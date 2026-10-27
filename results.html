@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Search · 10K Roster</title>
+    <meta name="description" content="Creatives that match a 10K search." />
+    <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <meta http-equiv="Cache-Control" content="no-cache" />
+    <link rel="stylesheet" href="styles.css?v=31" />
+  </head>
+  <body data-page="results" data-view="home">
+    <header class="results-top">
+      <a class="nav_brand" href="/" aria-label="10K Projects, home">
+        <img
+          src="https://cdn.prod.website-files.com/6627e667ad5e5d4d27964cc3/6627ebb08215c7da6b5e8a4e_logo-b.svg"
+          alt="10K Projects"
+        />
+      </a>
+      <form class="search" id="search-form" role="search">
+        <div class="airbnb" id="airbnb" data-open="">
+          <div class="airbnb_bar">
+            <div class="segment-slot">
+              <button class="segment" id="where-segment" type="button" aria-expanded="false" aria-controls="where-panel">
+                <span class="segment_label">Where</span>
+                <span class="segment_value" id="where-value">Search cities</span>
+              </button>
+              <button class="segment_clear" id="where-clear" type="button" hidden aria-label="Clear city">×</button>
+            </div>
+            <button class="segment" id="who-segment" type="button" aria-expanded="false" aria-controls="who-panel">
+              <span class="segment_label">Who</span>
+              <span class="segment_value" id="who-value">Add a role</span>
+            </button>
+            <button class="airbnb_go" type="submit" aria-label="Search">
+              <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
+                <circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="2.6" />
+                <path d="M15.2 15.2 L20 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" />
+              </svg>
+              <span class="airbnb_go_label">Search</span>
+            </button>
+          </div>
+          <div class="airbnb_panel" id="where-panel" hidden>
+            <p class="panel_label panel_label-soft">Suggested cities</p>
+            <label class="where-search">
+              <span class="material-symbols-outlined" aria-hidden="true">search</span>
+              <input id="where-filter" type="search" placeholder="Los Angeles, Memphis, Remote" autocomplete="off" aria-label="Search cities" />
+            </label>
+            <div class="airbnb_options" id="where-options"></div>
+          </div>
+          <div class="airbnb_panel" id="who-panel" hidden>
+            <p class="panel_label panel_label-soft">Suggested roles</p>
+            <div class="airbnb_options airbnb_options-roles" id="who-options"></div>
+          </div>
+        </div>
+      </form>
+    </header>
+
+    <main class="results-page">
+      <div class="results-tools">
+        <button class="tool-pill" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M4 7h16M7 7v0M4 12h16M10 12v0M4 17h16M14 17v0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            <circle cx="8" cy="7" r="1.6" fill="currentColor" />
+            <circle cx="15" cy="12" r="1.6" fill="currentColor" />
+            <circle cx="10" cy="17" r="1.6" fill="currentColor" />
+          </svg>
+          Filters
+        </button>
+        <button class="tool-icon is-on" type="button" aria-label="Saved">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.2L6 20V5.5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button class="tool-icon" type="button" aria-label="List">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path d="M8 7h11M8 12h11M8 17h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            <circle cx="4.5" cy="7" r="1" fill="currentColor" />
+            <circle cx="4.5" cy="12" r="1" fill="currentColor" />
+            <circle cx="4.5" cy="17" r="1" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="results-split">
+        <section class="results" id="results" aria-live="polite">
+          <h2 id="results-title">Creatives</h2>
+          <p class="summary" id="summary"></p>
+          <p class="count" id="count" hidden></p>
+          <p class="nearby" id="nearby" hidden></p>
+          <p class="empty" id="empty" hidden>No one matches that yet.</p>
+          <div class="grid" id="grid"></div>
+        </section>
+        <div class="map-pane">
+          <div id="map" role="region" aria-label="Map of matching creatives"></div>
+        </div>
+      </div>
+    </main>
+
+    <article class="profile-view" id="profile" hidden></article>
+
+    <script src="people.js?v=1"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js?v=23"></script>
+  </body>
+</html>
