@@ -122,7 +122,7 @@ const state = {
   profile: "",
 };
 
-let resultsView = "map";
+let resultsView = "list";
 let openFilterRole = "";
 
 let skipUrl = false;
@@ -326,7 +326,10 @@ function renderMapResults(list) {
   const empty = document.getElementById("empty");
   const title = document.getElementById("results-title");
   if (title) title.textContent = resultsHeading(list);
-  document.getElementById("summary").textContent = summaryText(list);
+  document.getElementById("summary").textContent =
+    resultsView === "map"
+      ? "Hover a card to find them on the map. Click the card to open their profile."
+      : summaryText(list);
   document.getElementById("count").textContent = "";
   empty.hidden = list.length !== 0;
   empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives on the roster yet.";
@@ -1069,8 +1072,9 @@ function resultsQuery() {
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
+  params.set("view", "map");
   const query = params.toString();
-  return `results.html${query ? `?${query}` : ""}`;
+  return `results.html?${query}`;
 }
 
 function writeFilterParams(params) {
@@ -1103,6 +1107,7 @@ function writeUrl(mode) {
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
+  if (resultsView === "map") params.set("view", "map");
   if (state.profile) params.set("person", state.profile);
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
   if (next === `${location.pathname}${location.search}`) return;
@@ -1200,7 +1205,8 @@ function bind() {
       location.href = resultsQuery();
       return;
     }
-    render();
+    setResultsView("map");
+    render({ url: "push" });
   });
   document.querySelectorAll(".nav-menu a, .nav-side a").forEach((link) => {
     link.addEventListener("click", (event) => {
@@ -1437,5 +1443,6 @@ PEOPLE.forEach((record) => {
 bind();
 bindAddRoster();
 readUrl();
+if (isResultsPage() && new URLSearchParams(location.search).get("view") === "map") setResultsView("map");
 render({ url: "replace" });
 if (typeof initProjects === "function") initProjects({ people: PEOPLE, openProfile });

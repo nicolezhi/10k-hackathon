@@ -2228,8 +2228,26 @@ body.add-open {
   grid-template-columns: 1fr;
 }
 
-.results-page[data-results-view="list"] .grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+body[data-page="results"]:has([data-results-view="map"]) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.results-page[data-results-view="map"] .results-tools {
+  position: relative;
+  top: auto;
+}
+
+.results-page[data-results-view="map"] .results {
+  height: 100%;
+  overflow: auto;
+  padding: 22px 28px 48px;
+}
+
+.results-page[data-results-view="map"] .grid {
+  grid-template-columns: 1fr 1fr;
 }
 
 .results-split {

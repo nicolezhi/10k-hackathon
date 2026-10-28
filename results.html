@@ -12,8 +12,10 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=63" />
+    <link rel="stylesheet" href="styles.css?v=64" />
   </head>
   <body data-page="results" data-view="home">
     <header class="results-top">
@@ -65,7 +67,7 @@
       </form>
     </header>
 
-    <main class="results-page">
+    <main class="results-page" data-results-view="list">
       <div class="results-tools">
         <div class="filter-wrap" id="filter-wrap">
           <button class="tool-pill" id="filters-toggle" type="button" aria-expanded="false" aria-controls="filters-panel">
@@ -86,14 +88,19 @@
         <button class="tool-pill tool-pill_add" id="add-roster" type="button">Add a roster</button>
       </div>
 
-      <section class="results" id="results" aria-live="polite">
-        <h2 id="results-title">Creatives</h2>
-        <p class="summary" id="summary"></p>
-        <p class="count" id="count" hidden></p>
-        <p class="nearby" id="nearby" hidden></p>
-        <p class="empty" id="empty" hidden>No one matches that yet.</p>
-        <div class="grid" id="grid"></div>
-      </section>
+      <div class="results-split">
+        <section class="results" id="results" aria-live="polite">
+          <h2 id="results-title">Creatives</h2>
+          <p class="summary" id="summary"></p>
+          <p class="count" id="count" hidden></p>
+          <p class="nearby" id="nearby" hidden></p>
+          <p class="empty" id="empty" hidden>No one matches that yet.</p>
+          <div class="grid" id="grid"></div>
+        </section>
+        <div class="map-pane">
+          <div id="map" role="region" aria-label="Map of matching creatives"></div>
+        </div>
+      </div>
     </main>
 
     <article class="profile-view" id="profile" hidden></article>
@@ -154,6 +161,8 @@
     </div>
 
     <script src="people.js?v=5"></script>
-    <script src="app.js?v=44"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="app.js?v=45"></script>
   </body>
 </html>
