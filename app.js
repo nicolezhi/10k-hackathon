@@ -274,9 +274,14 @@ function pluralRole(role, count) {
 }
 
 function resultsHeading(list) {
-  const noun = state.roles.length === 1 ? pluralRole(state.roles[0], list.length) : list.length === 1 ? "creative" : "creatives";
+  const count = list.length;
+  const labels = [
+    ...state.roles.map((role) => pluralRole(role, count)),
+    ...state.genres,
+  ];
+  const who = labels.length ? labels.join(", ") : count === 1 ? "creative" : "creatives";
   const place = state.city || activeCities().join(" and ");
-  return place ? `${list.length} ${noun} in ${place}` : `${list.length} ${noun}`;
+  return place ? `${count} ${who} in ${place}` : `${count} ${who}`;
 }
 
 function cityRecord(name) {
@@ -298,6 +303,59 @@ function tinyIcon(path) {
   return `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${path}</svg>`;
 }
 
+function joinPhrase(items) {
+  if (items.length <= 1) return items[0] || "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+function cardBio(record) {
+  if (record.bio) return record.bio;
+  const place = record.city && record.city !== "Remote" ? ` in ${record.city}` : "";
+  const phrases = {
+    Portrait: "portraits",
+    Concert: "concerts",
+    Events: "events",
+    Product: "product",
+    Club: "club portraits",
+    "Lo-fi": "lo-fi work",
+    Film: "film portraits",
+    Fashion: "fashion",
+    Sports: "sports",
+    "Music video": "music videos",
+    "Album covers": "album covers",
+  };
+  const genres = [];
+  (record.genres || []).forEach((genre) => {
+    const phrase = phrases[genre] || String(genre).toLowerCase();
+    if (!genres.includes(phrase)) genres.push(phrase);
+  });
+  const makes = new Set(["Photographer", "Videographer / DP", "Director", "Graphic designer", "Animator", "Editor", "Colorist"]);
+  if (genres.length && (record.roles || []).some((role) => makes.has(role))) {
+    return `Makes ${joinPhrase(genres)}${place}.`;
+  }
+  const role = (record.roles || [])[0] || "Creative";
+  return place ? `${role} based${place}.` : `${role}.`;
+}
+
+function instagramShots(record) {
+  return (record.images || [])
+    .map((item) => (typeof item === "string" ? { src: item, href: "" } : item))
+    .filter((item) => item && item.src)
+    .slice(0, 3);
+}
+
+const CONTACT_PATHS = {
+  instagram:
+    '<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/>',
+  portfolio:
+    '<circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 12h14.8M12 4.6c2 2.2 3 4.7 3 7.4s-1 5.2-3 7.4c-2-2.2-3-4.7-3-7.4s1-5.2 3-7.4z" fill="none" stroke="currentColor" stroke-width="1.7"/>',
+  phone:
+    '<path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  email:
+    '<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>',
+};
+
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
   const tags = (record.genres || []).join(" · ");
@@ -312,10 +370,10 @@ function rosterCardHtml(record) {
       ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : ""}
       ${tags ? `<p>${escapeHtml(tags)}</p>` : ""}
       <div class="result-card_icons">
-        ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon('<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/>'))}
-        ${externalControl("roster-icon", "Portfolio", record.portfolio || "", tinyIcon('<circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 12h14.8M12 4.6c2 2.2 3 4.7 3 7.4s-1 5.2-3 7.4c-2-2.2-3-4.7-3-7.4s1-5.2 3-7.4z" fill="none" stroke="currentColor" stroke-width="1.7"/>'))}
-        ${externalControl("roster-icon", "Phone", phoneHref, tinyIcon('<path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'))}
-        ${externalControl("roster-icon", "Email", mailHref, tinyIcon('<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>'))}
+        ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
+        ${externalControl("roster-icon", "Portfolio", record.portfolio || "", tinyIcon(CONTACT_PATHS.portfolio))}
+        ${externalControl("roster-icon", "Phone", phoneHref, tinyIcon(CONTACT_PATHS.phone))}
+        ${externalControl("roster-icon", "Email", mailHref, tinyIcon(CONTACT_PATHS.email))}
       </div>
     </div>
   `;
@@ -410,12 +468,38 @@ function pinPoint(record, indexInCity, cityCount) {
 }
 
 function mapPopup(record) {
+  const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
+  const phoneHref = record.phone ? `tel:${record.phone}` : "";
+  const mailHref = record.email ? `mailto:${record.email}` : "";
+  const shots = instagramShots(record)
+    .map((item) => {
+      const href = item.href || instagramHref;
+      const img = `<img src="${escapeHtml(item.src)}" alt="" />`;
+      return href
+        ? `<a class="roster-pop_shot" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${img}</a>`
+        : img;
+    })
+    .join("");
   return `
     <div class="roster-pop">
       <button class="roster-pop_close" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <article class="result-card">${rosterCardHtml(record)}</article>
+      <div class="roster-pop_head">
+        ${avatarHtml(record, "roster-pop_avatar")}
+        <div>
+          <h3>${escapeHtml(record.name)}</h3>
+          <p>${escapeHtml(record.roles.join(" · "))}</p>
+        </div>
+      </div>
+      ${shots ? `<div class="roster-pop_shots">${shots}</div>` : ""}
+      <p class="roster-pop_bio">${escapeHtml(cardBio(record))}</p>
+      <div class="roster-pop_icons">
+        ${externalControl("roster-pop_icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
+        ${externalControl("roster-pop_icon", "Portfolio", record.portfolio || "", tinyIcon(CONTACT_PATHS.portfolio))}
+        ${externalControl("roster-pop_icon", "Phone", phoneHref, tinyIcon(CONTACT_PATHS.phone))}
+        ${externalControl("roster-pop_icon", "Email", mailHref, tinyIcon(CONTACT_PATHS.email))}
+      </div>
     </div>
   `;
 }
@@ -440,7 +524,7 @@ function syncMap(list) {
     resultMap = L.map(mount, { zoomControl: false, scrollWheelZoom: true });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap",
-      maxZoom: 18,
+      maxZoom: 19,
     }).addTo(resultMap);
     L.control.zoom({ position: "topright" }).addTo(resultMap);
     resultMap.getContainer().addEventListener("click", (event) => {
@@ -484,24 +568,18 @@ function syncMap(list) {
       className: "map-card",
       closeButton: false,
       autoPan: true,
-      autoPanPadding: [28, 28],
-      offset: [0, 200],
-      maxWidth: 320,
-      minWidth: 280,
+      keepInView: true,
+      autoPanPaddingTopLeft: [24, 24],
+      autoPanPaddingBottomRight: [24, 24],
+      offset: [0, -8],
+      maxWidth: 380,
+      minWidth: 340,
     });
-    marker.on("popupopen", (event) => {
+    marker.on("popupopen", () => {
       resultMarkers.forEach((item, id) => {
         item.getElement()?.classList.toggle("is-selected", id === record.id);
         if (id === record.id) item.setZIndexOffset(1000);
       });
-      const popup = event.popup;
-      const element = popup.getElement();
-      const height = element?.offsetHeight || 0;
-      if (height && popup.options.offset.y !== height + 24) {
-        popup.options.offset = L.point(0, height + 24);
-        popup.update();
-        popup._adjustPan?.();
-      }
     });
     marker.on("popupclose", () => {
       marker.getElement()?.classList.remove("is-selected");
@@ -1034,6 +1112,8 @@ function buildFilters() {
 
 function setResultsView(view) {
   if (view !== "map" && view !== "list") return;
+  const scroller = document.querySelector(".results");
+  const savedTop = resultsView === "map" ? scroller?.scrollTop || 0 : window.scrollY;
   resultsView = view;
   const page = document.querySelector(".results-page");
   if (page) page.dataset.resultsView = view;
@@ -1048,12 +1128,14 @@ function setResultsView(view) {
     summary.textContent =
       view === "list" ? summaryText(list) : "Hover a card to find them on the map. Click the card to open their profile.";
   }
-  if (view === "map" && resultMap) {
-    requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    if (view === "list") window.scrollTo(0, savedTop);
+    else if (scroller) scroller.scrollTop = savedTop;
+    if (view === "map" && resultMap) {
       resultMap.invalidateSize();
       syncMap(filteredPeople());
-    });
-  }
+    }
+  });
 }
 
 function syncControls() {
@@ -1168,6 +1250,12 @@ function bind() {
       }
     });
   }
+  document.querySelectorAll(".view-toggle_btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      setResultsView(button.dataset.view);
+      if (isResultsPage()) writeUrl("replace");
+    });
+  });
   document.getElementById("where-segment").addEventListener("click", () => setPanel("where"));
   document.getElementById("who-segment").addEventListener("click", () => setPanel("who"));
   const clearWhere = document.getElementById("where-clear");

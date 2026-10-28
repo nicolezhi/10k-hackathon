@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=64" />
+    <link rel="stylesheet" href="styles.css?v=71" />
   </head>
   <body data-page="results" data-view="home">
     <header class="results-top">
@@ -27,7 +27,7 @@
       </a>
       <nav class="nav-side" aria-label="Sections">
         <a class="nav_link" href="projects.html">Projects</a>
-        <a class="nav_link is-current" href="results.html">Roster</a>
+        <a class="nav_link" href="results.html">Roster</a>
       </nav>
       <form class="search" id="search-form" role="search">
         <div class="airbnb" id="airbnb" data-open="">
@@ -85,7 +85,22 @@
             <div class="filters-sub" id="filters-sub" hidden role="menu" aria-label="Genres"></div>
           </div>
         </div>
-        <button class="tool-pill tool-pill_add" id="add-roster" type="button">Add a roster</button>
+        <div class="view-toggle" role="group" aria-label="Map or list">
+          <button class="view-toggle_btn" type="button" data-view="map" aria-pressed="false" aria-label="Map">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path d="M9 18.5 3.5 20.5v-14L9 4.5l6 2 5.5-2v14L15 20.5l-6-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              <path d="M9 4.5v14M15 6.5v14" fill="none" stroke="currentColor" stroke-width="1.7" />
+            </svg>
+          </button>
+          <button class="view-toggle_btn is-on" type="button" data-view="list" aria-pressed="true" aria-label="List">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path d="M9 7h11M9 12h11M9 17h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              <circle cx="5" cy="7" r="1.15" fill="currentColor" />
+              <circle cx="5" cy="12" r="1.15" fill="currentColor" />
+              <circle cx="5" cy="17" r="1.15" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="results-split">
@@ -163,6 +178,6 @@
     <script src="people.js?v=5"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=45"></script>
+    <script src="app.js?v=50"></script>
   </body>
 </html>
