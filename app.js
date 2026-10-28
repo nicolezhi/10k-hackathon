@@ -614,14 +614,18 @@ function renderResults(list) {
   }
   const grid = document.getElementById("grid");
   if (!grid) return;
+  const city = nearbyCity();
+  const nearby = city ? list.filter((record) => record.city === city) : list;
   const empty = document.getElementById("empty");
-  document.getElementById("summary").textContent = summaryText(list);
-  document.getElementById("count").textContent = list.length === 1 ? "1 creative" : `${list.length} creatives`;
-  empty.hidden = list.length !== 0;
+  document.getElementById("summary").textContent = summaryText(nearby);
+  document.getElementById("count").textContent = nearby.length === 1 ? "1 creative" : `${nearby.length} creatives`;
+  const more = document.getElementById("nearby-more");
+  if (more) more.href = city ? `results.html?city=${encodeURIComponent(city)}` : "results.html";
+  empty.hidden = nearby.length !== 0;
   empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives on the roster yet.";
   grid.innerHTML = "";
 
-  list.forEach((record) => {
+  nearby.forEach((record) => {
     const card = document.createElement("article");
     card.className = "result-card";
     card.tabIndex = 0;
@@ -788,6 +792,7 @@ function escapeHtml(value) {
 }
 
 let openPanel = "";
+let openWhoRole = "";
 
 function whereLabel() {
   const cities = activeCities().map((city) => (city === "Remote" ? "Remote / anywhere" : city));
@@ -796,10 +801,18 @@ function whereLabel() {
   return `${cities[0]} +${cities.length - 1}`;
 }
 
+function whoDetail(role) {
+  const picked = state.roleGenres[role] || [];
+  if (picked.length === 1) return `${picked[0]} ${role.toLowerCase()}`;
+  if (picked.length > 1) return `${picked[0]} +${picked.length - 1}`;
+  return role;
+}
+
 function whoLabel() {
   if (!state.roles.length) return "Add a role";
-  if (state.roles.length === 1) return state.roles[0];
-  return `${state.roles[0]} +${state.roles.length - 1}`;
+  const label = whoDetail(state.roles[0]);
+  if (state.roles.length === 1) return label;
+  return `${label} +${state.roles.length - 1}`;
 }
 
 function pickButton(item, pressed) {
@@ -808,7 +821,7 @@ function pickButton(item, pressed) {
   button.className = "pick";
   button.setAttribute("aria-pressed", pressed ? "true" : "false");
   button.innerHTML = `
-    <span class="pick-mark" style="--tint:${item.tint}" aria-hidden="true">
+    <span class="pick-mark" aria-hidden="true">
       <span class="material-symbols-outlined">${item.icon}</span>
     </span>
     <span class="pick-copy">
@@ -848,28 +861,81 @@ function renderWhereOptions() {
   });
 }
 
-function renderWhoOptions() {
-  const container = document.getElementById("who-options");
-  container.innerHTML = "";
-  ROLES.forEach((role) => {
-    const button = pickButton(role, state.roles.includes(role.name));
+function genresForRole(role) {
+  const item = filterMenu().find((entry) => entry.role === role);
+  return item ? item.genres : [];
+}
+
+function showWhoSub(role) {
+  openWhoRole = role || "";
+  paintWhoSub();
+  document.querySelectorAll("#who-options .pick").forEach((button) => {
+    button.classList.toggle("is-open", button.dataset.role === openWhoRole);
+  });
+}
+
+function paintWhoSub() {
+  const sub = document.getElementById("who-sub");
+  if (!sub) return;
+  const genres = openWhoRole ? genresForRole(openWhoRole) : [];
+  if (!genres.length) {
+    sub.hidden = true;
+    sub.innerHTML = "";
+    return;
+  }
+  const allOn = roleIsAll(openWhoRole);
+  const picked = state.roleGenres[openWhoRole] || [];
+  const rows = [
+    { label: filterAllLabel(openWhoRole), checked: allOn, genre: "" },
+    ...genres.map((genre) => ({ label: genre, checked: !allOn && picked.includes(genre), genre })),
+  ];
+  sub.hidden = false;
+  sub.innerHTML = rows
+    .map(
+      (row) => `<button class="filter-sub_row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-genre="${escapeHtml(row.genre)}">
+        ${checkHtml()}
+        <span class="filter-row_label">${escapeHtml(row.label)}</span>
+      </button>`
+    )
+    .join("");
+  sub.querySelectorAll(".filter-sub_row").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      if (state.roles.includes(role.name)) {
-        state.roles = state.roles.filter((item) => item !== role.name);
-        delete state.roleGenres[role.name];
-        if (state.genresScoped) {
-          state.genres = Object.values(state.roleGenres).flat();
-          state.genresScoped = state.genres.length > 0;
-        }
-      } else {
-        state.roles = [...state.roles, role.name];
-        state.roleGenres[role.name] = [];
-      }
-      render();
+      if (!button.dataset.genre) toggleAllRole(openWhoRole);
+      else toggleRoleGenre(openWhoRole, button.dataset.genre);
+    });
+  });
+  const row = [...document.querySelectorAll("#who-options .pick")].find((button) => button.dataset.role === openWhoRole);
+  alignSubmenu(sub, row, 10);
+}
+
+function renderWhoOptions() {
+  const container = document.getElementById("who-options");
+  if (!container) return;
+  container.innerHTML = "";
+  ROLES.forEach((role) => {
+    const genres = genresForRole(role.name);
+    const button = pickButton(role, state.roles.includes(role.name));
+    button.dataset.role = role.name;
+    if (genres.length) {
+      button.classList.toggle("is-open", openWhoRole === role.name);
+      button.insertAdjacentHTML(
+        "beforeend",
+        `<span class="pick-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`
+      );
+      button.addEventListener("mouseenter", () => showWhoSub(role.name));
+    } else {
+      button.addEventListener("mouseenter", () => showWhoSub(""));
+    }
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (genres.length) showWhoSub(role.name);
+      if (genres.length) toggleAllRole(role.name);
+      else toggleFlatRole(role.name);
     });
     container.append(button);
   });
+  paintWhoSub();
 }
 
 function paintSearch() {
@@ -892,7 +958,11 @@ function paintSearch() {
 
 function setPanel(name) {
   openPanel = openPanel === name ? "" : name;
-  if (openPanel) setFiltersOpen(false);
+  if (openPanel !== "who") openWhoRole = "";
+  if (openPanel) {
+    setFiltersOpen(false);
+    setLocationOpen(false);
+  }
   paintSearch();
   if (openPanel === "where") document.getElementById("where-filter").focus();
 }
@@ -902,13 +972,46 @@ function filtersOpen() {
   return Boolean(panel && !panel.hidden);
 }
 
+function closeRolePanel() {
+  const panel = document.getElementById("filters-panel");
+  const toggle = document.getElementById("filters-toggle");
+  if (!panel || !toggle) return;
+  panel.hidden = true;
+  toggle.setAttribute("aria-expanded", "false");
+  showFilterSub("");
+}
+
+function closeLocationPanel() {
+  const panel = document.getElementById("location-panel");
+  const toggle = document.getElementById("location-toggle");
+  if (!panel || !toggle) return;
+  panel.hidden = true;
+  toggle.setAttribute("aria-expanded", "false");
+}
+
 function setFiltersOpen(open) {
   const panel = document.getElementById("filters-panel");
   const toggle = document.getElementById("filters-toggle");
   if (!panel || !toggle) return;
+  if (open) closeLocationPanel();
   panel.hidden = !open;
   toggle.setAttribute("aria-expanded", String(open));
   if (!open) showFilterSub("");
+}
+
+function locationOpen() {
+  const panel = document.getElementById("location-panel");
+  return Boolean(panel && !panel.hidden);
+}
+
+function setLocationOpen(open) {
+  const panel = document.getElementById("location-panel");
+  const toggle = document.getElementById("location-toggle");
+  if (!panel || !toggle) return;
+  if (open) closeRolePanel();
+  panel.hidden = !open;
+  toggle.setAttribute("aria-expanded", String(open));
+  if (open) document.getElementById("location-filter")?.focus();
 }
 
 function filterLabel(role) {
@@ -1001,6 +1104,58 @@ function toggleFlatRole(role) {
   render();
 }
 
+function nearbyCity() {
+  if (state.city) return state.city;
+  const counts = new Map();
+  PEOPLE.forEach((record) => {
+    if (!record.city) return;
+    counts.set(record.city, (counts.get(record.city) || 0) + 1);
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+}
+
+function setLocation(city) {
+  state.city = city;
+  state.extraCities = [];
+  render();
+}
+
+function paintLocation() {
+  const menu = document.getElementById("location-menu");
+  const toggle = document.getElementById("location-toggle");
+  if (!menu || !toggle) return;
+  const query = (document.getElementById("location-filter")?.value || "").trim().toLowerCase();
+  const cities = CITIES.filter((city) => cityMatches(city, query));
+  const rows = [
+    ...(query ? [] : [{ label: "All locations", city: "", checked: !state.city }]),
+    ...cities.map((city) => ({ label: city.place, city: city.name, checked: state.city === city.name })),
+  ];
+  menu.innerHTML = rows.length
+    ? rows
+        .map(
+          (row) => `<button class="filter-row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-city="${escapeHtml(row.city)}">
+        ${checkHtml()}
+        <span class="filter-row_label">${escapeHtml(row.label)}</span>
+      </button>`
+        )
+        .join("")
+    : `<p class="location-empty">No cities match.</p>`;
+  menu.querySelectorAll(".filter-row").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setLocation(button.dataset.city || "");
+    });
+  });
+  const badge = document.getElementById("location-count");
+  const on = Boolean(state.city);
+  if (badge) {
+    badge.hidden = !on;
+    const num = badge.querySelector(".tool-pill_num");
+    if (num) num.textContent = on ? "1" : "";
+  }
+  toggle.classList.toggle("is-on", on);
+}
+
 function paintFilterSub() {
   const sub = document.getElementById("filters-sub");
   if (!sub) return;
@@ -1033,14 +1188,34 @@ function paintFilterSub() {
       else toggleRoleGenre(item.role, button.dataset.genre);
     });
   });
+  placeFilterSub(sub);
+}
+
+function placeFilterSub(sub) {
+  const row = [...document.querySelectorAll("#filters-menu .filter-row")].find((button) => button.dataset.role === openFilterRole);
+  alignSubmenu(sub, row, 8);
+}
+
+function alignSubmenu(sub, row, gap) {
   sub.style.left = "";
   sub.style.right = "";
+  if (!row || !sub.offsetParent || (sub.id === "who-sub" && window.matchMedia("(max-width: 800px)").matches)) {
+    sub.style.top = "";
+    return;
+  }
+  const top = row.getBoundingClientRect().top - sub.offsetParent.getBoundingClientRect().top;
+  sub.style.top = `${top}px`;
   requestAnimationFrame(() => {
     if (sub.hidden) return;
     const rect = sub.getBoundingClientRect();
     if (rect.right > window.innerWidth - 12) {
       sub.style.left = "auto";
-      sub.style.right = "calc(100% + 8px)";
+      sub.style.right = `calc(100% + ${gap}px)`;
+    }
+    const overflow = rect.bottom - (window.innerHeight - 12);
+    if (overflow > 0) {
+      const current = parseFloat(sub.style.top) || 0;
+      sub.style.top = `${Math.max(8, current - overflow)}px`;
     }
   });
 }
@@ -1048,7 +1223,7 @@ function paintFilterSub() {
 function paintFilters() {
   const toggle = document.getElementById("filters-toggle");
   if (!toggle) return;
-  document.querySelectorAll(".filter-row").forEach((button) => {
+  document.querySelectorAll("#filters-menu .filter-row").forEach((button) => {
     const role = button.dataset.role;
     const genres = (button.dataset.genres || "").split("|").filter(Boolean);
     const picked = state.roleGenres[role] || [];
@@ -1063,7 +1238,8 @@ function paintFilters() {
   const badge = document.getElementById("filters-count");
   if (badge) {
     badge.hidden = count === 0;
-    badge.textContent = String(count);
+    const num = badge.querySelector(".tool-pill_num");
+    if (num) num.textContent = count ? String(count) : "";
   }
   toggle.classList.toggle("is-on", count > 0);
 }
@@ -1138,9 +1314,26 @@ function setResultsView(view) {
   });
 }
 
+function clearLocation() {
+  state.city = "";
+  state.extraCities = [];
+  const field = document.getElementById("location-filter");
+  if (field) field.value = "";
+  render();
+}
+
+function clearRoles() {
+  state.roles = [];
+  state.roleGenres = {};
+  state.genres = [];
+  state.genresScoped = false;
+  render();
+}
+
 function syncControls() {
   paintSearch();
   paintFilters();
+  paintLocation();
 }
 
 function isResultsPage() {
@@ -1250,6 +1443,41 @@ function bind() {
       }
     });
   }
+  const locationToggle = document.getElementById("location-toggle");
+  if (locationToggle) {
+    locationToggle.addEventListener("click", () => {
+      const next = !locationOpen();
+      setLocationOpen(next);
+      if (next) {
+        openPanel = "";
+        openWhoRole = "";
+        paintSearch();
+      }
+    });
+  }
+  document.getElementById("location-count")?.addEventListener("click", (event) => {
+    if (!state.city) return;
+    event.stopPropagation();
+    event.preventDefault();
+    clearLocation();
+  });
+  document.getElementById("filters-count")?.addEventListener("click", (event) => {
+    if (!activeFilterCount()) return;
+    event.stopPropagation();
+    event.preventDefault();
+    clearRoles();
+  });
+  const locationFilter = document.getElementById("location-filter");
+  if (locationFilter) {
+    locationFilter.addEventListener("input", () => paintLocation());
+    locationFilter.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      const query = locationFilter.value.trim().toLowerCase();
+      const match = CITIES.find((city) => cityMatches(city, query));
+      if (match) setLocation(match.name);
+    });
+  }
   document.querySelectorAll(".view-toggle_btn").forEach((button) => {
     button.addEventListener("click", () => {
       setResultsView(button.dataset.view);
@@ -1258,6 +1486,13 @@ function bind() {
   });
   document.getElementById("where-segment").addEventListener("click", () => setPanel("where"));
   document.getElementById("who-segment").addEventListener("click", () => setPanel("who"));
+  const whoPanel = document.getElementById("who-panel");
+  if (whoPanel) {
+    whoPanel.addEventListener("mouseleave", (event) => {
+      if (whoPanel.contains(event.relatedTarget)) return;
+      showWhoSub("");
+    });
+  }
   const clearWhere = document.getElementById("where-clear");
   if (clearWhere) {
     clearWhere.addEventListener("click", (event) => {
@@ -1271,10 +1506,13 @@ function bind() {
   document.addEventListener("click", (event) => {
     if (openPanel && !document.getElementById("airbnb").contains(event.target)) {
       openPanel = "";
+      openWhoRole = "";
       paintSearch();
     }
     const wrap = document.getElementById("filter-wrap");
     if (wrap && filtersOpen() && !wrap.contains(event.target)) setFiltersOpen(false);
+    const locationWrap = document.getElementById("location-wrap");
+    if (locationWrap && locationOpen() && !locationWrap.contains(event.target)) setLocationOpen(false);
   });
   document.getElementById("search-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1320,6 +1558,16 @@ function bind() {
     if (document.getElementById("project-modal") && !document.getElementById("project-modal").hidden) return;
     if (addDialogOpen()) {
       setAddOpen(false);
+      return;
+    }
+    if (locationOpen()) {
+      const field = document.getElementById("location-filter");
+      if (field && field.value && document.activeElement === field) {
+        field.value = "";
+        paintLocation();
+        return;
+      }
+      setLocationOpen(false);
       return;
     }
     if (filtersOpen()) {
@@ -1424,6 +1672,7 @@ function setAddOpen(open) {
     return;
   }
   setFiltersOpen(false);
+  setLocationOpen(false);
   openPanel = "";
   paintSearch();
   fillAddForm();

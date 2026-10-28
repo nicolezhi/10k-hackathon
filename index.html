@@ -16,7 +16,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=59" />
+    <link rel="stylesheet" href="styles.css?v=74" />
   </head>
   <body data-view="home">
     <header class="navbar results-top">
@@ -63,6 +63,7 @@
           <div class="airbnb_panel" id="who-panel" hidden>
             <p class="panel_label panel_label-soft">Suggested roles</p>
             <div class="airbnb_options airbnb_options-roles" id="who-options"></div>
+            <div class="who-sub" id="who-sub" hidden></div>
           </div>
         </div>
       </form>
@@ -91,7 +92,10 @@
         <div class="results_head">
           <h2>Nearby Creatives</h2>
           <p class="summary" id="summary"></p>
-          <p class="count" id="count"></p>
+          <div class="results_head_side">
+            <p class="count" id="count"></p>
+            <a class="text-button" id="nearby-more" href="results.html">See more</a>
+          </div>
         </div>
         <p class="nearby" id="nearby" hidden></p>
         <p class="empty" id="empty" hidden>No one matches that yet.</p>
@@ -103,6 +107,6 @@
 
     <script src="people.js?v=5"></script>
     <script src="projects.js?v=25"></script>
-    <script src="app.js?v=45"></script>
+    <script src="app.js?v=54"></script>
   </body>
 </html>
