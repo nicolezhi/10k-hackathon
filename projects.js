@@ -1,107 +1,96 @@
 const PROJECTS = [
   {
-    id: "trippy-red",
-    title: "Trippy Red Music Video",
-    summary: "A night shoot soaked in red light. The look was built around wardrobe, practicals, and a tight camera crew.",
-    date: "September 14, 2025",
-    place: "New York, NY",
-    images: [
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
+    id: "pay-gotti-dnd",
+    title: "Pay Gotti — DnD ft. Luhh Dyl",
+    summary: "Official music video. The YouTube description credits the artists and does not list a production crew.",
+    date: "October 23, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=Bf8pXBD8CPg",
+    images: ["images/projects/Bf8pXBD8CPg.jpg"],
     creatives: [
-      { id: "aiden-zamiri", role: "Director" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "stephanie-ocean-stephanieocean", role: "Gaffer" },
-      { id: "isaac-wheatley-ikeview", role: "Photographer" },
+      { name: "Pay Gotti", role: "Artist" },
+      { name: "Luhh Dyl", role: "Featured artist" },
     ],
   },
   {
-    id: "warehouse-editorial",
-    title: "Warehouse Night Editorial",
-    summary: "An empty warehouse, one set wall, and a small team. Styling and set design carried the frame.",
-    date: "November 2, 2025",
-    place: "New York, NY",
-    images: [
-      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
+    id: "trim-get-hit",
+    title: "Trim — Get Hit",
+    summary: "Official music video. The YouTube description credits Trim and does not list a production crew.",
+    date: "August 27, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=Ca77yvpNdfA",
+    images: ["images/projects/Ca77yvpNdfA.jpg"],
+    creatives: [{ name: "Trim", role: "Artist" }],
+  },
+  {
+    id: "trim-nobody-remix",
+    title: "Trim — Nobody (Remix) feat. G Herbo",
+    summary: "Official music video. The release credits Trim, Monaleo, and G Herbo. No production crew is listed.",
+    date: "July 29, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=Nv_xXbj0h-w",
+    images: ["images/projects/Nv_xXbj0h-w.jpg"],
     creatives: [
-      { id: "hameem-hameem", role: "Stylist" },
-      { id: "talia-restrepo-taliarestrepo", role: "Stylist" },
-      { id: "ayden-starr-fatecapture", role: "Photographer" },
+      { name: "Trim", role: "Artist" },
+      { name: "Monaleo", role: "Featured artist" },
+      { name: "G Herbo", role: "Featured artist" },
     ],
   },
   {
-    id: "festival-stage",
-    title: "Festival Main Stage",
-    summary: "Day-into-night coverage from the pit and the side stage. Fast calls, a lot of light, and a director on comms.",
-    date: "June 21, 2026",
-    place: "New York, NY",
-    images: [
-      "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
+    id: "strawbry-right-thru-u",
+    title: "STRAWBRY — Right Thru U",
+    summary: "Visualizer. The YouTube description credits STRAWBRY and does not list a production crew.",
+    date: "September 23, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=9WVk3pdC-7s",
+    images: ["images/projects/9WVk3pdC-7s.jpg"],
+    creatives: [{ name: "STRAWBRY", role: "Artist" }],
+  },
+  {
+    id: "claire-rosinkranz-rocket",
+    title: "Claire Rosinkranz — Rocket",
+    summary: "Official visualizer. The YouTube description credits Claire Rosinkranz and does not list a production crew.",
+    date: "July 20, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=TRdYOOMuGtY",
+    images: ["images/projects/TRdYOOMuGtY.jpg"],
+    creatives: [{ name: "Claire Rosinkranz", role: "Artist" }],
+  },
+  {
+    id: "claire-rosinkranz-water-the-flowers",
+    title: "Claire Rosinkranz — Water The Flowers",
+    summary: "Official visualizer. The YouTube description credits Claire Rosinkranz and does not list a production crew.",
+    date: "June 25, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=8n7jyCUSrF8",
+    images: ["images/projects/8n7jyCUSrF8.jpg"],
+    creatives: [{ name: "Claire Rosinkranz", role: "Artist" }],
+  },
+  {
+    id: "gigi-moss-criminal",
+    title: "Gigi Moss — Criminal",
+    summary: "Lyric video. Credits are taken from the YouTube description.",
+    date: "August 20, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=J0o9PkcXmcs",
+    images: ["images/projects/J0o9PkcXmcs.jpg"],
     creatives: [
-      { id: "simon-bradley-simonbradleyx", role: "Director" },
-      { id: "nick-wheat-nickywheat", role: "Gaffer" },
-      { id: "alex-olesky-alexolesky", role: "Photographer" },
-      { id: "vika-vikasfotos", role: "Photographer" },
+      { name: "Gigi Moss", role: "Writer" },
+      { name: "Solly", role: "Writer" },
+      { name: "Jonah Shy", role: "Producer" },
+      { name: "Nick Gale", role: "Producer" },
+      { name: "Pedro Calloni", role: "Mixer" },
     ],
   },
   {
-    id: "studio-35",
-    title: "Studio 35mm Portraits",
-    summary: "A quiet studio day. Film stills, a simple set, and makeup that reads on a close crop.",
-    date: "January 18, 2026",
-    place: "New York, NY",
-    images: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "aiden-zamiri", role: "Photographer" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "anna-koblish-annakoblish", role: "Photographer" },
-    ],
-  },
-  {
-    id: "after-hours",
-    title: "After Hours Lookbook",
-    summary: "Street-to-studio looks shot after call time. Wardrobe led, with a photographer working the available light.",
-    date: "August 8, 2025",
-    place: "New York, NY",
-    images: [
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "talia-restrepo-taliarestrepo", role: "Stylist" },
-      { id: "hameem-hameem", role: "Stylist" },
-      { id: "oliver-oliverstemmler", role: "Photographer" },
-    ],
-  },
-  {
-    id: "cover-day",
-    title: "Cover Day in Color",
-    summary: "A cover setup with a painted backdrop. Set, styling, and stills, all in one room.",
-    date: "March 4, 2026",
-    place: "New York, NY",
-    images: [
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "simon-bradley-simonbradleyx", role: "Director" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "aiden-zamiri", role: "Photographer" },
-    ],
+    id: "girlfriend-wife-slow-dancing",
+    title: "Girlfriend, Wife — Slow Dancing",
+    summary: "Visualizer. The YouTube description credits Girlfriend, Wife and does not list a production crew.",
+    date: "October 2, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=W7Ey1JZpEoc",
+    images: ["images/projects/W7Ey1JZpEoc.jpg"],
+    creatives: [{ name: "Girlfriend, Wife", role: "Artist" }],
   },
 ];
 
@@ -262,6 +251,22 @@ function initProjects({ people, openProfile }) {
     title.textContent = project.title;
     summary.textContent = project.summary;
     kicker.textContent = [project.date, project.place].filter(Boolean).join(" · ");
+    let watch = modal.querySelector("#project-watch");
+    if (!watch) {
+      watch = document.createElement("a");
+      watch.id = "project-watch";
+      watch.className = "text-button";
+      summary.insertAdjacentElement("afterend", watch);
+    }
+    if (project.href) {
+      watch.href = project.href;
+      watch.target = "_blank";
+      watch.rel = "noreferrer";
+      watch.textContent = "Watch";
+      watch.hidden = false;
+    } else {
+      watch.hidden = true;
+    }
     paintGallery();
     creatives.innerHTML = "";
     project.creatives.forEach((creative) => {
@@ -318,11 +323,13 @@ function initProjects({ people, openProfile }) {
   }
 
   function crewHtml(project) {
-    const records = (project.creatives || [])
-      .map((creative) => people.find((person) => person.id === creative.id))
-      .filter(Boolean);
-    const count = (project.creatives || []).length;
+    const records = (project.creatives || []).map((creative) => {
+      const match = people.find((person) => person.id === creative.id) || people.find((person) => person.name.toLowerCase() === String(creative.name || "").toLowerCase());
+      return { name: match?.name || creative.name || "Creative", avatar: match?.avatar || "" };
+    });
+    const count = records.length;
     const faces = records
+      .slice(0, 4)
       .map((record) =>
         record.avatar
           ? `<img src="${escapeProjectText(record.avatar)}" alt="" />`

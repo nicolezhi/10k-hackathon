@@ -1783,3 +1783,148 @@ readUrl();
 if (isResultsPage() && new URLSearchParams(location.search).get("view") === "map") setResultsView("map");
 render({ url: "replace" });
 if (typeof initProjects === "function") initProjects({ people: PEOPLE, openProfile });
+initHeroMap();
+
+function initHeroMap() {
+  const stage = document.getElementById("hero-stage");
+  const svg = document.getElementById("hero-map");
+  const shots = document.getElementById("hero-shots");
+  if (!stage || !svg || !shots) return;
+  const ns = "http://www.w3.org/2000/svg";
+  const board = { w: 780, h: 300 };
+  const pin = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>`;
+  const place = (roles, city) => roles.map((role) => `${role} (${city})`).join(", ");
+  const origin = [348, 150];
+  const steps = [
+    { name: "Jules Smerling", caption: place(["Stylist"], "Atlanta"), src: "posts/jules-smerling-jul3sarchive/1.jpg", href: "https://www.instagram.com/p/DepQPa6G3we/", x: 14, y: 8, w: 68, h: 68, inn: [90, 42], bend: -40 },
+    { name: "Isaac Wheatley", caption: place(["Stylist"], "London"), src: "images/hero/C_1Z2bxxC_C-1.jpg?v=2", href: "https://www.instagram.com/p/C_1Z2bxxC_C/?img_index=1", x: 242, y: 2, w: 56, h: 85, inn: [306, 45], bend: -36 },
+    { name: "Charlie Harris", caption: place(["Photographer"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/3.jpg", href: "https://www.instagram.com/p/DdCMAwKDMow/?img_index=1", x: 456, y: 2, w: 78, h: 100, inn: [448, 52], bend: -36 },
+    { name: "Vika", caption: place(["MUA"], "London"), src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 700, y: 64, w: 62, h: 83, inn: [692, 106], bend: 46 },
+    { name: "Charlie Harris", caption: place(["Animator"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
+    { name: "Randy", caption: place(["Animator"], "London"), src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 146, y: 194, w: 68, h: 68, inn: [222, 228], bend: 30 },
+    { name: "Michele Perna", caption: place(["Designer"], "Atlanta"), src: "posts/michele-perna-micheleperna/1.jpg", href: "https://www.instagram.com/p/Dew7glWDK1d/?img_index=1", x: 12, y: 122, w: 62, h: 78, inn: [82, 161], bend: -46 },
+  ];
+
+  const frames = steps.map((step) => {
+    const link = document.createElement("a");
+    link.className = "hero_shot";
+    link.href = step.href;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.style.left = `${(step.x / board.w) * 100}%`;
+    link.style.top = `${(step.y / board.h) * 100}%`;
+    link.style.width = `${(step.w / board.w) * 100}%`;
+    link.style.setProperty("--shot-ratio", `${step.w} / ${step.h}`);
+    link.setAttribute("aria-label", `${step.caption}, ${step.name} on Instagram`);
+    link.tabIndex = -1;
+    const image = document.createElement("img");
+    image.src = step.src;
+    image.alt = "";
+    const caption = document.createElement("span");
+    caption.className = "hero_cap";
+    caption.insertAdjacentHTML("beforeend", pin);
+    const text = document.createElement("span");
+    text.textContent = step.caption;
+    caption.append(text);
+    link.append(image, caption);
+    shots.append(link);
+    return { step, link };
+  });
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const curve = (from, to, bend) => {
+    const mx = (from[0] + to[0]) / 2;
+    const my = (from[1] + to[1]) / 2;
+    const dx = to[0] - from[0];
+    const dy = to[1] - from[1];
+    const len = Math.hypot(dx, dy) || 1;
+    return `M ${from[0]} ${from[1]} Q ${(mx + (-dy / len) * bend).toFixed(1)} ${(my + (dx / len) * bend).toFixed(1)} ${to[0]} ${to[1]}`;
+  };
+
+  const addDot = (at, radius = 2.2) => {
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("class", "sat");
+    dot.setAttribute("cx", at[0]);
+    dot.setAttribute("cy", at[1]);
+    dot.setAttribute("r", radius);
+    dot.setAttribute("fill", "#111");
+    svg.append(dot);
+    return dot;
+  };
+
+  const addPath = (from, to, bend) => {
+    const path = document.createElementNS(ns, "path");
+    path.setAttribute("d", curve(from, to, bend));
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "#161616");
+    path.setAttribute("stroke-width", "1.25");
+    path.setAttribute("stroke-linecap", "round");
+    svg.append(path);
+    return path;
+  };
+
+  const showFrame = (frame) => {
+    addDot(frame.step.inn);
+    frame.link.tabIndex = 0;
+    frame.link.classList.add("is-in");
+  };
+
+  if (reduced) {
+    addDot(origin, 3.4);
+    frames.forEach((frame) => {
+      addPath(origin, frame.step.inn, frame.step.bend);
+      showFrame(frame);
+    });
+    return;
+  }
+
+  const drawLine = (path) => new Promise((resolve) => {
+    const length = path.getTotalLength();
+    path.style.strokeDasharray = `${length}`;
+    path.style.strokeDashoffset = `${length}`;
+    const duration = 760;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      path.style.strokeDashoffset = `${length * (1 - eased)}`;
+      if (t < 1) requestAnimationFrame(tick);
+      else resolve();
+    };
+    requestAnimationFrame(tick);
+  });
+
+  const play = async () => {
+    const drawn = [];
+    while (svg.isConnected) {
+      addDot(origin, 3.4);
+      await sleep(280);
+      for (let index = 0; index < frames.length; index += 1) {
+        if (!svg.isConnected) return;
+        const frame = frames[index];
+        const path = addPath(origin, frame.step.inn, frame.step.bend);
+        drawn.push(path);
+        await drawLine(path);
+        if (!svg.isConnected) return;
+        showFrame(frame);
+        await sleep(320);
+      }
+      await sleep(2200);
+      if (!svg.isConnected) return;
+      stage.classList.add("is-clear");
+      await sleep(460);
+      drawn.splice(0).forEach((path) => path.remove());
+      svg.querySelectorAll("circle.sat").forEach((dot) => dot.remove());
+      frames.forEach(({ link }) => {
+        link.classList.remove("is-in");
+        link.tabIndex = -1;
+      });
+      stage.classList.remove("is-clear");
+      await sleep(360);
+    }
+  };
+
+  play();
+}
