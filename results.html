@@ -12,9 +12,8 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=31" />
+    <link rel="stylesheet" href="styles.css?v=63" />
   </head>
   <body data-page="results" data-view="home">
     <header class="results-top">
@@ -24,6 +23,10 @@
           alt="10K Projects"
         />
       </a>
+      <nav class="nav-side" aria-label="Sections">
+        <a class="nav_link" href="projects.html">Projects</a>
+        <a class="nav_link is-current" href="results.html">Roster</a>
+      </nav>
       <form class="search" id="search-form" role="search">
         <div class="airbnb" id="airbnb" data-open="">
           <div class="airbnb_bar">
@@ -64,49 +67,93 @@
 
     <main class="results-page">
       <div class="results-tools">
-        <button class="tool-pill" type="button">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M4 7h16M7 7v0M4 12h16M10 12v0M4 17h16M14 17v0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-            <circle cx="8" cy="7" r="1.6" fill="currentColor" />
-            <circle cx="15" cy="12" r="1.6" fill="currentColor" />
-            <circle cx="10" cy="17" r="1.6" fill="currentColor" />
-          </svg>
-          Filters
-        </button>
-        <button class="tool-icon is-on" type="button" aria-label="Saved">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M7 4.5h10a1 1 0 0 1 1 1V20l-6-3.2L6 20V5.5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
-          </svg>
-        </button>
-        <button class="tool-icon" type="button" aria-label="List">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M8 7h11M8 12h11M8 17h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-            <circle cx="4.5" cy="7" r="1" fill="currentColor" />
-            <circle cx="4.5" cy="12" r="1" fill="currentColor" />
-            <circle cx="4.5" cy="17" r="1" fill="currentColor" />
-          </svg>
-        </button>
+        <div class="filter-wrap" id="filter-wrap">
+          <button class="tool-pill" id="filters-toggle" type="button" aria-expanded="false" aria-controls="filters-panel">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              <circle cx="8" cy="7" r="2" fill="currentColor" />
+              <circle cx="15" cy="12" r="2" fill="currentColor" />
+              <circle cx="10" cy="17" r="2" fill="currentColor" />
+            </svg>
+            Filters
+            <span class="tool-pill_count" id="filters-count" hidden></span>
+          </button>
+          <div class="filters-panel" id="filters-panel" hidden>
+            <div class="filters-menu" id="filters-menu" role="menu" aria-label="Roles"></div>
+            <div class="filters-sub" id="filters-sub" hidden role="menu" aria-label="Genres"></div>
+          </div>
+        </div>
+        <button class="tool-pill tool-pill_add" id="add-roster" type="button">Add a roster</button>
       </div>
 
-      <div class="results-split">
-        <section class="results" id="results" aria-live="polite">
-          <h2 id="results-title">Creatives</h2>
-          <p class="summary" id="summary"></p>
-          <p class="count" id="count" hidden></p>
-          <p class="nearby" id="nearby" hidden></p>
-          <p class="empty" id="empty" hidden>No one matches that yet.</p>
-          <div class="grid" id="grid"></div>
-        </section>
-        <div class="map-pane">
-          <div id="map" role="region" aria-label="Map of matching creatives"></div>
-        </div>
-      </div>
+      <section class="results" id="results" aria-live="polite">
+        <h2 id="results-title">Creatives</h2>
+        <p class="summary" id="summary"></p>
+        <p class="count" id="count" hidden></p>
+        <p class="nearby" id="nearby" hidden></p>
+        <p class="empty" id="empty" hidden>No one matches that yet.</p>
+        <div class="grid" id="grid"></div>
+      </section>
     </main>
 
     <article class="profile-view" id="profile" hidden></article>
 
-    <script src="people.js?v=1"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="app.js?v=23"></script>
+    <div class="add-dialog" id="add-dialog" hidden>
+      <form class="add-dialog_panel" id="add-form" novalidate role="dialog" aria-modal="true" aria-labelledby="add-title">
+        <h2 id="add-title">Add a roster</h2>
+        <p class="add-dialog_lede">Add someone to the roster and link how to reach them.</p>
+        <label class="add-field">
+          <span>Name</span>
+          <input id="add-name" name="name" type="text" autocomplete="name" />
+        </label>
+        <label class="add-field">
+          <span>City</span>
+          <select id="add-city" name="city"></select>
+        </label>
+        <fieldset class="add-field">
+          <legend>Role</legend>
+          <div class="add-checks" id="add-roles"></div>
+        </fieldset>
+        <fieldset class="add-field">
+          <legend>Genre</legend>
+          <div class="add-checks" id="add-genres"></div>
+        </fieldset>
+        <h3 class="add-section">Contact</h3>
+        <div class="add-contact">
+          <label class="add-field">
+            <span>Instagram</span>
+            <input id="add-instagram" name="instagram" type="text" autocomplete="off" placeholder="username" />
+          </label>
+          <label class="add-field">
+            <span>Email</span>
+            <input id="add-email" name="email" type="email" autocomplete="email" placeholder="name@email.com" />
+          </label>
+          <label class="add-field">
+            <span>Phone</span>
+            <input id="add-phone" name="phone" type="tel" autocomplete="tel" placeholder="(000) 000-0000" />
+          </label>
+          <label class="add-field">
+            <span>Portfolio</span>
+            <input id="add-portfolio" name="portfolio" type="text" inputmode="url" autocomplete="url" placeholder="https://" />
+          </label>
+        </div>
+        <fieldset class="add-field">
+          <legend>Preferred contact</legend>
+          <div class="add-checks" id="add-preferred">
+            <label class="add-check"><input type="radio" name="preferred" value="instagram" /><span>Instagram</span></label>
+            <label class="add-check"><input type="radio" name="preferred" value="email" /><span>Email</span></label>
+            <label class="add-check"><input type="radio" name="preferred" value="phone" /><span>Phone</span></label>
+          </div>
+        </fieldset>
+        <p class="add-dialog_error" id="add-error" role="alert"></p>
+        <div class="add-dialog_actions">
+          <button class="add-cancel" id="add-cancel" type="button">Cancel</button>
+          <button class="add-submit" type="submit">Add to roster</button>
+        </div>
+      </form>
+    </div>
+
+    <script src="people.js?v=5"></script>
+    <script src="app.js?v=44"></script>
   </body>
 </html>

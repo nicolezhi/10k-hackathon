@@ -92,15 +92,38 @@ const WORD_ALIASES = {
   promo: "promo",
 };
 
+const FILTER_ORDER = [
+  "Photographer",
+  "Videographer / DP",
+  "Graphic designer",
+  "Model",
+  "Stylist",
+  "MUA",
+  "Casting director",
+  "Choreographer",
+  "Animator",
+];
+
+const FILTER_COPY = {
+  Photographer: ["Photography", "All photography"],
+  "Videographer / DP": ["Videography", "All videography"],
+  "Graphic designer": ["Graphic design", "All graphic design"],
+};
+
 const state = {
   query: "",
   city: "",
   extraCities: [],
   roles: [],
   genres: [],
+  roleGenres: {},
+  genresScoped: false,
   tenk: false,
   profile: "",
 };
+
+let resultsView = "map";
+let openFilterRole = "";
 
 let skipUrl = false;
 
@@ -152,8 +175,16 @@ function filteredPeople() {
   const cities = activeCities();
   return PEOPLE.filter((record) => {
     if (cities.length && !cities.includes(record.city)) return false;
-    if (state.roles.length && !state.roles.some((role) => record.roles.includes(role))) return false;
-    if (state.genres.length && !state.genres.some((genre) => record.genres.includes(genre))) return false;
+    if (state.roles.length) {
+      const hit = state.roles.some((role) => {
+        if (!record.roles.includes(role)) return false;
+        const picked = state.roleGenres[role] || [];
+        if (!picked.length) return true;
+        return picked.some((genre) => (record.genres || []).includes(genre));
+      });
+      if (!hit) return false;
+    }
+    if (!state.genresScoped && state.genres.length && !state.genres.some((genre) => (record.genres || []).includes(genre))) return false;
     if (state.tenk && !record.tenk) return false;
     return matchesQuery(record, tokens);
   });
@@ -171,7 +202,7 @@ function hitLine(record) {
 }
 
 function summaryText(list) {
-  if (!isResultsPage()) return PEOPLE.length ? "Ready for the next shoot." : "";
+  if (!isResultsPage()) return "";
   const parts = [];
   if (state.roles.length) parts.push(state.roles.join(", "));
   const cities = activeCities();
@@ -193,6 +224,36 @@ function initials(name) {
 function avatarHtml(record, className) {
   if (record.avatar) return `<img class="${className}" src="${escapeHtml(record.avatar)}" alt="" />`;
   return `<span class="${className} avatar-fallback">${escapeHtml(initials(record.name))}</span>`;
+}
+
+function profileLink(label, href) {
+  if (!href) return `<span>${label}</span>`;
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${label}</a>`;
+}
+
+function profileLinksHtml(record) {
+  return `<div class="links">
+    ${profileLink("Instagram", record.instagram ? `https://instagram.com/${record.instagram}` : "")}
+    ${profileLink("Portfolio", record.portfolio || "")}
+    ${profileLink("Email", record.email ? `mailto:${record.email}` : "")}
+    ${profileLink("Phone", record.phone ? `tel:${record.phone}` : "")}
+  </div>`;
+}
+
+function workGridHtml(record) {
+  const items = (record.images || [])
+    .map((item) => (typeof item === "string" ? { src: item, href: "" } : item))
+    .filter((item) => item && item.src)
+    .slice(0, 6);
+  if (!items.length) return "";
+  return `<div class="work_grid">${items
+    .map((item) => {
+      const img = `<img src="${escapeHtml(item.src)}" alt="" />`;
+      return item.href
+        ? `<a href="${escapeHtml(item.href)}" target="_blank" rel="noreferrer">${img}</a>`
+        : img;
+    })
+    .join("")}</div>`;
 }
 
 function instagramIcon() {
@@ -222,8 +283,42 @@ function cityRecord(name) {
   return CITIES.find((city) => city.name === name);
 }
 
+function cityMatches(city, filter) {
+  if (!filter) return true;
+  const aliases = {
+    "New York": "nyc ny",
+    "Los Angeles": "la",
+    Atlanta: "atl",
+    London: "ldn",
+  };
+  return `${city.name} ${city.place || ""} ${city.line} ${aliases[city.name] || ""}`.toLowerCase().includes(filter);
+}
+
 function tinyIcon(path) {
   return `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${path}</svg>`;
+}
+
+function rosterCardHtml(record) {
+  const city = cityRecord(record.city);
+  const tags = (record.genres || []).join(" · ");
+  const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
+  const phoneHref = record.phone ? `tel:${record.phone}` : "";
+  const mailHref = record.email ? `mailto:${record.email}` : "";
+  return `
+    ${avatarHtml(record, "result-card_avatar")}
+    <div class="result-card_body">
+      <h3>${escapeHtml(record.name)}</h3>
+      <p class="result-card_role">${escapeHtml(record.roles.join(" · "))}</p>
+      ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : ""}
+      ${tags ? `<p>${escapeHtml(tags)}</p>` : ""}
+      <div class="result-card_icons">
+        ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon('<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/>'))}
+        ${externalControl("roster-icon", "Portfolio", record.portfolio || "", tinyIcon('<circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 12h14.8M12 4.6c2 2.2 3 4.7 3 7.4s-1 5.2-3 7.4c-2-2.2-3-4.7-3-7.4s1-5.2 3-7.4z" fill="none" stroke="currentColor" stroke-width="1.7"/>'))}
+        ${externalControl("roster-icon", "Phone", phoneHref, tinyIcon('<path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'))}
+        ${externalControl("roster-icon", "Email", mailHref, tinyIcon('<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>'))}
+      </div>
+    </div>
+  `;
 }
 
 function renderMapResults(list) {
@@ -231,7 +326,7 @@ function renderMapResults(list) {
   const empty = document.getElementById("empty");
   const title = document.getElementById("results-title");
   if (title) title.textContent = resultsHeading(list);
-  document.getElementById("summary").textContent = "Hover a card to find them on the map. Click the card to open their profile.";
+  document.getElementById("summary").textContent = summaryText(list);
   document.getElementById("count").textContent = "";
   empty.hidden = list.length !== 0;
   empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives on the roster yet.";
@@ -242,27 +337,7 @@ function renderMapResults(list) {
     card.className = "result-card";
     card.tabIndex = 0;
     card.dataset.id = record.id;
-    const city = cityRecord(record.city);
-    const avatar = record.avatar || (record.images || []).find(Boolean) || "";
-    const tags = (record.genres || []).join(" · ");
-    const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
-    const phoneHref = record.phone ? `tel:${record.phone}` : "";
-    const mailHref = record.email ? `mailto:${record.email}` : "";
-    card.innerHTML = `
-      ${avatarHtml(record, "result-card_avatar")}
-      <div class="result-card_body">
-        <h3>${escapeHtml(record.name)}</h3>
-        <p>${escapeHtml(record.roles.join(" · "))}</p>
-        ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : ""}
-        ${tags ? `<p class="result-card_tags">${escapeHtml(tags)}</p>` : ""}
-        <div class="result-card_icons">
-          ${externalControl("mini-btn", "Instagram", instagramHref, tinyIcon('<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/>'))}
-          ${externalControl("mini-btn", "Portfolio", record.portfolio || "", tinyIcon('<circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 8.4v7.2M8.4 12h7.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>'))}
-          ${externalControl("mini-btn", "Phone", phoneHref, tinyIcon('<path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'))}
-          ${externalControl("mini-btn", "Email", mailHref, tinyIcon('<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>'))}
-        </div>
-      </div>
-    `;
+    card.innerHTML = rosterCardHtml(record);
     const open = () => openProfile(record.id);
     card.addEventListener("click", (event) => {
       if (event.target.closest("a")) return;
@@ -277,7 +352,7 @@ function renderMapResults(list) {
   });
 
   renderNearby(list);
-  syncMap(list);
+  if (document.getElementById("map")) syncMap(list);
 }
 
 function renderNearby(list) {
@@ -304,14 +379,55 @@ function renderNearby(list) {
 }
 
 let resultMap = null;
+let resultClusters = null;
 const resultMarkers = new Map();
+
+function showcasePoint(record, index, total) {
+  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(total, 1) * 1.7)));
+  const rows = Math.max(1, Math.ceil(total / cols));
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  let hash = 2166136261;
+  for (let i = 0; i < record.id.length; i += 1) {
+    hash ^= record.id.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const jx = (((hash >>> 0) % 1000) / 1000 - 0.5) * 0.7;
+  const jy = (((hash >>> 8) % 1000) / 1000 - 0.5) * 0.7;
+  return [40.87 - ((row + 0.5 + jy) / rows) * 0.25, -74.08 + ((col + 0.5 + jx) / cols) * 0.42];
+}
 
 function pinPoint(record, indexInCity, cityCount) {
   const city = cityRecord(record.city);
-  if (!city?.at) return null;
+  if (!city?.at) return showcasePoint(record, indexInCity, cityCount);
   if (cityCount < 2) return city.at;
+  if (cityCount > 12) return showcasePoint(record, indexInCity, cityCount);
   const angle = (indexInCity / cityCount) * Math.PI * 2;
   return [city.at[0] + Math.sin(angle) * 0.035, city.at[1] + Math.cos(angle) * 0.045];
+}
+
+function mapPopup(record) {
+  return `
+    <div class="roster-pop">
+      <button class="roster-pop_close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <article class="result-card">${rosterCardHtml(record)}</article>
+    </div>
+  `;
+}
+
+function pinIcon(record) {
+  const avatar = record.avatar || (record.images || []).find(Boolean) || "";
+  const face = avatar
+    ? `<img src="${escapeHtml(avatar)}" alt="" />`
+    : `<span>${escapeHtml(initials(record.name))}</span>`;
+  return L.divIcon({
+    className: "map-pin",
+    html: `<div class="map-pin-face">${face}</div>`,
+    iconSize: [46, 58],
+    iconAnchor: [23, 54],
+  });
 }
 
 function syncMap(list) {
@@ -324,7 +440,29 @@ function syncMap(list) {
       maxZoom: 18,
     }).addTo(resultMap);
     L.control.zoom({ position: "topright" }).addTo(resultMap);
+    resultMap.getContainer().addEventListener("click", (event) => {
+      if (!event.target.closest(".roster-pop_close")) return;
+      event.preventDefault();
+      resultMap.closePopup();
+    });
+    if (typeof L.markerClusterGroup === "function") {
+      resultClusters = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        maxClusterRadius: 24,
+        spiderfyOnMaxZoom: true,
+        iconCreateFunction(cluster) {
+          return L.divIcon({
+            className: "map-cluster",
+            html: `<div class="map-cluster-face"><span>${cluster.getChildCount()}</span></div>`,
+            iconSize: [46, 58],
+            iconAnchor: [23, 54],
+          });
+        },
+      });
+      resultMap.addLayer(resultClusters);
+    }
   }
+  if (resultClusters) resultClusters.clearLayers();
   resultMarkers.forEach((marker) => marker.remove());
   resultMarkers.clear();
   const counts = {};
@@ -338,21 +476,43 @@ function syncMap(list) {
     seen[record.city] = indexInCity + 1;
     const point = pinPoint(record, indexInCity, counts[record.city] || 1);
     if (!point) return;
-    const avatar = record.avatar || (record.images || []).find(Boolean) || "";
-    const icon = L.divIcon({
-      className: "map-pin",
-      html: avatar ? `<img src="${escapeHtml(avatar)}" alt="" />` : `<span>${escapeHtml(initials(record.name))}</span>`,
-      iconSize: [46, 46],
-      iconAnchor: [23, 23],
+    const marker = L.marker(point, { icon: pinIcon(record), zIndexOffset: indexInCity });
+    marker.bindPopup(mapPopup(record), {
+      className: "map-card",
+      closeButton: false,
+      autoPan: true,
+      autoPanPadding: [28, 28],
+      offset: [0, 200],
+      maxWidth: 320,
+      minWidth: 280,
     });
-    const marker = L.marker(point, { icon, zIndexOffset: indexInCity }).addTo(resultMap);
-    marker.on("click", () => openProfile(record.id));
+    marker.on("popupopen", (event) => {
+      resultMarkers.forEach((item, id) => {
+        item.getElement()?.classList.toggle("is-selected", id === record.id);
+        if (id === record.id) item.setZIndexOffset(1000);
+      });
+      const popup = event.popup;
+      const element = popup.getElement();
+      const height = element?.offsetHeight || 0;
+      if (height && popup.options.offset.y !== height + 24) {
+        popup.options.offset = L.point(0, height + 24);
+        popup.update();
+        popup._adjustPan?.();
+      }
+    });
+    marker.on("popupclose", () => {
+      marker.getElement()?.classList.remove("is-selected");
+      marker.setZIndexOffset(0);
+    });
+    if (resultClusters) resultClusters.addLayer(marker);
+    else marker.addTo(resultMap);
     resultMarkers.set(record.id, marker);
     points.push(point);
   });
   const focus = state.city ? cityRecord(state.city)?.at : null;
-  if (points.length === 1) resultMap.setView(points[0], 11);
-  else if (points.length) resultMap.fitBounds(points, { padding: [48, 48], maxZoom: 11 });
+  if (points.length === 1) resultMap.setView(points[0], 12);
+  else if (!state.city && points.length > 24) resultMap.setView([40.748, -73.985], 12);
+  else if (points.length) resultMap.fitBounds(points, { padding: [36, 36], maxZoom: 12 });
   else if (focus) resultMap.setView(focus, 11);
   else resultMap.setView([39.5, -98.35], 4);
   requestAnimationFrame(() => resultMap.invalidateSize());
@@ -372,6 +532,7 @@ function renderResults(list) {
     return;
   }
   const grid = document.getElementById("grid");
+  if (!grid) return;
   const empty = document.getElementById("empty");
   document.getElementById("summary").textContent = summaryText(list);
   document.getElementById("count").textContent = list.length === 1 ? "1 creative" : `${list.length} creatives`;
@@ -381,25 +542,17 @@ function renderResults(list) {
 
   list.forEach((record) => {
     const card = document.createElement("article");
-    card.className = "card";
-    const shots = (record.images || []).filter(Boolean).slice(0, 3);
-    const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
-    card.innerHTML = `
-      <header class="card_top">
-        ${avatarHtml(record, "card_avatar")}
-        <div class="card_id">
-          <h3>${escapeHtml(record.name)}</h3>
-          <p class="card_roles">${escapeHtml(record.roles.join(" · "))}</p>
-        </div>
-      </header>
-      ${shots.length ? `<div class="card_shots">${shots.map((src) => `<img src="${escapeHtml(src)}" alt="" />`).join("")}</div>` : ""}
-      <div class="card_actions">
-        ${externalControl("icon-btn", "Instagram", instagramHref, instagramIcon())}
-        ${externalControl("pill-btn", "Portfolio", record.portfolio || "", "Portfolio")}
-      </div>
-      <button class="card_contact" type="button">Contact</button>
-    `;
-    card.querySelector(".card_contact").addEventListener("click", () => openProfile(record.id));
+    card.className = "result-card";
+    card.tabIndex = 0;
+    card.innerHTML = rosterCardHtml(record);
+    const open = () => openProfile(record.id);
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a")) return;
+      open();
+    });
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") open();
+    });
     grid.appendChild(card);
   });
 
@@ -424,6 +577,7 @@ function introText(record) {
 
 function renderProfile() {
   const root = document.getElementById("profile");
+  if (!root) return;
   const record = PEOPLE.find((item) => item.id === state.profile);
   document.body.dataset.view = record ? "profile" : "home";
   if (!record) {
@@ -447,8 +601,10 @@ function renderProfile() {
   const place = record.city ? `${escapeHtml(record.city)}.${escapeHtml(also)}` : "";
 
   root.innerHTML = `
-    <a class="back" href="#results">${isResultsPage() ? "Back to results" : "Back to roster"}</a>
+    <a class="back" href="#results"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${isResultsPage() ? "Back to results" : "Back to roster"}</span></a>
     <header class="profile_head">
+      ${avatarHtml(record, "profile_avatar")}
+      <div>
       <h1>${escapeHtml(record.name)}</h1>
       ${place ? `<p>${place}</p>` : ""}
       <ul class="tags">
@@ -456,16 +612,12 @@ function renderProfile() {
         ${record.tenk ? '<li class="mark">10K</li>' : ""}
       </ul>
       ${record.referredBy ? `<p>Referred by ${escapeHtml(record.referredBy)}.</p>` : ""}
+      ${profileLinksHtml(record)}
+      </div>
     </header>
     <div class="profile_layout">
       <div>
-        <div class="work_grid">
-          ${(record.images || []).map((src) => `<img src="${escapeHtml(src)}" alt="" onerror="this.remove()" />`).join("")}
-        </div>
-        <div class="links">
-          ${record.portfolio ? `<a href="${escapeHtml(record.portfolio)}" target="_blank" rel="noreferrer">Portfolio</a>` : ""}
-          ${record.instagram ? `<a href="https://instagram.com/${escapeHtml(record.instagram)}" target="_blank" rel="noreferrer">Instagram</a>` : ""}
-        </div>
+        ${workGridHtml(record)}
       </div>
       <div>
         <section>
@@ -477,8 +629,12 @@ function renderProfile() {
           <h2>Contact</h2>
           <div class="contact" id="contact"></div>
           <label class="sr" for="intro">Intro message</label>
-          <textarea class="intro" id="intro" rows="4"></textarea>
-          <button class="text-button" type="button" id="copy-intro">Copy intro message</button>
+          <div class="intro-shell">
+            <button class="intro-copy" type="button" id="copy-intro" aria-label="Copy intro message">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </button>
+            <textarea class="intro" id="intro" rows="4"></textarea>
+          </div>
         </section>
       </div>
     </div>
@@ -521,19 +677,23 @@ function renderProfile() {
 
   const intro = root.querySelector("#intro");
   intro.value = introText(record);
-  root.querySelector("#copy-intro").addEventListener("click", async () => {
-    const button = root.querySelector("#copy-intro");
+  const copyIntro = root.querySelector("#copy-intro");
+  const copyIcon = copyIntro.innerHTML;
+  const copiedIcon = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  copyIntro.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(intro.value);
-      button.textContent = "Copied";
+      copyIntro.innerHTML = copiedIcon;
+      copyIntro.setAttribute("aria-label", "Copied");
     } catch {
       intro.focus();
       intro.select();
-      button.textContent = "Select to copy";
+      copyIntro.setAttribute("aria-label", "Select the message to copy");
     }
     setTimeout(() => {
-      button.textContent = "Copy intro message";
-    }, 1200);
+      copyIntro.innerHTML = copyIcon;
+      copyIntro.setAttribute("aria-label", "Copy intro message");
+    }, 1600);
   });
   window.scrollTo(0, 0);
 }
@@ -583,7 +743,7 @@ function renderWhereOptions() {
   const container = document.getElementById("where-options");
   const cities = CITIES.filter((city) => {
     if (!filter) return true;
-    return `${city.name} ${city.line}`.toLowerCase().includes(filter);
+    return cityMatches(city, filter);
   });
   container.innerHTML = "";
   if (!cities.length) {
@@ -614,9 +774,17 @@ function renderWhoOptions() {
     const button = pickButton(role, state.roles.includes(role.name));
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      state.roles = state.roles.includes(role.name)
-        ? state.roles.filter((item) => item !== role.name)
-        : [...state.roles, role.name];
+      if (state.roles.includes(role.name)) {
+        state.roles = state.roles.filter((item) => item !== role.name);
+        delete state.roleGenres[role.name];
+        if (state.genresScoped) {
+          state.genres = Object.values(state.roleGenres).flat();
+          state.genresScoped = state.genres.length > 0;
+        }
+      } else {
+        state.roles = [...state.roles, role.name];
+        state.roleGenres[role.name] = [];
+      }
       render();
     });
     container.append(button);
@@ -643,12 +811,251 @@ function paintSearch() {
 
 function setPanel(name) {
   openPanel = openPanel === name ? "" : name;
+  if (openPanel) setFiltersOpen(false);
   paintSearch();
   if (openPanel === "where") document.getElementById("where-filter").focus();
 }
 
+function filtersOpen() {
+  const panel = document.getElementById("filters-panel");
+  return Boolean(panel && !panel.hidden);
+}
+
+function setFiltersOpen(open) {
+  const panel = document.getElementById("filters-panel");
+  const toggle = document.getElementById("filters-toggle");
+  if (!panel || !toggle) return;
+  panel.hidden = !open;
+  toggle.setAttribute("aria-expanded", String(open));
+  if (!open) showFilterSub("");
+}
+
+function filterLabel(role) {
+  return (FILTER_COPY[role] && FILTER_COPY[role][0]) || role;
+}
+
+function filterAllLabel(role) {
+  return (FILTER_COPY[role] && FILTER_COPY[role][1]) || `All ${filterLabel(role).toLowerCase()}`;
+}
+
+function filterMenu() {
+  const used = new Set(PEOPLE.flatMap((record) => record.roles));
+  const ordered = [
+    ...FILTER_ORDER.filter((role) => used.has(role)),
+    ...ROLES.map((role) => role.name).filter((role) => used.has(role) && !FILTER_ORDER.includes(role)),
+  ];
+  return ordered.map((role) => {
+    const genres = new Set();
+    PEOPLE.forEach((record) => {
+      if (!record.roles.includes(role)) return;
+      (record.genres || []).forEach((genre) => genres.add(genre));
+    });
+    return {
+      role,
+      label: filterLabel(role),
+      all: filterAllLabel(role),
+      genres: [...genres].sort((a, b) => a.localeCompare(b)),
+    };
+  });
+}
+
+function checkHtml() {
+  return `<span class="filter-check" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+}
+
+function roleIsAll(role) {
+  return state.roles.includes(role) && !(state.roleGenres[role] || []).length;
+}
+
+function syncScopedGenres() {
+  state.genres = Object.values(state.roleGenres).flat();
+  state.genresScoped = state.genres.length > 0;
+}
+
+function activeFilterCount() {
+  let count = 0;
+  state.roles.forEach((role) => {
+    const picked = state.roleGenres[role] || [];
+    count += picked.length || 1;
+  });
+  if (!state.genresScoped) count += state.genres.length;
+  return count;
+}
+
+function toggleAllRole(role) {
+  if (roleIsAll(role)) {
+    state.roles = state.roles.filter((item) => item !== role);
+    delete state.roleGenres[role];
+  } else {
+    if (!state.roles.includes(role)) state.roles = [...state.roles, role];
+    state.roleGenres[role] = [];
+  }
+  syncScopedGenres();
+  render();
+}
+
+function toggleRoleGenre(role, genre) {
+  const current = roleIsAll(role) ? [] : state.roleGenres[role] || [];
+  const next = current.includes(genre) ? current.filter((item) => item !== genre) : [...current, genre];
+  if (!next.length) {
+    state.roles = state.roles.filter((item) => item !== role);
+    delete state.roleGenres[role];
+  } else {
+    if (!state.roles.includes(role)) state.roles = [...state.roles, role];
+    state.roleGenres[role] = next;
+  }
+  syncScopedGenres();
+  render();
+}
+
+function toggleFlatRole(role) {
+  if (state.roles.includes(role)) {
+    state.roles = state.roles.filter((item) => item !== role);
+    delete state.roleGenres[role];
+  } else {
+    state.roles = [...state.roles, role];
+    state.roleGenres[role] = [];
+  }
+  syncScopedGenres();
+  render();
+}
+
+function paintFilterSub() {
+  const sub = document.getElementById("filters-sub");
+  if (!sub) return;
+  const item = filterMenu().find((entry) => entry.role === openFilterRole && entry.genres.length);
+  if (!item) {
+    sub.hidden = true;
+    sub.innerHTML = "";
+    return;
+  }
+  sub.hidden = false;
+  sub.setAttribute("aria-label", item.label);
+  const allOn = roleIsAll(item.role);
+  const picked = state.roleGenres[item.role] || [];
+  const rows = [
+    { label: item.all, checked: allOn, genre: "" },
+    ...item.genres.map((genre) => ({ label: genre, checked: !allOn && picked.includes(genre), genre })),
+  ];
+  sub.innerHTML = rows
+    .map(
+      (row) => `<button class="filter-sub_row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-genre="${escapeHtml(row.genre)}">
+        ${checkHtml()}
+        <span class="filter-row_label">${escapeHtml(row.label)}</span>
+      </button>`
+    )
+    .join("");
+  sub.querySelectorAll(".filter-sub_row").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!button.dataset.genre) toggleAllRole(item.role);
+      else toggleRoleGenre(item.role, button.dataset.genre);
+    });
+  });
+  sub.style.left = "";
+  sub.style.right = "";
+  requestAnimationFrame(() => {
+    if (sub.hidden) return;
+    const rect = sub.getBoundingClientRect();
+    if (rect.right > window.innerWidth - 12) {
+      sub.style.left = "auto";
+      sub.style.right = "calc(100% + 8px)";
+    }
+  });
+}
+
+function paintFilters() {
+  const toggle = document.getElementById("filters-toggle");
+  if (!toggle) return;
+  document.querySelectorAll(".filter-row").forEach((button) => {
+    const role = button.dataset.role;
+    const genres = (button.dataset.genres || "").split("|").filter(Boolean);
+    const picked = state.roleGenres[role] || [];
+    button.classList.toggle("is-open", role === openFilterRole && genres.length > 0);
+    if (button.hasAttribute("aria-checked")) {
+      button.setAttribute("aria-checked", String(state.roles.includes(role) && !picked.length));
+    }
+    if (genres.length) button.setAttribute("aria-expanded", String(role === openFilterRole));
+  });
+  paintFilterSub();
+  const count = activeFilterCount();
+  const badge = document.getElementById("filters-count");
+  if (badge) {
+    badge.hidden = count === 0;
+    badge.textContent = String(count);
+  }
+  toggle.classList.toggle("is-on", count > 0);
+}
+
+function showFilterSub(role) {
+  openFilterRole = role || "";
+  paintFilters();
+}
+
+function buildFilters() {
+  const menu = document.getElementById("filters-menu");
+  if (!menu) return;
+  if (!menu.dataset.ready) {
+    menu.dataset.ready = "1";
+    const panel = document.getElementById("filters-panel");
+    panel.addEventListener("mouseleave", (event) => {
+      if (panel.contains(event.relatedTarget)) return;
+      showFilterSub("");
+    });
+  }
+  menu.innerHTML = "";
+  filterMenu().forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "filter-row";
+    button.dataset.role = item.role;
+    button.dataset.genres = item.genres.join("|");
+    if (item.genres.length) {
+      button.setAttribute("aria-haspopup", "menu");
+      button.setAttribute("aria-expanded", "false");
+      button.innerHTML = `<span class="filter-row_label">${escapeHtml(item.label)}</span><span class="filter-row_chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+    } else {
+      button.setAttribute("role", "menuitemcheckbox");
+      button.setAttribute("aria-checked", "false");
+      button.innerHTML = `${checkHtml()}<span class="filter-row_label">${escapeHtml(item.label)}</span>`;
+    }
+    button.addEventListener("mouseenter", () => showFilterSub(item.genres.length ? item.role : ""));
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (item.genres.length) showFilterSub(item.role);
+      else toggleFlatRole(item.role);
+    });
+    menu.append(button);
+  });
+}
+
+function setResultsView(view) {
+  if (view !== "map" && view !== "list") return;
+  resultsView = view;
+  const page = document.querySelector(".results-page");
+  if (page) page.dataset.resultsView = view;
+  document.querySelectorAll(".view-toggle_btn").forEach((button) => {
+    const on = button.dataset.view === view;
+    button.classList.toggle("is-on", on);
+    button.setAttribute("aria-pressed", String(on));
+  });
+  const summary = document.getElementById("summary");
+  if (summary && isResultsPage()) {
+    const list = filteredPeople();
+    summary.textContent =
+      view === "list" ? summaryText(list) : "Hover a card to find them on the map. Click the card to open their profile.";
+  }
+  if (view === "map" && resultMap) {
+    requestAnimationFrame(() => {
+      resultMap.invalidateSize();
+      syncMap(filteredPeople());
+    });
+  }
+}
+
 function syncControls() {
   paintSearch();
+  paintFilters();
 }
 
 function isResultsPage() {
@@ -660,11 +1067,23 @@ function resultsQuery() {
   if (state.query) params.set("q", state.query);
   if (state.city) params.set("city", state.city);
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
-  if (state.roles.length) params.set("roles", state.roles.join(","));
-  if (state.genres.length) params.set("genres", state.genres.join(","));
+  writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
   const query = params.toString();
   return `results.html${query ? `?${query}` : ""}`;
+}
+
+function writeFilterParams(params) {
+  if (state.roles.length) params.set("roles", state.roles.join(","));
+  if (state.genresScoped) {
+    const parts = [];
+    Object.entries(state.roleGenres).forEach(([role, genres]) => {
+      genres.forEach((genre) => parts.push(`${role}:${genre}`));
+    });
+    if (parts.length) params.set("genres", parts.join(","));
+  } else if (state.genres.length) {
+    params.set("genres", state.genres.join(","));
+  }
 }
 
 function render(options = {}) {
@@ -682,8 +1101,7 @@ function writeUrl(mode) {
   if (state.query) params.set("q", state.query);
   if (state.city) params.set("city", state.city);
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
-  if (state.roles.length) params.set("roles", state.roles.join(","));
-  if (state.genres.length) params.set("genres", state.genres.join(","));
+  writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
   if (state.profile) params.set("person", state.profile);
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
@@ -698,7 +1116,24 @@ function readUrl() {
   state.city = params.get("city") || "";
   state.extraCities = (params.get("near") || "").split(",").filter(Boolean);
   state.roles = (params.get("roles") || "").split(",").filter(Boolean);
-  state.genres = (params.get("genres") || "").split(",").filter(Boolean);
+  state.roleGenres = {};
+  state.genresScoped = false;
+  const rawGenres = (params.get("genres") || "").split(",").filter(Boolean);
+  if (rawGenres.some((part) => part.includes(":"))) {
+    state.genresScoped = true;
+    rawGenres.forEach((part) => {
+      const splitAt = part.indexOf(":");
+      const role = part.slice(0, splitAt);
+      const genre = part.slice(splitAt + 1);
+      if (!role || !genre) return;
+      if (!state.roles.includes(role)) state.roles.push(role);
+      if (!state.roleGenres[role]) state.roleGenres[role] = [];
+      state.roleGenres[role].push(genre);
+    });
+    state.genres = Object.values(state.roleGenres).flat();
+  } else {
+    state.genres = rawGenres;
+  }
   state.tenk = params.get("tenk") === "1";
   state.profile = params.get("person") || "";
 }
@@ -716,6 +1151,18 @@ function closeProfile() {
 }
 
 function bind() {
+  buildFilters();
+  const filtersToggle = document.getElementById("filters-toggle");
+  if (filtersToggle) {
+    filtersToggle.addEventListener("click", () => {
+      const next = !filtersOpen();
+      setFiltersOpen(next);
+      if (next) {
+        openPanel = "";
+        paintSearch();
+      }
+    });
+  }
   document.getElementById("where-segment").addEventListener("click", () => setPanel("where"));
   document.getElementById("who-segment").addEventListener("click", () => setPanel("who"));
   const clearWhere = document.getElementById("where-clear");
@@ -733,12 +1180,14 @@ function bind() {
       openPanel = "";
       paintSearch();
     }
+    const wrap = document.getElementById("filter-wrap");
+    if (wrap && filtersOpen() && !wrap.contains(event.target)) setFiltersOpen(false);
   });
   document.getElementById("search-form").addEventListener("submit", (event) => {
     event.preventDefault();
     const typed = document.getElementById("where-filter").value.trim().toLowerCase();
     if (typed) {
-      const match = CITIES.find((city) => `${city.name} ${city.line}`.toLowerCase().includes(typed));
+      const match = CITIES.find((city) => cityMatches(city, typed));
       if (match) {
         state.city = match.name;
         state.extraCities = [];
@@ -753,7 +1202,7 @@ function bind() {
     }
     render();
   });
-  document.querySelectorAll(".nav-menu a").forEach((link) => {
+  document.querySelectorAll(".nav-menu a, .nav-side a").forEach((link) => {
     link.addEventListener("click", (event) => {
       const href = link.getAttribute("href") || "";
       if (!href.startsWith("#")) return;
@@ -775,6 +1224,14 @@ function bind() {
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     if (document.getElementById("project-modal") && !document.getElementById("project-modal").hidden) return;
+    if (addDialogOpen()) {
+      setAddOpen(false);
+      return;
+    }
+    if (filtersOpen()) {
+      setFiltersOpen(false);
+      return;
+    }
     if (openPanel) {
       openPanel = "";
       paintSearch();
@@ -784,11 +1241,201 @@ function bind() {
   });
 }
 
+const ADDED_KEY = "10k-added-people";
+
+function readAddedPeople() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ADDED_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadAddedPeople() {
+  readAddedPeople()
+    .slice()
+    .reverse()
+    .forEach((record) => {
+      if (!record || !record.id || !record.name || PEOPLE.some((item) => item.id === record.id)) return;
+      record.roles = record.roles || [];
+      record.genres = record.genres || [];
+      record.also = record.also || [];
+      record.images = record.images || [];
+      record.past = record.past || [];
+      PEOPLE.unshift(record);
+    });
+}
+
+function rememberPerson(record) {
+  const added = readAddedPeople().filter((item) => item.id !== record.id);
+  added.unshift(record);
+  localStorage.setItem(ADDED_KEY, JSON.stringify(added));
+}
+
+function rosterId(name) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "creative";
+  let id = base;
+  let n = 2;
+  while (PEOPLE.some((item) => item.id === id)) {
+    id = `${base}-${n}`;
+    n += 1;
+  }
+  return id;
+}
+
+function cleanHandle(value) {
+  let handle = value.trim();
+  const fromUrl = handle.match(/instagram\.com\/([^/?#]+)/i);
+  if (fromUrl) handle = fromUrl[1];
+  return handle.replace(/^@/, "").replace(/\/$/, "");
+}
+
+function cleanUrl(value) {
+  const raw = value.trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function checkedValues(name) {
+  return [...document.querySelectorAll(`#add-form input[name="${name}"]:checked`)].map((input) => input.value);
+}
+
+function fillAddForm() {
+  const city = document.getElementById("add-city");
+  city.innerHTML = `<option value="">Select a city</option>${CITIES.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.place || item.name)}</option>`).join("")}`;
+  const roles = document.getElementById("add-roles");
+  roles.innerHTML = ROLES.map(
+    (role) => `<label class="add-check"><input type="checkbox" name="add-role" value="${escapeHtml(role.name)}" /><span>${escapeHtml(role.name)}</span></label>`
+  ).join("");
+  const genres = [...new Set(PEOPLE.flatMap((record) => record.genres || []))].sort((a, b) => a.localeCompare(b));
+  document.getElementById("add-genres").innerHTML = genres
+    .map((genre) => `<label class="add-check"><input type="checkbox" name="add-genre" value="${escapeHtml(genre)}" /><span>${escapeHtml(genre)}</span></label>`)
+    .join("");
+}
+
+function addDialogOpen() {
+  const dialog = document.getElementById("add-dialog");
+  return Boolean(dialog && !dialog.hidden);
+}
+
+function setAddOpen(open) {
+  const dialog = document.getElementById("add-dialog");
+  if (!dialog) return;
+  dialog.hidden = !open;
+  document.body.classList.toggle("add-open", open);
+  if (!open) {
+    document.getElementById("add-roster")?.focus();
+    return;
+  }
+  setFiltersOpen(false);
+  openPanel = "";
+  paintSearch();
+  fillAddForm();
+  document.getElementById("add-form").reset();
+  document.getElementById("add-error").textContent = "";
+  document.getElementById("add-name").focus();
+}
+
+function addPersonFromForm() {
+  const name = document.getElementById("add-name").value.trim();
+  const city = document.getElementById("add-city").value;
+  const roles = checkedValues("add-role");
+  const genres = checkedValues("add-genre");
+  const instagram = cleanHandle(document.getElementById("add-instagram").value);
+  const email = document.getElementById("add-email").value.trim();
+  const phone = document.getElementById("add-phone").value.trim();
+  const portfolio = cleanUrl(document.getElementById("add-portfolio").value);
+  const preferred = document.querySelector('#add-form input[name="preferred"]:checked')?.value || "";
+  const error = document.getElementById("add-error");
+  if (!name) {
+    error.textContent = "Add a name.";
+    document.getElementById("add-name").focus();
+    return;
+  }
+  if (!city) {
+    error.textContent = "Choose a city.";
+    document.getElementById("add-city").focus();
+    return;
+  }
+  if (!roles.length) {
+    error.textContent = "Choose at least one role.";
+    return;
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    error.textContent = "Enter a valid email.";
+    document.getElementById("add-email").focus();
+    return;
+  }
+  if (phone && phone.replace(/\D/g, "").length < 7) {
+    error.textContent = "Enter a phone number.";
+    document.getElementById("add-phone").focus();
+    return;
+  }
+  if (!instagram && !email && !phone && !portfolio) {
+    error.textContent = "Add Instagram, email, phone, or a portfolio.";
+    document.getElementById("add-instagram").focus();
+    return;
+  }
+  const contact = { instagram, email, phone };
+  if (preferred && !contact[preferred]) {
+    error.textContent = "Preferred contact needs a value.";
+    return;
+  }
+  const record = person(rosterId(name), name, city, [], roles, genres, false, {
+    instagram,
+    email,
+    phone,
+    preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
+    referredBy: "",
+    rate: "",
+    compensation: "",
+    portfolio,
+    bio: "",
+    past: [],
+    avatar: "",
+    images: [],
+  });
+  PEOPLE.unshift(record);
+  rememberPerson(record);
+  if (!filteredPeople().some((item) => item.id === record.id)) {
+    state.roles = [];
+    state.genres = [];
+    state.roleGenres = {};
+    state.genresScoped = false;
+    state.city = "";
+    state.extraCities = [];
+  }
+  buildFilters();
+  setAddOpen(false);
+  render({ url: "push" });
+  window.scrollTo(0, 0);
+}
+
+function bindAddRoster() {
+  const button = document.getElementById("add-roster");
+  const dialog = document.getElementById("add-dialog");
+  if (!button || !dialog) return;
+  button.addEventListener("click", () => setAddOpen(true));
+  document.getElementById("add-cancel").addEventListener("click", () => setAddOpen(false));
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) setAddOpen(false);
+  });
+  document.getElementById("add-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    addPersonFromForm();
+  });
+}
+
+loadAddedPeople();
+
 PEOPLE.forEach((record) => {
   record.images = record.images || [];
 });
 
 bind();
+bindAddRoster();
 readUrl();
 render({ url: "replace" });
 if (typeof initProjects === "function") initProjects({ people: PEOPLE, openProfile });
