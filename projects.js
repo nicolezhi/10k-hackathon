@@ -20,6 +20,7 @@ const PROJECTS = [
     place: "",
     href: "https://www.youtube.com/watch?v=Ca77yvpNdfA",
     images: ["images/projects/Ca77yvpNdfA.jpg"],
+    home: false,
     creatives: [{ name: "Trim", role: "Artist" }],
   },
   {
@@ -44,6 +45,7 @@ const PROJECTS = [
     place: "",
     href: "https://www.youtube.com/watch?v=9WVk3pdC-7s",
     images: ["images/projects/9WVk3pdC-7s.jpg"],
+    home: false,
     creatives: [{ name: "STRAWBRY", role: "Artist" }],
   },
   {
@@ -64,6 +66,7 @@ const PROJECTS = [
     place: "",
     href: "https://www.youtube.com/watch?v=8n7jyCUSrF8",
     images: ["images/projects/8n7jyCUSrF8.jpg"],
+    home: false,
     creatives: [{ name: "Claire Rosinkranz", role: "Artist" }],
   },
   {
@@ -102,12 +105,44 @@ function escapeProjectText(value) {
     .replaceAll('"', "&quot;");
 }
 
-function contactIcon(label, href, path) {
-  const icon = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${path}</svg>`;
-  if (href) {
-    return `<a class="roster-icon" href="${escapeProjectText(href)}" target="_blank" rel="noreferrer" aria-label="${escapeProjectText(label)}">${icon}</a>`;
+function youtubeId(href) {
+  try {
+    const url = new URL(href);
+    if (url.hostname.includes("youtu.be")) return url.pathname.slice(1);
+    return url.searchParams.get("v") || "";
+  } catch {
+    return "";
   }
-  return `<span class="roster-icon is-empty" aria-label="${escapeProjectText(label)}">${icon}</span>`;
+}
+
+let youtubeApi;
+function ensureYouTube() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (!youtubeApi) {
+    youtubeApi = new Promise((resolve) => {
+      const prior = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prior === "function") prior();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      document.head.append(script);
+    });
+  }
+  return youtubeApi;
+}
+
+function copyIcon(label, value, copied, path) {
+  const icon = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${path}</svg>`;
+  if (!value) return `<span class="roster-icon is-empty" aria-label="${escapeProjectText(label)}">${icon}</span>`;
+  return `<button type="button" class="roster-icon copy-icon" data-copy="${escapeProjectText(value)}" data-copied="${escapeProjectText(copied)}" aria-label="${escapeProjectText(label)}">${icon}<span class="copy-tip" role="tooltip">${escapeProjectText(value)}</span></button>`;
+}
+
+function linkIcon(label, href, path) {
+  const icon = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${path}</svg>`;
+  if (!href) return `<span class="roster-icon is-empty" aria-label="${escapeProjectText(label)}">${icon}</span>`;
+  return `<a class="roster-icon" href="${escapeProjectText(href)}" target="_blank" rel="noreferrer" aria-label="${escapeProjectText(label)}">${icon}</a>`;
 }
 
 function initProjects({ people, openProfile }) {
@@ -117,6 +152,10 @@ function initProjects({ people, openProfile }) {
 
   let active = null;
   let slide = 0;
+  let player = null;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const playIcon = `<svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 7.2v9.6l8.2-4.8L9 7.2z" fill="currentColor"/></svg>`;
+  const pauseIcon = `<svg class="icon-pause" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 6.5h3.2v11H8v-11zm4.8 0H16v11h-3.2v-11z" fill="currentColor"/></svg>`;
 
   const modal = document.createElement("div");
   modal.className = "project-modal";
@@ -131,7 +170,7 @@ function initProjects({ people, openProfile }) {
           <p class="project-kicker" id="project-kicker"></p>
           <h2 id="project-title"></h2>
           <p class="project-summary" id="project-summary"></p>
-          <h3>Creatives</h3>
+          <h3>Credits</h3>
           <div class="creative-list" id="project-creatives"></div>
         </div>
       </div>
@@ -152,7 +191,93 @@ function initProjects({ people, openProfile }) {
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }
 
+  function stopPlayer() {
+    const current = player;
+    player = null;
+    try {
+      current?.destroy();
+    } catch {
+      /* The player node may already be gone. */
+    }
+  }
+
+  function setPlayState(button, playing) {
+    button.classList.toggle("is-playing", playing);
+    button.setAttribute("aria-label", playing ? "Pause" : "Play");
+    button.setAttribute("aria-pressed", playing ? "true" : "false");
+  }
+
+  function paintPlayer(videoId) {
+    stopPlayer();
+    gallery.innerHTML = `
+      <div class="project-stage project-player">
+        <div class="project-player_mount"></div>
+        <img class="project-player_poster" src="${escapeProjectText(active.images[0] || "")}" alt="" />
+        <button class="project-play" type="button" aria-label="Play" aria-pressed="false">${playIcon}${pauseIcon}</button>
+      </div>
+    `;
+    const button = gallery.querySelector(".project-play");
+    const poster = gallery.querySelector(".project-player_poster");
+    const mount = gallery.querySelector(".project-player_mount");
+    let pendingPlay = false;
+    const playOrPause = () => {
+      if (!player || typeof player.playVideo !== "function" || typeof player.getPlayerState !== "function") {
+        pendingPlay = true;
+        button.disabled = true;
+        return;
+      }
+      if (player.getPlayerState() === YT.PlayerState.PLAYING) player.pauseVideo();
+      else {
+        poster.hidden = true;
+        player.unMute();
+        player.playVideo();
+      }
+    };
+    button.addEventListener("click", playOrPause);
+    ensureYouTube().then(() => {
+      if (!mount.isConnected) return;
+      const node = document.createElement("div");
+      mount.append(node);
+      player = new YT.Player(node, {
+        videoId,
+        width: "100%",
+        height: "100%",
+        playerVars: {
+          autoplay: 0,
+          rel: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          controls: 0,
+          fs: 0,
+          disablekb: 1,
+          iv_load_policy: 3,
+          origin: location.origin,
+        },
+        events: {
+          onReady() {
+            button.disabled = false;
+            if (!pendingPlay) return;
+            pendingPlay = false;
+            poster.hidden = true;
+            player.unMute();
+            player.playVideo();
+          },
+          onStateChange(event) {
+            const playing = event.data === YT.PlayerState.PLAYING;
+            if (playing || event.data === YT.PlayerState.PAUSED) poster.hidden = true;
+            setPlayState(button, playing);
+          },
+        },
+      });
+    });
+  }
+
   function paintGallery() {
+    const videoId = youtubeId(active.href);
+    if (videoId) {
+      paintPlayer(videoId);
+      return;
+    }
     const images = active.images;
     const many = images.length > 1;
     gallery.innerHTML = `
@@ -251,22 +376,6 @@ function initProjects({ people, openProfile }) {
     title.textContent = project.title;
     summary.textContent = project.summary;
     kicker.textContent = [project.date, project.place].filter(Boolean).join(" · ");
-    let watch = modal.querySelector("#project-watch");
-    if (!watch) {
-      watch = document.createElement("a");
-      watch.id = "project-watch";
-      watch.className = "text-button";
-      summary.insertAdjacentElement("afterend", watch);
-    }
-    if (project.href) {
-      watch.href = project.href;
-      watch.target = "_blank";
-      watch.rel = "noreferrer";
-      watch.textContent = "Watch";
-      watch.hidden = false;
-    } else {
-      watch.hidden = true;
-    }
     paintGallery();
     creatives.innerHTML = "";
     project.creatives.forEach((creative) => {
@@ -287,10 +396,10 @@ function initProjects({ people, openProfile }) {
           </span>
         </button>
         <div class="creative-mini_icons">
-          ${contactIcon("Instagram", match?.instagram ? `https://instagram.com/${match.instagram}` : "", '<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/>')}
-          ${contactIcon("Portfolio", match?.portfolio || "", '<circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 12h14.8M12 4.6c2 2.2 3 4.7 3 7.4s-1 5.2-3 7.4c-2-2.2-3-4.7-3-7.4s1-5.2 3-7.4z" fill="none" stroke="currentColor" stroke-width="1.7"/>')}
-          ${contactIcon("Phone", match?.phone ? `tel:${match.phone}` : "", '<path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>')}
-          ${contactIcon("Email", match?.email ? `mailto:${match.email}` : "", '<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>')}
+          ${linkIcon("Instagram", match?.instagram ? `https://instagram.com/${match.instagram}` : "", '<rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/>')}
+          ${copyIcon("Portfolio", match?.portfolio || "", "copied portfolio link", '<circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 12h14.8M12 4.6c2 2.2 3 4.7 3 7.4s-1 5.2-3 7.4c-2-2.2-3-4.7-3-7.4s1-5.2 3-7.4z" fill="none" stroke="currentColor" stroke-width="1.7"/>')}
+          ${copyIcon("Phone", match?.phone || "", "copied phone number", '<path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>')}
+          ${copyIcon("Email", match?.email || "", "copied email", '<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>')}
         </div>
       `;
       row.querySelector(".creative-mini_open").addEventListener("click", () => {
@@ -306,6 +415,7 @@ function initProjects({ people, openProfile }) {
   }
 
   function close() {
+    stopPlayer();
     modal.hidden = true;
     active = null;
     document.body.classList.remove("modal-open");
@@ -340,14 +450,20 @@ function initProjects({ people, openProfile }) {
     return `<span class="project-card_crew" aria-label="${label}">${faces}<span class="project-card_count">${count}</span></span>`;
   }
 
+  const showHidden = document.body.dataset.page === "explore";
   PROJECTS.forEach((project) => {
+    if (!showHidden && project.home === false) return;
     const card = document.createElement("button");
     card.type = "button";
     card.className = "project-card";
+    const videoId = youtubeId(project.href);
+    const preview = videoId && !reduceMotion
+      ? `<img class="project-card_preview" src="images/projects/${escapeProjectText(videoId)}.gif" alt="" aria-hidden="true" />`
+      : "";
     card.innerHTML = `
       <span class="project-card_media">
         <img src="${escapeProjectText(project.images[0])}" alt="" />
-        <span class="project-card_veil">View project</span>
+        ${preview}
       </span>
       <span class="project-card_title">${escapeProjectText(project.title)}</span>
       <span class="project-card_meta">

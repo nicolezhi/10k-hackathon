@@ -267,6 +267,54 @@ function externalControl(className, label, href, inner) {
   return `<span class="${className}" aria-label="${escapeHtml(label)}">${inner}</span>`;
 }
 
+function copyControl(label, value, copied, inner) {
+  if (!value) return `<span class="roster-icon is-empty" aria-label="${escapeHtml(label)}">${inner}</span>`;
+  return `<button type="button" class="roster-icon copy-icon" data-copy="${escapeHtml(value)}" data-copied="${escapeHtml(copied)}" aria-label="${escapeHtml(label)}">${inner}<span class="copy-tip" role="tooltip">${escapeHtml(value)}</span></button>`;
+}
+
+function copyContact(button) {
+  const value = button.dataset.copy || "";
+  const tip = button.querySelector(".copy-tip");
+  const done = () => {
+    if (tip) tip.textContent = button.dataset.copied || "Copied";
+    button.classList.add("is-copied");
+    window.clearTimeout(button._copyTimer);
+    button._copyTimer = window.setTimeout(() => {
+      if (tip) tip.textContent = value;
+      button.classList.remove("is-copied");
+    }, 1600);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(value).then(done).catch(() => {
+      fallbackCopy(value);
+      done();
+    });
+    return;
+  }
+  fallbackCopy(value);
+  done();
+}
+
+function fallbackCopy(value) {
+  const area = document.createElement("textarea");
+  area.value = value;
+  area.setAttribute("readonly", "");
+  area.style.position = "fixed";
+  area.style.left = "-9999px";
+  document.body.append(area);
+  area.select();
+  document.execCommand("copy");
+  area.remove();
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest(".copy-icon");
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  copyContact(button);
+}, true);
+
 function pluralRole(role, count) {
   if (count === 1) return role;
   if (role === "MUA") return "MUAs";
@@ -280,7 +328,8 @@ function resultsHeading(list) {
     ...state.genres,
   ];
   const who = labels.length ? labels.join(", ") : count === 1 ? "creative" : "creatives";
-  const place = state.city || activeCities().join(" and ");
+  const cities = activeCities();
+  const place = cities.length ? joinPhrase(cities) : "";
   return place ? `${count} ${who} in ${place}` : `${count} ${who}`;
 }
 
@@ -358,22 +407,18 @@ const CONTACT_PATHS = {
 
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
-  const tags = (record.genres || []).join(" · ");
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
-  const phoneHref = record.phone ? `tel:${record.phone}` : "";
-  const mailHref = record.email ? `mailto:${record.email}` : "";
   return `
     ${avatarHtml(record, "result-card_avatar")}
     <div class="result-card_body">
       <h3>${escapeHtml(record.name)}</h3>
       <p class="result-card_role">${escapeHtml(record.roles.join(" · "))}</p>
       ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : ""}
-      ${tags ? `<p>${escapeHtml(tags)}</p>` : ""}
       <div class="result-card_icons">
         ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
-        ${externalControl("roster-icon", "Portfolio", record.portfolio || "", tinyIcon(CONTACT_PATHS.portfolio))}
-        ${externalControl("roster-icon", "Phone", phoneHref, tinyIcon(CONTACT_PATHS.phone))}
-        ${externalControl("roster-icon", "Email", mailHref, tinyIcon(CONTACT_PATHS.email))}
+        ${copyControl("Portfolio", record.portfolio || "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
+        ${copyControl("Phone", record.phone || "", "Copied phone number", tinyIcon(CONTACT_PATHS.phone))}
+        ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
       </div>
     </div>
   `;
@@ -401,11 +446,11 @@ function renderMapResults(list) {
     card.innerHTML = rosterCardHtml(record);
     const open = () => openProfile(record.id);
     card.addEventListener("click", (event) => {
-      if (event.target.closest("a")) return;
+      if (event.target.closest("a, .copy-icon")) return;
       open();
     });
     card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") open();
+      if (event.key === "Enter" && !event.target.closest("a, .copy-icon")) open();
     });
     card.addEventListener("mouseenter", () => highlightPin(record.id, true));
     card.addEventListener("mouseleave", () => highlightPin(record.id, false));
@@ -570,8 +615,8 @@ function syncMap(list) {
       autoPan: true,
       keepInView: true,
       autoPanPaddingTopLeft: [24, 24],
-      autoPanPaddingBottomRight: [24, 24],
-      offset: [0, -8],
+      autoPanPaddingBottomRight: [24, 96],
+      offset: [0, -78],
       maxWidth: 380,
       minWidth: 340,
     });
@@ -632,11 +677,11 @@ function renderResults(list) {
     card.innerHTML = rosterCardHtml(record);
     const open = () => openProfile(record.id);
     card.addEventListener("click", (event) => {
-      if (event.target.closest("a")) return;
+      if (event.target.closest("a, .copy-icon")) return;
       open();
     });
     card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") open();
+      if (event.key === "Enter" && !event.target.closest("a, .copy-icon")) open();
     });
     grid.appendChild(card);
   });
@@ -682,24 +727,32 @@ function renderProfile() {
         )
         .join("")
     : "<p>No 10K projects on file yet.</p>";
-  const also = (record.also || []).length ? ` Also works in ${record.also.join(", ")}.` : "";
-  const place = record.city ? `${escapeHtml(record.city)}.${escapeHtml(also)}` : "";
+  const city = cityRecord(record.city);
+  const place = city?.place || record.city || "";
+  const also = (record.also || []).length ? `Also works in ${record.also.join(", ")}.` : "";
+  const genreLabel = { Concert: "Concerts" };
+  const genres = [...(record.genres || [])].sort((a, b) => a.localeCompare(b)).map((genre) => genreLabel[genre] || genre);
+  const roleLine = [...(record.roles || []), genres.join("/")].filter(Boolean).join(", ");
+  const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
 
   root.innerHTML = `
     <a class="back" href="#results"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${isResultsPage() ? "Back to results" : "Back to roster"}</span></a>
     <header class="profile_head">
       ${avatarHtml(record, "profile_avatar")}
-      <div>
+      <div class="profile_id">
       <h1>${escapeHtml(record.name)}</h1>
-      ${place ? `<p>${place}</p>` : ""}
-      <ul class="tags">
-        ${[...record.roles, ...(record.genres || [])].map((tag) => `<li>${escapeHtml(tag)}</li>`).join("")}
-        ${record.tenk ? '<li class="mark">10K</li>' : ""}
-      </ul>
-      ${record.referredBy ? `<p>Referred by ${escapeHtml(record.referredBy)}.</p>` : ""}
-      ${profileLinksHtml(record)}
+      ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
+      ${place ? `<p class="profile_place">${escapeHtml(place)}</p>` : ""}
+      </div>
+      <div class="profile_icons">
+        ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
+        ${copyControl("Phone", record.phone || "", "Copied phone number", tinyIcon(CONTACT_PATHS.phone))}
+        ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
+        ${copyControl("Portfolio", record.portfolio || "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
       </div>
     </header>
+    ${also ? `<p class="profile_also">${escapeHtml(also)}</p>` : ""}
+    ${record.referredBy ? `<p>Referred by ${escapeHtml(record.referredBy)}.</p>` : ""}
     <div class="profile_layout">
       <div>
         ${workGridHtml(record)}
@@ -712,7 +765,6 @@ function renderProfile() {
         ${record.compensation ? `<section><h2>Compensation notes</h2><p>${escapeHtml(record.compensation)}</p></section>` : ""}
         <section>
           <h2>Contact</h2>
-          <div class="contact" id="contact"></div>
           <label class="sr" for="intro">Intro message</label>
           <div class="intro-shell">
             <button class="intro-copy" type="button" id="copy-intro" aria-label="Copy intro message">
@@ -728,36 +780,6 @@ function renderProfile() {
   root.querySelector(".back").addEventListener("click", (event) => {
     event.preventDefault();
     closeProfile();
-  });
-
-  const contact = root.querySelector("#contact");
-  contactRows(record).forEach((row) => {
-    const line = document.createElement("div");
-    line.className = "contact_row";
-    const copy = document.createElement("div");
-    copy.innerHTML = `<strong>${row.label}${row.key === record.preferred ? ' <span class="preferred">Preferred</span>' : ""}</strong>`;
-    copy.append(document.createTextNode(row.value));
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "text-button";
-    button.textContent = row.action;
-    button.addEventListener("click", async () => {
-      if (row.href) {
-        window.open(row.href, "_blank", "noopener");
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(row.value);
-        button.textContent = "Copied";
-      } catch {
-        button.textContent = "Select to copy";
-      }
-      setTimeout(() => {
-        button.textContent = row.action;
-      }, 1200);
-    });
-    line.append(copy, button);
-    contact.append(line);
   });
 
   const intro = root.querySelector("#intro");
@@ -793,6 +815,21 @@ function escapeHtml(value) {
 
 let openPanel = "";
 let openWhoRole = "";
+let whoSubTimer = 0;
+
+function cancelHideWhoSub() {
+  window.clearTimeout(whoSubTimer);
+}
+
+function scheduleHideWhoSub() {
+  cancelHideWhoSub();
+  whoSubTimer = window.setTimeout(() => {
+    const panel = document.getElementById("who-panel");
+    const sub = document.getElementById("who-sub");
+    if (panel?.matches(":hover") || sub?.matches(":hover")) return;
+    showWhoSub("");
+  }, 350);
+}
 
 function whereLabel() {
   const cities = activeCities().map((city) => (city === "Remote" ? "Remote / anywhere" : city));
@@ -809,10 +846,42 @@ function whoDetail(role) {
 }
 
 function whoLabel() {
-  if (!state.roles.length) return "Add a role";
+  if (!state.roles.length) return "Search roles";
   const label = whoDetail(state.roles[0]);
   if (state.roles.length === 1) return label;
   return `${label} +${state.roles.length - 1}`;
+}
+
+function cityAbbrev(city) {
+  if (city.name === "Remote") return "RM";
+  const code = String(city.place || "").split(", ")[1];
+  return code || city.name.slice(0, 2).toUpperCase();
+}
+
+const ROLE_ICONS = {
+  Photographer:
+    '<path d="M8.2 9.2h2l.8-1.4h1.9l.8 1.4h2.1a1.5 1.5 0 0 1 1.5 1.5v5.3a1.5 1.5 0 0 1-1.5 1.5H8.2a1.5 1.5 0 0 1-1.5-1.5v-5.3a1.5 1.5 0 0 1 1.5-1.5z"/><circle cx="12" cy="13.1" r="2.1"/>',
+  "Videographer / DP":
+    '<rect x="3.5" y="7.5" width="12" height="9" rx="1.6"/><path d="M15.5 11.2 20.2 8.8v6.4l-4.7-2.4z"/>',
+  Director: '<path d="M8 7.2 10.2 9H20v8.2H4V9h3.2L8 7.2z"/><path d="M4 9.2 8.2 6.4h4.2L9.8 9.2"/>',
+  Stylist: '<path d="M12 8.2a3.2 3.2 0 0 1 3.2 3.2l-1.1 7.2h-4.2L8.8 11.4A3.2 3.2 0 0 1 12 8.2z"/><path d="M12 8.2V5.6"/>',
+  "Set designer": '<path d="M6 10.5h12v2.2H6z"/><path d="M7.2 12.7v5.2M16.8 12.7v5.2M4.8 17.9h14.4"/>',
+  MUA: '<path d="M15.8 5.6 8.2 18.4"/><path d="M14.2 5.2c1.3.2 2.2 1.2 2.2 1.2M7.2 16.6l-1.4 2.2h3.2"/>',
+  Gaffer: '<path d="M9 15.2a3.6 3.6 0 1 1 6 0"/><path d="M9.4 15.2h5.2v1.4H9.4zM10 18.2h4M10.6 19.6h2.8"/>',
+  Editor: '<circle cx="7.2" cy="8.2" r="2"/><circle cx="16.8" cy="15.8" r="2"/><path d="M8.8 9.6 15.2 14.4M9.4 16.6 6.2 19M17.8 7.4 14.6 4.8"/>',
+  Designer: '<path d="M14.8 4.8 19.2 9.2 9.4 19H5v-4.4L14.8 4.8z"/><path d="M13 6.6 17.4 11"/>',
+  Animator: '<rect x="4" y="6" width="11" height="12" rx="1.4"/><path d="M15 9.2h3.2v7.2H15"/><path d="M8.6 10.2 12.4 12.4 8.6 14.6z"/>',
+  Model: '<circle cx="12" cy="7.4" r="2.2"/><path d="M7.6 19.2v-2.2a4.4 4.4 0 0 1 8.8 0v2.2"/>',
+  Assistant: '<rect x="7" y="4.8" width="10" height="14.4" rx="1.4"/><path d="M9.2 9h5.6M9.2 12.2h5.6M9.2 15.4h3.4"/>',
+  "Casting director": '<circle cx="9" cy="8" r="2"/><circle cx="15.6" cy="8.6" r="1.7"/><path d="M5.4 18.2v-1.6a3.6 3.6 0 0 1 7.2 0v1.6M13.2 18.2v-1.2a3 3 0 0 1 5.2-2"/>',
+  Choreographer: '<circle cx="14.2" cy="5.8" r="1.6"/><path d="M13.2 8.2 10.2 12.2l2.6 1.4-1.6 5.2M10.2 12.2 7.2 10.4M12.8 13.6l3.6-1.2 2 3.2"/>',
+  "Graphic designer": '<rect x="4.5" y="6" width="10.5" height="12" rx="1.2"/><path d="M13.2 15.6 19.2 9.6l-2.2-2.2-6 6"/>',
+  Colorist: '<circle cx="12" cy="12" r="6.2"/><path d="M12 5.8v12.4"/>',
+};
+
+function roleIcon(name) {
+  const body = ROLE_ICONS[name] || ROLE_ICONS.Assistant;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 }
 
 function pickButton(item, pressed) {
@@ -820,13 +889,13 @@ function pickButton(item, pressed) {
   button.type = "button";
   button.className = "pick";
   button.setAttribute("aria-pressed", pressed ? "true" : "false");
+  const mark = item.place
+    ? `<span class="pick-abbr">${escapeHtml(cityAbbrev(item))}</span>`
+    : `<span class="pick-glyph">${roleIcon(item.name)}</span>`;
   button.innerHTML = `
-    <span class="pick-mark" aria-hidden="true">
-      <span class="material-symbols-outlined">${item.icon}</span>
-    </span>
+    ${mark}
     <span class="pick-copy">
       <span class="pick-name">${escapeHtml(item.name)}</span>
-      <span class="pick-line">${escapeHtml(item.line)}</span>
     </span>
   `;
   return button;
@@ -867,6 +936,7 @@ function genresForRole(role) {
 }
 
 function showWhoSub(role) {
+  cancelHideWhoSub();
   openWhoRole = role || "";
   paintWhoSub();
   document.querySelectorAll("#who-options .pick").forEach((button) => {
@@ -1114,9 +1184,21 @@ function nearbyCity() {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
 }
 
-function setLocation(city) {
-  state.city = city;
-  state.extraCities = [];
+function setCities(cities) {
+  const unique = [];
+  cities.forEach((city) => {
+    if (city && !unique.includes(city)) unique.push(city);
+  });
+  state.city = unique[0] || "";
+  state.extraCities = unique.slice(1);
+}
+
+function toggleLocation(city) {
+  if (!city) setCities([]);
+  else {
+    const current = activeCities();
+    setCities(current.includes(city) ? current.filter((item) => item !== city) : [...current, city]);
+  }
   render();
 }
 
@@ -1125,10 +1207,11 @@ function paintLocation() {
   const toggle = document.getElementById("location-toggle");
   if (!menu || !toggle) return;
   const query = (document.getElementById("location-filter")?.value || "").trim().toLowerCase();
+  const picked = activeCities();
   const cities = CITIES.filter((city) => cityMatches(city, query));
   const rows = [
-    ...(query ? [] : [{ label: "All locations", city: "", checked: !state.city }]),
-    ...cities.map((city) => ({ label: city.place, city: city.name, checked: state.city === city.name })),
+    ...(query ? [] : [{ label: "All locations", city: "", checked: !picked.length }]),
+    ...cities.map((city) => ({ label: city.place, city: city.name, checked: picked.includes(city.name) })),
   ];
   menu.innerHTML = rows.length
     ? rows
@@ -1143,17 +1226,17 @@ function paintLocation() {
   menu.querySelectorAll(".filter-row").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      setLocation(button.dataset.city || "");
+      toggleLocation(button.dataset.city || "");
     });
   });
   const badge = document.getElementById("location-count");
-  const on = Boolean(state.city);
+  const count = activeCities().length;
   if (badge) {
-    badge.hidden = !on;
+    badge.hidden = !count;
     const num = badge.querySelector(".tool-pill_num");
-    if (num) num.textContent = on ? "1" : "";
+    if (num) num.textContent = count ? String(count) : "";
   }
-  toggle.classList.toggle("is-on", on);
+  toggle.classList.toggle("is-on", count > 0);
 }
 
 function paintFilterSub() {
@@ -1456,7 +1539,7 @@ function bind() {
     });
   }
   document.getElementById("location-count")?.addEventListener("click", (event) => {
-    if (!state.city) return;
+    if (!activeCities().length) return;
     event.stopPropagation();
     event.preventDefault();
     clearLocation();
@@ -1475,7 +1558,10 @@ function bind() {
       event.preventDefault();
       const query = locationFilter.value.trim().toLowerCase();
       const match = CITIES.find((city) => cityMatches(city, query));
-      if (match) setLocation(match.name);
+      if (match) {
+        setCities([...activeCities(), match.name]);
+        render();
+      }
     });
   }
   document.querySelectorAll(".view-toggle_btn").forEach((button) => {
@@ -1487,12 +1573,15 @@ function bind() {
   document.getElementById("where-segment").addEventListener("click", () => setPanel("where"));
   document.getElementById("who-segment").addEventListener("click", () => setPanel("who"));
   const whoPanel = document.getElementById("who-panel");
+  const whoSub = document.getElementById("who-sub");
   if (whoPanel) {
+    whoPanel.addEventListener("mouseenter", cancelHideWhoSub);
     whoPanel.addEventListener("mouseleave", (event) => {
-      if (whoPanel.contains(event.relatedTarget)) return;
-      showWhoSub("");
+      if (event.relatedTarget && whoPanel.contains(event.relatedTarget)) return;
+      scheduleHideWhoSub();
     });
   }
+  if (whoSub) whoSub.addEventListener("mouseenter", cancelHideWhoSub);
   const clearWhere = document.getElementById("where-clear");
   if (clearWhere) {
     clearWhere.addEventListener("click", (event) => {
@@ -1534,7 +1623,7 @@ function bind() {
     setResultsView("map");
     render({ url: "push" });
   });
-  document.querySelectorAll(".nav-menu a, .nav-side a").forEach((link) => {
+  document.querySelectorAll(".nav-menu a, .nav-links a").forEach((link) => {
     link.addEventListener("click", (event) => {
       const href = link.getAttribute("href") || "";
       if (!href.startsWith("#")) return;
@@ -1595,7 +1684,10 @@ function readAddedPeople() {
 }
 
 function loadAddedPeople() {
-  readAddedPeople()
+  const saved = readAddedPeople();
+  const kept = saved.filter((record) => !/^nicole(\s|$)/i.test(String(record?.name || "").trim()));
+  if (kept.length !== saved.length) localStorage.setItem(ADDED_KEY, JSON.stringify(kept));
+  kept
     .slice()
     .reverse()
     .forEach((record) => {

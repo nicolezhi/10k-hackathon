@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=74" />
+    <link rel="stylesheet" href="styles.css?v=109" />
   </head>
   <body data-page="results" data-view="home">
     <header class="results-top">
@@ -25,10 +25,6 @@
           alt="10K Projects"
         />
       </a>
-      <nav class="nav-side" aria-label="Sections">
-        <a class="nav_link" href="projects.html">Projects</a>
-        <a class="nav_link" href="results.html">Roster</a>
-      </nav>
       <form class="search" id="search-form" role="search">
         <div class="airbnb" id="airbnb" data-open="">
           <div class="airbnb_bar">
@@ -41,7 +37,7 @@
             </div>
             <button class="segment" id="who-segment" type="button" aria-expanded="false" aria-controls="who-panel">
               <span class="segment_label">Who</span>
-              <span class="segment_value" id="who-value">Add a role</span>
+              <span class="segment_value" id="who-value">Search roles</span>
             </button>
             <button class="airbnb_go" type="submit" aria-label="Search">
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
@@ -52,7 +48,6 @@
             </button>
           </div>
           <div class="airbnb_panel" id="where-panel" hidden>
-            <p class="panel_label panel_label-soft">Suggested cities</p>
             <label class="where-search">
               <span class="material-symbols-outlined" aria-hidden="true">search</span>
               <input id="where-filter" type="search" placeholder="Los Angeles, Memphis, Remote" autocomplete="off" aria-label="Search cities" />
@@ -60,12 +55,15 @@
             <div class="airbnb_options" id="where-options"></div>
           </div>
           <div class="airbnb_panel" id="who-panel" hidden>
-            <p class="panel_label panel_label-soft">Suggested roles</p>
             <div class="airbnb_options airbnb_options-roles" id="who-options"></div>
             <div class="who-sub" id="who-sub" hidden></div>
           </div>
         </div>
       </form>
+      <nav class="nav-links" aria-label="Sections">
+        <a class="nav_link" href="projects.html">Projects</a>
+        <a class="nav_link is-current" href="results.html">Creatives</a>
+      </nav>
     </header>
 
     <main class="results-page" data-results-view="list">
@@ -201,6 +199,6 @@
     <script src="people.js?v=5"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=54"></script>
+    <script src="app.js?v=93"></script>
   </body>
 </html>
