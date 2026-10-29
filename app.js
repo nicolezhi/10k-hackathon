@@ -1009,10 +1009,8 @@ function renderWhereOptions() {
     const button = pickButton(city, activeCities().includes(city.name));
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      state.city = state.city === city.name ? "" : city.name;
-      state.extraCities = [];
-      openPanel = "";
-      document.getElementById("where-filter").value = "";
+      const current = activeCities();
+      setCities(current.includes(city.name) ? current.filter((item) => item !== city.name) : [...current, city.name]);
       render();
     });
     container.append(button);
@@ -1110,7 +1108,9 @@ function paintSearch() {
   document.getElementById("where-segment").setAttribute("aria-expanded", String(openPanel === "where"));
   document.getElementById("who-segment").setAttribute("aria-expanded", String(openPanel === "who"));
   const clear = document.getElementById("where-clear");
-  if (clear) clear.hidden = !state.city;
+  if (clear) clear.hidden = !activeCities().length;
+  const clearWho = document.getElementById("who-clear");
+  if (clearWho) clearWho.hidden = !state.roles.length;
   renderWhereOptions();
   renderWhoOptions();
 }
@@ -1713,6 +1713,14 @@ function bind() {
       render();
     });
   }
+  const clearWho = document.getElementById("who-clear");
+  if (clearWho) {
+    clearWho.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openWhoRole = "";
+      clearRoles();
+    });
+  }
   document.getElementById("where-filter").addEventListener("input", () => renderWhereOptions());
   document.addEventListener("click", (event) => {
     if (openPanel && !document.getElementById("airbnb").contains(event.target)) {
@@ -1730,10 +1738,7 @@ function bind() {
     const typed = document.getElementById("where-filter").value.trim().toLowerCase();
     if (typed) {
       const match = CITIES.find((city) => cityMatches(city, typed));
-      if (match) {
-        state.city = match.name;
-        state.extraCities = [];
-      }
+      if (match && !activeCities().includes(match.name)) setCities([...activeCities(), match.name]);
     }
     state.profile = "";
     openPanel = "";
@@ -2562,13 +2567,13 @@ function initHeroMap() {
   const place = (roles, city) => roles.map((role) => `${role} (${city})`).join(", ");
   const origin = [348, 150];
   const steps = [
-    { name: "Jules Smerling", caption: place(["Stylist"], "Atlanta"), src: "posts/jules-smerling-jul3sarchive/1.jpg", href: "https://www.instagram.com/p/DepQPa6G3we/", x: 14, y: 8, w: 68, h: 68, inn: [90, 42], bend: -40 },
-    { name: "Isaac Wheatley", caption: place(["Stylist"], "London"), src: "images/hero/C_1Z2bxxC_C-1.jpg?v=2", href: "https://www.instagram.com/p/C_1Z2bxxC_C/?img_index=1", x: 242, y: 2, w: 56, h: 85, inn: [306, 45], bend: -36 },
-    { name: "Charlie Harris", caption: place(["Photographer"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/3.jpg", href: "https://www.instagram.com/p/DdCMAwKDMow/?img_index=1", x: 456, y: 2, w: 78, h: 100, inn: [448, 52], bend: -36 },
-    { name: "Vika", caption: place(["MUA"], "London"), src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 700, y: 64, w: 62, h: 83, inn: [692, 106], bend: 46 },
-    { name: "Charlie Harris", caption: place(["Animator"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
-    { name: "Randy", caption: place(["Animator"], "London"), src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 146, y: 194, w: 68, h: 68, inn: [222, 228], bend: 30 },
-    { name: "Michele Perna", caption: place(["Designer"], "Atlanta"), src: "posts/michele-perna-micheleperna/1.jpg", href: "https://www.instagram.com/p/Dew7glWDK1d/?img_index=1", x: 12, y: 122, w: 62, h: 78, inn: [82, 161], bend: -46 },
+    { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
+    { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 236, y: -72, w: 84, h: 84, inn: [322, 48], bend: -36 },
+    { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
+    { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
+    { name: "Charlie Harris", caption: place(["Videographer"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
+    { name: "Randy", caption: place(["Designer"], "London"), src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
+    { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 136, y: 128, w: 84, h: 112, inn: [226, 184], bend: -22 },
   ];
 
   const NEON = [
@@ -2603,25 +2608,25 @@ function initHeroMap() {
   svg.append(defs);
 
   const frames = steps.map((step) => {
-    const link = document.createElement("a");
+    const link = document.createElement("div");
     link.className = "hero_shot";
-    link.href = step.href;
-    link.target = "_blank";
-    link.rel = "noreferrer";
     link.style.left = `${(step.x / board.w) * 100}%`;
     link.style.top = `${(step.y / board.h) * 100}%`;
     link.style.width = `${(step.w / board.w) * 100}%`;
     link.style.setProperty("--shot-ratio", `${step.w} / ${step.h}`);
-    link.setAttribute("aria-label", `${step.caption}, ${step.name} on Instagram`);
-    link.tabIndex = -1;
     const image = document.createElement("img");
     image.src = step.src;
     image.alt = "";
+    if (step.focus) image.style.objectPosition = step.focus;
     const caption = document.createElement("span");
     caption.className = "hero_cap";
     caption.insertAdjacentHTML("beforeend", pin);
     const text = document.createElement("span");
-    text.textContent = step.caption;
+    step.caption.split("\n").forEach((line, index) => {
+      if (index) text.append(document.createElement("br"));
+      text.append(line);
+    });
+    if (step.caption.includes("\n")) caption.classList.add("is-lines");
     caption.append(text);
     link.append(image, caption);
     shots.append(link);
@@ -2685,7 +2690,6 @@ function initHeroMap() {
 
   const showFrame = (frame) => {
     addDot(frame.step.inn);
-    frame.link.tabIndex = 0;
     frame.link.classList.add("is-in");
   };
 
@@ -2737,7 +2741,6 @@ function initHeroMap() {
       svg.querySelectorAll("circle.sat").forEach((dot) => dot.remove());
       frames.forEach(({ link }) => {
         link.classList.remove("is-in");
-        link.tabIndex = -1;
       });
       stage.classList.remove("is-clear");
       await sleep(360);

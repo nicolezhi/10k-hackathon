@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=162" />
+    <link rel="stylesheet" href="styles.css?v=177" />
   </head>
   <body data-page="results" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -36,10 +36,13 @@
               </button>
               <button class="segment_clear" id="where-clear" type="button" hidden aria-label="Clear city">×</button>
             </div>
-            <button class="segment" id="who-segment" type="button" aria-expanded="false" aria-controls="who-panel">
-              <span class="segment_label">Who</span>
-              <span class="segment_value" id="who-value">Search roles</span>
-            </button>
+            <div class="segment-slot">
+              <button class="segment" id="who-segment" type="button" aria-expanded="false" aria-controls="who-panel">
+                <span class="segment_label">Who</span>
+                <span class="segment_value" id="who-value">Search roles</span>
+              </button>
+              <button class="segment_clear" id="who-clear" type="button" hidden aria-label="Clear roles">×</button>
+            </div>
             <button class="airbnb_go" type="submit" aria-label="Search">
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
                 <circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="2.6" />
@@ -273,9 +276,9 @@
     </div>
 
     <script src="people.js?v=8"></script>
-    <script src="projects.js?v=39"></script>
+    <script src="projects.js?v=44"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=109"></script>
+    <script src="app.js?v=125"></script>
   </body>
 </html>

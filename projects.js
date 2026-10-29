@@ -49,6 +49,25 @@ const PROJECTS = [
     creatives: [{ name: "STRAWBRY", role: "Artist" }],
   },
   {
+    id: "pryme-cross-the-line",
+    title: "pryme! — cross the line",
+    summary: "Official music video. Credits are taken from the YouTube description.",
+    date: "October 1, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=jxLDB3Iieoc",
+    images: ["images/projects/jxLDB3Iieoc.jpg"],
+    creatives: [
+      { name: "pryme!", role: "Artist" },
+      { name: "SAGEWOLF", role: "Director" },
+      { name: "Kai Cullen", role: "Director of Photography" },
+      { name: "Halle Adams", role: "Stylist" },
+      { name: "Samuel Norris", role: "Stylist" },
+      { name: "808toofly", role: "Producer" },
+      { name: "Raeningg", role: "Producer" },
+      { name: "Patrick Rosario", role: "Mix/master" },
+    ],
+  },
+  {
     id: "claire-rosinkranz-rocket",
     title: "Claire Rosinkranz — Rocket",
     summary: "Official visualizer. The YouTube description credits Claire Rosinkranz and does not list a production crew.",
@@ -56,6 +75,7 @@ const PROJECTS = [
     place: "",
     href: "https://www.youtube.com/watch?v=TRdYOOMuGtY",
     images: ["images/projects/TRdYOOMuGtY.jpg"],
+    home: false,
     creatives: [{ name: "Claire Rosinkranz", role: "Artist" }],
   },
   {
@@ -70,6 +90,139 @@ const PROJECTS = [
     creatives: [{ name: "Claire Rosinkranz", role: "Artist" }],
   },
   {
+    id: "sailorr-coconut",
+    title: "SAILORR — COCONUT",
+    summary: "Official music video. Credits are taken from the YouTube description.",
+    date: "March 9, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=TG1Vt7Czs8g",
+    images: ["images/projects/TG1Vt7Czs8g.jpg"],
+    creatives: [
+      { name: "SAILORR", role: "Artist" },
+      { name: "Eem Triplin", role: "Featured artist" },
+      { name: "Noah Keckler", role: "Director" },
+      { name: "Elan Bia", role: "Producer" },
+      { name: "Nick Buckwalter", role: "Director of Photography" },
+      { name: "Robert Blair", role: "1st AD" },
+      { name: "Juliana Popowich", role: "Production assistant" },
+      { name: "Anisha Patil", role: "Production assistant" },
+      { name: "Collin Grey", role: "Location rep" },
+      { name: "Jairo Cruz", role: "1st AC" },
+      { name: "Averi McHugh", role: "2nd AC" },
+      { name: "Donavyn Suffel", role: "Steadicam" },
+      { name: "Moses Buckwalter", role: "Camera PA" },
+      { name: "Evan Crocker", role: "Gaffer" },
+      { name: "Matt Pang", role: "Key grip" },
+      { name: "Tomaz Favrin", role: "G&E swing" },
+      { name: "Avery Niles", role: "Colorist" },
+      { name: "Steele Turner", role: "VFX" },
+      { name: "Joshua Clauss", role: "VFX" },
+      { name: "Nohluhn", role: "VFX" },
+      { name: "Niall Proctor", role: "VFX" },
+      { name: "Trevor Rittman", role: "Production designer" },
+      { name: "Emmett Tekstra", role: "Production designer" },
+      { name: "Will Peterson", role: "Art assist" },
+      { name: "Kelsey Miralles", role: "Set dresser" },
+      { name: "Dondre Tuck", role: "Art PA" },
+      { name: "Nadia Reese", role: "MUA" },
+      { name: "Manon Macher", role: "Stylist" },
+      { name: "Jean-Victor", role: "Choreographer" },
+      { name: "Natalie Keckler", role: "Choreographer" },
+      { name: "Jazzmin Oddie", role: "Talent MUA" },
+      { name: "Earvee Cruz", role: "Talent hair" },
+      { name: "Freak City", role: "Talent stylist" },
+      { name: "Beryl Chen", role: "Label commissioner" },
+      { name: "Alex Figueroa", role: "Label commissioner" },
+    ],
+  },
+  {
+    id: "avara-yasmeen",
+    title: "Avara — yasmeen",
+    summary: "Official music video. Credits are taken from the YouTube description.",
+    date: "September 4, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=rE_ebt4hgCM",
+    images: ["images/projects/rE_ebt4hgCM.jpg"],
+    creatives: [
+      { name: "Avara", role: "Artist" },
+      { name: "Vinaini Jayasinghe", role: "Director" },
+      { name: "Christopher Lacey", role: "Director of Photography" },
+      { name: "Lou Jorgensen", role: "1st AC" },
+      { name: "Fabian Placencia", role: "Gaffer" },
+      { name: "Christopher Medina", role: "Colorist" },
+      { name: "Nadia Reese Stone", role: "MUA" },
+      { name: "Belen Gómez", role: "Hair" },
+      { name: "Chithra Jagannathan", role: "Dancer" },
+      { name: "Rhea", role: "Dancer" },
+    ],
+  },
+  {
+    id: "artemas-high-note",
+    title: "Artemas — high note",
+    summary: "Lyric video. The YouTube description credits Artemas and does not list a production crew.",
+    date: "April 2, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=3IBskj3Xq54",
+    images: ["images/projects/3IBskj3Xq54.jpg"],
+    home: false,
+    creatives: [{ name: "Artemas", role: "Artist" }],
+  },
+  {
+    id: "between-friends-chevron",
+    title: "BETWEEN FRIENDS — Chevron",
+    summary: "Official music video. The YouTube description credits BETWEEN FRIENDS and does not list a production crew.",
+    date: "July 31, 2025",
+    place: "",
+    href: "https://www.youtube.com/watch?v=rZ-8taQjNLU",
+    images: ["images/projects/rZ-8taQjNLU.jpg"],
+    home: false,
+    creatives: [{ name: "BETWEEN FRIENDS", role: "Artist" }],
+  },
+  {
+    id: "between-friends-xd",
+    title: "BETWEEN FRIENDS — XD",
+    summary: "Official music video. The YouTube description credits BETWEEN FRIENDS and does not list a production crew.",
+    date: "June 26, 2025",
+    place: "",
+    href: "https://www.youtube.com/watch?v=m_z54lxaavw",
+    images: ["images/projects/m_z54lxaavw.jpg"],
+    home: false,
+    creatives: [{ name: "BETWEEN FRIENDS", role: "Artist" }],
+  },
+  {
+    id: "trippie-redd-svm3",
+    title: "Trippie Redd — SVM3",
+    summary: "Official video. The YouTube description credits Trippie Redd and does not list a production crew.",
+    date: "September 10, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=0O47X__jxjs",
+    images: ["images/projects/0O47X__jxjs.jpg"],
+    home: false,
+    creatives: [{ name: "Trippie Redd", role: "Artist" }],
+  },
+  {
+    id: "trippie-redd-plead-the-5th",
+    title: "Trippie Redd — Plead The 5th",
+    summary: "Official visualizer. The YouTube description credits Trippie Redd and does not list a production crew.",
+    date: "August 27, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=8CzXlPX7NIA",
+    images: ["images/projects/8CzXlPX7NIA.jpg"],
+    home: false,
+    creatives: [{ name: "Trippie Redd", role: "Artist" }],
+  },
+  {
+    id: "isabella-contadini-breadcrumbs",
+    title: "Isabella Contadini — Breadcrumbs",
+    summary: "Official lyric video. The YouTube description credits Isabella Contadini and does not list a production crew.",
+    date: "July 23, 2026",
+    place: "",
+    href: "https://www.youtube.com/watch?v=yKh6GYHtW-c",
+    images: ["images/projects/yKh6GYHtW-c.jpg"],
+    home: false,
+    creatives: [{ name: "Isabella Contadini", role: "Artist" }],
+  },
+  {
     id: "gigi-moss-criminal",
     title: "Gigi Moss — Criminal",
     summary: "Lyric video. Credits are taken from the YouTube description.",
@@ -77,6 +230,7 @@ const PROJECTS = [
     place: "",
     href: "https://www.youtube.com/watch?v=J0o9PkcXmcs",
     images: ["images/projects/J0o9PkcXmcs.jpg"],
+    home: false,
     creatives: [
       { name: "Gigi Moss", role: "Writer" },
       { name: "Solly", role: "Writer" },
@@ -93,162 +247,9 @@ const PROJECTS = [
     place: "",
     href: "https://www.youtube.com/watch?v=W7Ey1JZpEoc",
     images: ["images/projects/W7Ey1JZpEoc.jpg"],
+    home: false,
     creatives: [{ name: "Girlfriend, Wife", role: "Artist" }],
   },
-{
-    id: "trippy-red",
-    title: "Trippy Red Music Video",
-    home: false,
-    summary: "A night shoot soaked in red light. The look was built around wardrobe, practicals, and a tight camera crew.",
-    date: "September 14, 2025",
-    place: "New York, NY",
-    type: "Music video",
-    images: [
-      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "aiden-zamiri", role: "Director" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "stephanie-ocean-stephanieocean", role: "Gaffer" },
-      { id: "isaac-wheatley-ikeview", role: "Photographer" },
-    ],
-  },
-  {
-    id: "warehouse-editorial",
-    title: "Warehouse Night Editorial",
-    home: false,
-    summary: "An empty warehouse, one set wall, and a small team. Styling and set design carried the frame.",
-    date: "November 2, 2025",
-    place: "New York, NY",
-    type: "Editorial",
-    images: [
-      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "hameem-hameem", role: "Stylist" },
-      { id: "talia-restrepo-taliarestrepo", role: "Stylist" },
-      { id: "ayden-starr-fatecapture", role: "Photographer" },
-    ],
-  },
-  {
-    id: "festival-stage",
-    title: "Festival Main Stage",
-    home: false,
-    summary: "Day-into-night coverage from the pit and the side stage. Fast calls, a lot of light, and a director on comms.",
-    date: "June 21, 2026",
-    place: "New York, NY",
-    type: "Festival",
-    images: [
-      "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "simon-bradley-simonbradleyx", role: "Director" },
-      { id: "nick-wheat-nickywheat", role: "Gaffer" },
-      { id: "alex-olesky-alexolesky", role: "Photographer" },
-      { id: "vika-vikasfotos", role: "Photographer" },
-    ],
-  },
-  {
-    id: "studio-35",
-    title: "Studio 35mm Portraits",
-    home: false,
-    summary: "A quiet studio day. Film stills, a simple set, and makeup that reads on a close crop.",
-    date: "January 18, 2026",
-    place: "New York, NY",
-    type: "Portrait",
-    images: [
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "aiden-zamiri", role: "Photographer" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "anna-koblish-annakoblish", role: "Photographer" },
-    ],
-  },
-  {
-    id: "after-hours",
-    title: "After Hours Lookbook",
-    home: false,
-    summary: "Street-to-studio looks shot after call time. Wardrobe led, with a photographer working the available light.",
-    date: "August 8, 2025",
-    place: "New York, NY",
-    type: "Lookbook",
-    images: [
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "talia-restrepo-taliarestrepo", role: "Stylist" },
-      { id: "hameem-hameem", role: "Stylist" },
-      { id: "oliver-oliverstemmler", role: "Photographer" },
-    ],
-  },
-  {
-    id: "cover-day",
-    title: "Cover Day in Color",
-    home: false,
-    summary: "A cover setup with a painted backdrop. Set, styling, and stills, all in one room.",
-    date: "March 4, 2026",
-    place: "New York, NY",
-    type: "Cover",
-    images: [
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "simon-bradley-simonbradleyx", role: "Director" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "aiden-zamiri", role: "Photographer" },
-    ],
-  },
-  {
-    id: "late-set-portraits",
-    title: "Late Set Portraits",
-    home: false,
-    summary: "Portraits made after the set, while the room was still lit. A small crew, one backdrop, and a photographer working close.",
-    date: "October 12, 2025",
-    place: "New York, NY",
-    type: "Portrait",
-    images: [
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "isaac-wheatley-ikeview", role: "Photographer" },
-      { id: "alliyah-alliyah", role: "MUA" },
-      { id: "hameem-hameem", role: "Stylist" },
-    ],
-  },
-  {
-    id: "side-stage",
-    title: "Side Stage Coverage",
-    home: false,
-    summary: "Concert stills from the side of the stage. Fast light, a tight crop, and a photographer staying out of the shot.",
-    date: "May 3, 2026",
-    place: "New York, NY",
-    type: "Concert",
-    images: [
-      "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1459749411177-04de2b3705b9?auto=format&fit=crop&w=900&h=1125&q=80",
-      "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=900&h=1125&q=80",
-    ],
-    creatives: [
-      { id: "isaac-wheatley-ikeview", role: "Photographer" },
-      { id: "vika-vikasfotos", role: "Photographer" },
-      { id: "nick-wheat-nickywheat", role: "Gaffer" },
-    ],
-  }
 ];
 
 function escapeProjectText(value) {
@@ -626,7 +627,7 @@ function initProjects({ people, openProfile }) {
     card.className = "project-card";
     card.dataset.project = project.id;
     const videoId = youtubeId(project.href);
-    const preview = videoId && project.id !== "trim-get-hit" && !reduceMotion
+    const preview = videoId && !reduceMotion
       ? `<img class="project-card_preview" src="images/projects/${escapeProjectText(videoId)}.gif" alt="" aria-hidden="true" />`
       : "";
     card.innerHTML = `
@@ -640,7 +641,6 @@ function initProjects({ people, openProfile }) {
         ${crewHtml(project)}
       </span>
     `;
-    if (project.id === "trim-get-hit") bindTrimPreview(card);
     card.addEventListener("click", () => open(project));
     grid.append(card);
   });
@@ -661,48 +661,6 @@ function initProjects({ people, openProfile }) {
     }
     if (event.key === "Escape") filters.close();
   });
-}
-
-const TRIM_CLIP = { id: "Ca77yvpNdfA", start: 20, end: 34 };
-
-function bindTrimPreview(card) {
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const media = card.querySelector(".project-card_media");
-  let preview = null;
-
-  const stop = () => {
-    preview?.remove();
-    preview = null;
-  };
-
-  const start = () => {
-    if (preview) return;
-    const frame = document.createElement("iframe");
-    const params = new URLSearchParams({
-      autoplay: "1",
-      mute: "1",
-      controls: "0",
-      start: String(TRIM_CLIP.start),
-      end: String(TRIM_CLIP.end),
-      rel: "0",
-      playsinline: "1",
-    });
-    frame.src = `https://www.youtube.com/embed/${TRIM_CLIP.id}?${params}`;
-    frame.allow = "autoplay; encrypted-media";
-    frame.referrerPolicy = "strict-origin-when-cross-origin";
-    frame.title = "Trim — Get Hit preview";
-    frame.tabIndex = -1;
-    preview = document.createElement("span");
-    preview.className = "project-card_preview is-on";
-    preview.append(frame);
-    media.append(preview);
-  };
-
-  card.addEventListener("pointerenter", start);
-  card.addEventListener("pointerleave", stop);
-  card.addEventListener("focus", start);
-  card.addEventListener("blur", stop);
-  card.addEventListener("click", stop);
 }
 
 const PROJECT_CHECK = `<span class="filter-check" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;

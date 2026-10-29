@@ -21,7 +21,7 @@
       href="https://api.fontshare.com/v2/css?f[]=neue-montreal@400&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=162" />
+    <link rel="stylesheet" href="styles.css?v=177" />
   </head>
   <body data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -42,10 +42,13 @@
               </button>
               <button class="segment_clear" id="where-clear" type="button" hidden aria-label="Clear city">×</button>
             </div>
-            <button class="segment" id="who-segment" type="button" aria-expanded="false" aria-controls="who-panel">
-              <span class="segment_label">Who</span>
-              <span class="segment_value" id="who-value">Search roles</span>
-            </button>
+            <div class="segment-slot">
+              <button class="segment" id="who-segment" type="button" aria-expanded="false" aria-controls="who-panel">
+                <span class="segment_label">Who</span>
+                <span class="segment_value" id="who-value">Search roles</span>
+              </button>
+              <button class="segment_clear" id="who-clear" type="button" hidden aria-label="Clear roles">×</button>
+            </div>
             <button class="airbnb_go" type="submit" aria-label="Search">
               <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16">
                 <circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="2.6" />
@@ -97,7 +100,7 @@
           <div>
             <h2>Explore recent projects</h2>
           </div>
-          <a class="text-button" href="projects.html">See all</a>
+          <a class="text-button" href="projects.html">View all</a>
         </div>
         <div class="masonry" id="project-grid" aria-busy="true" aria-label="Loading projects">
           <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
@@ -110,11 +113,11 @@
 
       <section class="results" id="results" aria-live="polite">
         <div class="results_head">
-          <h2>Nearby Creatives</h2>
+          <h2>Nearby creatives</h2>
           <p class="summary" id="summary"></p>
           <div class="results_head_side">
             <p class="count" id="count"></p>
-            <a class="text-button" id="nearby-more" href="results.html">See more</a>
+            <a class="text-button" id="nearby-more" href="results.html">View more</a>
           </div>
         </div>
         <p class="nearby" id="nearby" hidden></p>
@@ -148,7 +151,7 @@
     </article>
 
     <script src="people.js?v=8"></script>
-    <script src="projects.js?v=39"></script>
-    <script src="app.js?v=109"></script>
+    <script src="projects.js?v=44"></script>
+    <script src="app.js?v=125"></script>
   </body>
 </html>
