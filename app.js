@@ -26,6 +26,36 @@ const CITIES = [
   { name: "Brussels", icon: "location_city", line: "Paris and Cologne are a short trip", tint: "#f8efe4", place: "Brussels, BE", at: [50.8503, 4.3517] },
   { name: "Paris", icon: "museum", line: "Film and fashion, close to Brussels", tint: "#fde8f3", place: "Paris, FR", at: [48.8566, 2.3522] },
   { name: "Cologne", icon: "church", line: "Lighting and crew, close to Brussels and Paris", tint: "#e7f3ff", place: "Cologne, DE", at: [50.9375, 6.9603] },
+  { name: "Chicago", icon: "location_city", line: "Concert and portrait crew", tint: "#e7f0fb", place: "Chicago, IL", at: [41.8781, -87.6298] },
+  { name: "Boston", icon: "location_city", line: "Photo and video crew", tint: "#f3e8fb", place: "Boston, MA", at: [42.3601, -71.0589] },
+  { name: "Austin", icon: "location_city", line: "Concert photography", tint: "#fff4d6", place: "Austin, TX", at: [30.2672, -97.7431] },
+  { name: "Minneapolis", icon: "location_city", line: "Fashion portraits", tint: "#e7f6ee", place: "Minneapolis, MN", at: [44.9778, -93.265] },
+  { name: "Brighton", icon: "location_city", line: "Concert photography", tint: "#fde8f3", place: "Brighton, UK", at: [50.8225, -0.1372] },
+  { name: "Bristol", icon: "location_city", line: "Concert and portrait crew", tint: "#f8efe4", place: "Bristol, UK", at: [51.4545, -2.5879] },
+  { name: "Birmingham", icon: "location_city", line: "Concert crew", tint: "#eef2f6", place: "Birmingham, UK", at: [52.4862, -1.8904] },
+  { name: "Galway", icon: "location_city", line: "Concert crew", tint: "#e7f6ee", place: "Galway, IE", at: [53.2707, -9.0568] },
+  { name: "Ireland", icon: "public", line: "Concert and portrait crew", tint: "#e7f6ee", place: "Ireland", at: [53.1424, -7.6921] },
+  { name: "Madrid", icon: "location_city", line: "Concert crew", tint: "#fff4d6", place: "Madrid, ES", at: [40.4168, -3.7038] },
+  { name: "Barcelona", icon: "location_city", line: "Concert crew", tint: "#fde8f3", place: "Barcelona, ES", at: [41.3874, 2.1686] },
+  { name: "Glasgow", icon: "location_city", line: "Concert photography", tint: "#eef2f6", place: "Glasgow, UK", at: [55.8642, -4.2518] },
+  { name: "Germany", icon: "public", line: "Concert crew", tint: "#e7f3ff", place: "Germany", at: [51.1657, 10.4515] },
+  { name: "Copenhagen", icon: "location_city", line: "Portrait and video crew", tint: "#e7f0fb", place: "Copenhagen, DK", at: [55.6761, 12.5683] },
+  { name: "Denmark", icon: "public", line: "Concert and portrait crew", tint: "#e7f0fb", place: "Denmark", at: [56.2639, 9.5018] },
+  { name: "Netherlands", icon: "public", line: "Concert crew", tint: "#fff4d6", place: "Netherlands", at: [52.1326, 5.2913] },
+  { name: "Switzerland", icon: "public", line: "Concert crew", tint: "#fde8ea", place: "Switzerland", at: [46.8182, 8.2275] },
+  { name: "Czech Republic", icon: "public", line: "Concert and event crew", tint: "#f8efe4", place: "Czech Republic", at: [49.8175, 15.473] },
+  { name: "Bergen", icon: "location_city", line: "Concert crew", tint: "#e7f6ee", place: "Bergen, NO", at: [60.3913, 5.3221] },
+  { name: "Oslo", icon: "location_city", line: "Concert photography", tint: "#eef2f6", place: "Oslo, NO", at: [59.9139, 10.7522] },
+  { name: "Warsaw", icon: "location_city", line: "Concert photography", tint: "#fde8ea", place: "Warsaw, PL", at: [52.2297, 21.0122] },
+  { name: "Helsinki", icon: "location_city", line: "Concert and portrait crew", tint: "#e7f0fb", place: "Helsinki, FI", at: [60.1699, 24.9384] },
+  { name: "Finland", icon: "public", line: "Portrait crew", tint: "#e7f0fb", place: "Finland", at: [61.9241, 25.7482] },
+  { name: "Sweden", icon: "public", line: "Portrait photography", tint: "#fff4d6", place: "Sweden", at: [60.1282, 18.6435] },
+  { name: "Varberg", icon: "location_city", line: "Concert video", tint: "#e7f6ee", place: "Varberg, SE", at: [57.1057, 12.2508] },
+  { name: "Porto", icon: "location_city", line: "Concert photography", tint: "#fde8f3", place: "Porto, PT", at: [41.1579, -8.6291] },
+  { name: "Portugal", icon: "public", line: "Concert and portrait crew", tint: "#fde8f3", place: "Portugal", at: [39.3999, -8.2245] },
+  { name: "Sydney", icon: "location_city", line: "Concert photography", tint: "#fff4d6", place: "Sydney, AU", at: [-33.8688, 151.2093] },
+  { name: "Mexico City", icon: "location_city", line: "Portrait and concert photography", tint: "#f8efe4", place: "Mexico City, MX", at: [19.4326, -99.1332] },
+  { name: "Accra", icon: "location_city", line: "Director of photography", tint: "#e7f6ee", place: "Accra, GH", at: [5.6037, -0.187] },
   { name: "Remote", icon: "public", line: "Anywhere. Editors, designers, and animators", tint: "#eef2f6", place: "Remote", at: null },
 ];
 
@@ -178,7 +208,7 @@ function filteredPeople() {
   const tokens = tokensFrom(state.query);
   const cities = activeCities();
   return PEOPLE.filter((record) => {
-    if (cities.length && !cities.some((city) => record.city === city || (record.also || []).includes(city))) return false;
+    if (cities.length && !cities.some((city) => sameCity(record.city, city) || (record.also || []).some((item) => sameCity(item, city)))) return false;
     if (state.roles.length) {
       const hit = state.roles.some((role) => {
         if (!roleNames(record).includes(role)) return false;
@@ -337,8 +367,18 @@ function resultsHeading(list) {
   return place ? `${count} ${who} in ${place}` : `${count} ${who}`;
 }
 
+function canonicalCity(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  const found = CITIES.find(
+    (city) => city.name.toLowerCase() === lower || String(city.place || "").toLowerCase() === lower
+  );
+  return found ? found.name : raw;
+}
+
 function cityRecord(name) {
-  return CITIES.find((city) => city.name === name);
+  return CITIES.find((city) => city.name === canonicalCity(name));
 }
 
 function cityMatches(city, filter) {
@@ -348,6 +388,8 @@ function cityMatches(city, filter) {
     "Los Angeles": "la",
     Atlanta: "atl",
     London: "ldn",
+    Birmingham: "brum",
+    "Mexico City": "cdmx",
   };
   return `${city.name} ${city.place || ""} ${city.line} ${aliases[city.name] || ""}`.toLowerCase().includes(filter);
 }
@@ -385,7 +427,7 @@ function cardBio(record) {
   });
   const makes = new Set(["Photographer", "Videographer / DP", "Director", "Graphic designer", "Animator", "Editor", "Colorist"]);
   if (genres.length && (record.roles || []).some((role) => makes.has(role))) {
-    return `Makes ${joinPhrase(genres)}${place}.`;
+    return `Shoots ${joinPhrase(genres)}${place}.`;
   }
   const role = (record.roles || [])[0] || "Creative";
   return place ? `${role} based${place}.` : `${role}.`;
@@ -514,8 +556,8 @@ function showcasePoint(record, index, total) {
 
 function pinCity(record) {
   const cities = activeCities();
-  if (cities.length && !cities.includes(record.city)) {
-    return (record.also || []).find((city) => cities.includes(city)) || record.city;
+  if (cities.length && !cities.some((city) => sameCity(record.city, city))) {
+    return (record.also || []).find((city) => cities.some((item) => sameCity(city, item))) || record.city;
   }
   return record.city;
 }
@@ -579,9 +621,37 @@ function pinIcon(record) {
   });
 }
 
+const POPUP_GLASS =
+  "linear-gradient(115deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 246, 240, 0.58) 46%, rgba(255, 255, 255, 0.38) 100%)";
+
+function paintPopupGlass(popup) {
+  const wrap = popup?.getElement()?.querySelector(".leaflet-popup-content-wrapper");
+  if (!wrap) return;
+  wrap.style.backgroundColor = "rgba(255, 248, 244, 0.78)";
+  wrap.style.backgroundImage = POPUP_GLASS;
+  wrap.style.border = "1px solid rgba(255, 255, 255, 0.72)";
+  wrap.style.borderRadius = "22px";
+  wrap.style.boxShadow = "0 12px 32px rgba(20, 20, 30, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)";
+  wrap.style.backdropFilter = "blur(18px) saturate(1.6)";
+  wrap.style.webkitBackdropFilter = "blur(18px) saturate(1.6)";
+}
+
+let mapSyncTries = 0;
+
 function syncMap(list) {
   const mount = document.getElementById("map");
   if (!mount || typeof L === "undefined") return;
+  const pane = mount.closest(".map-pane") || mount;
+  if (getComputedStyle(pane).display === "none") return;
+  const rect = mount.getBoundingClientRect();
+  if (rect.width < 24 || rect.height < 24) {
+    if (resultsView === "map" && mapSyncTries < 12) {
+      mapSyncTries += 1;
+      requestAnimationFrame(() => syncMap(filteredPeople()));
+    }
+    return;
+  }
+  mapSyncTries = 0;
   if (!resultMap) {
     resultMap = L.map(mount, { zoomControl: false, scrollWheelZoom: true });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -639,7 +709,9 @@ function syncMap(list) {
       maxWidth: 380,
       minWidth: 340,
     });
-    marker.on("popupopen", () => {
+    marker.on("popupopen", (event) => {
+      paintPopupGlass(event.popup);
+      requestAnimationFrame(() => paintPopupGlass(event.popup));
       resultMarkers.forEach((item, id) => {
         item.getElement()?.classList.toggle("is-selected", id === record.id);
         if (id === record.id) item.setZIndexOffset(1000);
@@ -771,9 +843,7 @@ function renderProfile() {
   const also = (record.also || []).length ? `Also travels to ${record.also.join(", ")}.` : "";
   const genreLabel = { Concert: "Concerts" };
   const genres = [...(record.genres || [])].sort((a, b) => a.localeCompare(b)).map((genre) => genreLabel[genre] || genre);
-  const secondary = (record.secondary || []).filter((role) => !(record.roles || []).includes(role));
   const roleLine = [...(record.roles || []), genres.join("/")].filter(Boolean).join(", ");
-  const secondaryLine = secondary.length ? `<p class="profile_secondary"><span>Secondary</span> ${escapeHtml(secondary.join(", "))}</p>` : "";
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
 
   root.innerHTML = `
@@ -783,7 +853,6 @@ function renderProfile() {
       <div class="profile_id">
       <h1>${escapeHtml(record.name)}</h1>
       ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
-      ${secondaryLine}
       ${place ? `<p class="profile_place">${escapeHtml(place)}</p>` : ""}
       </div>
       <div class="profile_icons">
@@ -1273,10 +1342,17 @@ function nearbyCity() {
   return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
 }
 
+function sameCity(left, right) {
+  const a = canonicalCity(left);
+  const b = canonicalCity(right);
+  return Boolean(a) && a === b;
+}
+
 function setCities(cities) {
   const unique = [];
   cities.forEach((city) => {
-    if (city && !unique.includes(city)) unique.push(city);
+    const name = canonicalCity(city);
+    if (name && !unique.includes(name)) unique.push(name);
   });
   state.city = unique[0] || "";
   state.extraCities = unique.slice(1);
@@ -1315,7 +1391,8 @@ function paintLocation() {
   menu.querySelectorAll(".filter-row").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      toggleLocation(button.dataset.city || "");
+      event.preventDefault();
+      toggleLocation(button.getAttribute("data-city") || "");
     });
   });
   const badge = document.getElementById("location-count");
@@ -1493,10 +1570,12 @@ function setResultsView(view) {
       if (generation !== resultsViewGeneration) return;
       if (view === "list") window.scrollTo(0, savedTop);
       else if (scroller) scroller.scrollTop = savedTop;
-      if (view === "map" && resultMap) {
-        resultMap.invalidateSize();
+      if (view !== "map") return;
+      requestAnimationFrame(() => {
+        if (generation !== resultsViewGeneration) return;
         syncMap(filteredPeople());
-      }
+        resultMap?.invalidateSize();
+      });
     });
   };
 
@@ -1598,8 +1677,8 @@ function writeUrl(mode) {
 function readUrl() {
   const params = new URLSearchParams(location.search);
   state.query = params.get("q") || "";
-  state.city = params.get("city") || "";
-  state.extraCities = (params.get("near") || "").split(",").filter(Boolean);
+  state.city = canonicalCity(params.get("city") || "");
+  state.extraCities = (params.get("near") || "").split(",").map(canonicalCity).filter(Boolean);
   state.roles = (params.get("roles") || "").split(",").filter(Boolean);
   state.roleGenres = {};
   state.genresScoped = false;
@@ -1870,6 +1949,34 @@ function cleanUrl(value) {
   return `https://${raw}`;
 }
 
+function clearDialogMenu(panel) {
+  panel.style.position = "";
+  panel.style.top = "";
+  panel.style.left = "";
+  panel.style.width = "";
+  panel.style.right = "";
+}
+
+function placeDialogMenu(panel) {
+  const scroller = panel.closest(".add-dialog_panel");
+  const anchor = panel.parentElement?.querySelector(".add-role_toggle, .add-city_toggle");
+  if (!scroller || !anchor || panel.hidden) return;
+  const rect = anchor.getBoundingClientRect();
+  panel.style.position = "fixed";
+  panel.style.left = `${rect.left}px`;
+  panel.style.width = `${rect.width}px`;
+  panel.style.right = "auto";
+  panel.style.top = `${rect.bottom + 8}px`;
+  const menu = panel.getBoundingClientRect();
+  const overflow = menu.bottom - (window.innerHeight - 12);
+  if (overflow > 0) {
+    scroller.scrollTop += overflow;
+    const next = anchor.getBoundingClientRect();
+    panel.style.top = `${next.bottom + 8}px`;
+    panel.style.left = `${next.left}px`;
+  }
+}
+
 function createRolePicker(config) {
   const pick = { roles: [], roleGenres: {}, openRole: "" };
   const single = Boolean(config.single);
@@ -1916,6 +2023,8 @@ function createRolePicker(config) {
     }
     panel.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
+    if (open) placeDialogMenu(panel);
+    else clearDialogMenu(panel);
     if (!open) {
       pick.openRole = "";
       paintSub();
@@ -2210,6 +2319,8 @@ function setCityOpen(wrap, open) {
   wrap.classList.toggle("is-open", open);
   panel.hidden = !open;
   toggle.setAttribute("aria-expanded", String(open));
+  if (open) placeDialogMenu(panel);
+  else clearDialogMenu(panel);
 }
 
 function paintCityMenu(wrap) {
@@ -2475,6 +2586,10 @@ function bindAddRoster() {
     if (event.target === dialog) setAddOpen(false);
   });
   mainPicker.bind();
+  const dialogPanel = document.querySelector(".add-dialog_panel");
+  dialogPanel?.addEventListener("scroll", () => {
+    dialogPanel.querySelectorAll(".add-role_panel:not([hidden]), .add-city_panel:not([hidden])").forEach((panel) => placeDialogMenu(panel));
+  }, { passive: true });
   document.getElementById("add-secondary-add")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -2568,12 +2683,12 @@ function initHeroMap() {
   const origin = [348, 150];
   const steps = [
     { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
-    { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 236, y: -72, w: 84, h: 84, inn: [322, 48], bend: -36 },
+    { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 48], bend: -36 },
     { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
     { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
     { name: "Charlie Harris", caption: place(["Videographer"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
     { name: "Randy", caption: place(["Designer"], "London"), src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
-    { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 136, y: 128, w: 84, h: 112, inn: [226, 184], bend: -22 },
+    { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
   ];
 
   const NEON = [
@@ -2753,6 +2868,7 @@ function initHeroMap() {
 function revealPage() {
   if (isResultsPage() && new URLSearchParams(location.search).get("view") === "map") setResultsView("map");
   render({ url: "replace" });
+  if (isResultsPage()) requestAnimationFrame(() => render({ url: "replace" }));
   resultsViewSettled = true;
   if (typeof initProjects === "function") {
     const open = document.body.dataset.page === "explore"
@@ -2878,6 +2994,12 @@ function initGlassCursor() {
     if (!inHero(pointer.x, pointer.y)) hide();
   }, { passive: true });
 }
+
+window.addEventListener("pageshow", (event) => {
+  if (!event.persisted || !isResultsPage()) return;
+  readUrl();
+  render({ url: "replace" });
+});
 
 const delay = skeletonDelay();
 if (delay) {

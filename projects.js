@@ -51,7 +51,7 @@ const PROJECTS = [
   {
     id: "pryme-cross-the-line",
     title: "pryme! — cross the line",
-    summary: "Official music video. Credits are taken from the YouTube description.",
+    summary: "Official music video.",
     date: "October 1, 2026",
     place: "",
     href: "https://www.youtube.com/watch?v=jxLDB3Iieoc",
@@ -92,7 +92,7 @@ const PROJECTS = [
   {
     id: "sailorr-coconut",
     title: "SAILORR — COCONUT",
-    summary: "Official music video. Credits are taken from the YouTube description.",
+    summary: "Official music video.",
     date: "March 9, 2026",
     place: "",
     href: "https://www.youtube.com/watch?v=TG1Vt7Czs8g",
@@ -138,7 +138,7 @@ const PROJECTS = [
   {
     id: "avara-yasmeen",
     title: "Avara — yasmeen",
-    summary: "Official music video. Credits are taken from the YouTube description.",
+    summary: "Official music video.",
     date: "September 4, 2026",
     place: "",
     href: "https://www.youtube.com/watch?v=rE_ebt4hgCM",
@@ -225,7 +225,7 @@ const PROJECTS = [
   {
     id: "gigi-moss-criminal",
     title: "Gigi Moss — Criminal",
-    summary: "Lyric video. Credits are taken from the YouTube description.",
+    summary: "Lyric video.",
     date: "August 20, 2026",
     place: "",
     href: "https://www.youtube.com/watch?v=J0o9PkcXmcs",
