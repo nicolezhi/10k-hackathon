@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>10K Roster</title>
+    <title>10K Creatives</title>
     <meta
       name="description"
-      content="Find freelance creatives for a 10K shoot by city and role."
+      content="Stop asking around. The short list of freelancers for a 10K shoot, with the work up front."
     />
     <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,9 +21,10 @@
       href="https://api.fontshare.com/v2/css?f[]=neue-montreal@400&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=109" />
+    <link rel="stylesheet" href="styles.css?v=162" />
   </head>
   <body data-view="home">
+    <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <header class="navbar results-top">
       <a class="nav_brand" href="/" aria-label="10K Projects, home">
         <img
@@ -78,9 +79,16 @@
           <svg id="hero-map" viewBox="0 0 780 300" aria-hidden="true"></svg>
           <div class="hero_shots" id="hero-shots"></div>
         </figure>
-        <h1>Find the creative for the shoot.</h1>
+        <svg class="ink-defs" aria-hidden="true" focusable="false">
+          <filter id="ink-bleed" x="-12%" y="-30%" width="124%" height="160%" color-interpolation-filters="sRGB">
+            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="6" result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G" result="spread" />
+            <feGaussianBlur in="spread" stdDeviation="0.45" />
+          </filter>
+        </svg>
+        <h1>Stop asking around.</h1>
         <p class="lede">
-          A short list of freelancers, with the work up front. Filter by city and role, then reach out on Instagram, email, or phone.
+          A shoot needs a photographer, a stylist, or a MUA, and finding one still means a group chat. This is the short list, with the work up front. Pick a city and a role, then reach them.
         </p>
       </section>
 
@@ -88,11 +96,16 @@
         <div class="projects_head">
           <div>
             <h2>Explore recent projects</h2>
-            <p>Past shoots, with the creatives who worked them.</p>
           </div>
           <a class="text-button" href="projects.html">See all</a>
         </div>
-        <div class="masonry" id="project-grid"></div>
+        <div class="masonry" id="project-grid" aria-busy="true" aria-label="Loading projects">
+          <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+          <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+          <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+          <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+          <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        </div>
       </section>
 
       <section class="results" id="results" aria-live="polite">
@@ -106,14 +119,36 @@
         </div>
         <p class="nearby" id="nearby" hidden></p>
         <p class="empty" id="empty" hidden>No one matches that yet.</p>
-        <div class="grid" id="grid"></div>
+        <div class="grid" id="grid" aria-busy="true" aria-label="Loading creatives">
+          <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+          <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+          <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+          <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+        </div>
       </section>
     </div>
 
-    <article class="profile-view" id="profile" hidden></article>
+    <article class="profile-view" id="profile" hidden>
+      <div class="profile-skeleton" aria-hidden="true">
+        <span class="skeleton_block skeleton_line skeleton_line-back"></span>
+        <div class="profile-skeleton_head">
+          <span class="skeleton_block skeleton_avatar skeleton_avatar-lg"></span>
+          <span class="skeleton_copy">
+            <span class="skeleton_block skeleton_line skeleton_line-name"></span>
+            <span class="skeleton_block skeleton_line skeleton_line-short"></span>
+            <span class="skeleton_tags"><span class="skeleton_block"></span><span class="skeleton_block"></span><span class="skeleton_block"></span></span>
+          </span>
+        </div>
+        <div class="profile-skeleton_shots">
+          <span class="skeleton_block skeleton_shot"></span>
+          <span class="skeleton_block skeleton_shot"></span>
+          <span class="skeleton_block skeleton_shot"></span>
+        </div>
+      </div>
+    </article>
 
-    <script src="people.js?v=5"></script>
-    <script src="projects.js?v=34"></script>
-    <script src="app.js?v=93"></script>
+    <script src="people.js?v=8"></script>
+    <script src="projects.js?v=39"></script>
+    <script src="app.js?v=109"></script>
   </body>
 </html>

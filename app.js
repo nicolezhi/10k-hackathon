@@ -41,7 +41,7 @@ const NEARBY_NOTE = {
   Brussels: "Paris and Cologne are less than 2 hours from Brussels. Check those too.",
   Paris: "Brussels and Cologne are close enough to check for the same shoot.",
   Cologne: "Brussels and Paris are close enough to check for the same shoot.",
-  Memphis: "Memphis is a thin market. Atlanta is the next place this roster has depth.",
+  Memphis: "Memphis is a thin market. Atlanta is the next place the creatives have depth.",
   Atlanta: "If Atlanta is short, Memphis is the other city already on this list.",
 };
 
@@ -127,13 +127,17 @@ let openFilterRole = "";
 
 let skipUrl = false;
 
+function roleNames(record) {
+  return [...(record.roles || []), ...(record.secondary || [])];
+}
+
 function blob(record) {
   const past = (record.past || []).map((item) => `${item.artist} ${item.project} ${item.role}`).join(" ");
   return [
     record.name,
     record.city,
     ...(record.also || []),
-    ...record.roles,
+    ...roleNames(record),
     ...record.genres,
     record.bio,
     record.instagram,
@@ -174,10 +178,10 @@ function filteredPeople() {
   const tokens = tokensFrom(state.query);
   const cities = activeCities();
   return PEOPLE.filter((record) => {
-    if (cities.length && !cities.includes(record.city)) return false;
+    if (cities.length && !cities.some((city) => record.city === city || (record.also || []).includes(city))) return false;
     if (state.roles.length) {
       const hit = state.roles.some((role) => {
-        if (!record.roles.includes(role)) return false;
+        if (!roleNames(record).includes(role)) return false;
         const picked = state.roleGenres[role] || [];
         if (!picked.length) return true;
         return picked.some((genre) => (record.genres || []).includes(genre));
@@ -210,7 +214,7 @@ function summaryText(list) {
   if (state.genres.length) parts.push(state.genres.join(", "));
   if (state.tenk) parts.push("10K projects");
   if (state.query.trim()) parts.push(`“${state.query.trim()}”`);
-  if (!parts.length) return PEOPLE.length ? "Everyone on the roster." : "";
+  if (!parts.length) return PEOPLE.length ? "Everyone in the creatives." : "";
   return parts.join(" · ");
 }
 
@@ -407,13 +411,15 @@ const CONTACT_PATHS = {
 
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
+  const tags = (record.genres || []).join(" · ");
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
   return `
     ${avatarHtml(record, "result-card_avatar")}
     <div class="result-card_body">
       <h3>${escapeHtml(record.name)}</h3>
-      <p class="result-card_role">${escapeHtml(record.roles.join(" · "))}</p>
-      ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : ""}
+      <p class="result-card_role">${escapeHtml(roleNames(record).join(" · "))}</p>
+      ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : "<p></p>"}
+      <p class="result-card_tags">${escapeHtml(tags)}</p>
       <div class="result-card_icons">
         ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
         ${copyControl("Portfolio", record.portfolio || "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
@@ -435,8 +441,11 @@ function renderMapResults(list) {
       : summaryText(list);
   document.getElementById("count").textContent = "";
   empty.hidden = list.length !== 0;
-  empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives on the roster yet.";
+  empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives yet.";
+  document.querySelector(".map-skeleton")?.remove();
   grid.innerHTML = "";
+  grid.removeAttribute("aria-busy");
+  grid.removeAttribute("aria-label");
 
   list.forEach((record) => {
     const card = document.createElement("article");
@@ -503,8 +512,16 @@ function showcasePoint(record, index, total) {
   return [40.87 - ((row + 0.5 + jy) / rows) * 0.25, -74.08 + ((col + 0.5 + jx) / cols) * 0.42];
 }
 
-function pinPoint(record, indexInCity, cityCount) {
-  const city = cityRecord(record.city);
+function pinCity(record) {
+  const cities = activeCities();
+  if (cities.length && !cities.includes(record.city)) {
+    return (record.also || []).find((city) => cities.includes(city)) || record.city;
+  }
+  return record.city;
+}
+
+function pinPoint(record, indexInCity, cityCount, cityName = record.city) {
+  const city = cityRecord(cityName);
   if (!city?.at) return showcasePoint(record, indexInCity, cityCount);
   if (cityCount < 2) return city.at;
   if (cityCount > 12) return showcasePoint(record, indexInCity, cityCount);
@@ -534,7 +551,7 @@ function mapPopup(record) {
         ${avatarHtml(record, "roster-pop_avatar")}
         <div>
           <h3>${escapeHtml(record.name)}</h3>
-          <p>${escapeHtml(record.roles.join(" · "))}</p>
+          <p>${escapeHtml(roleNames(record).join(" · "))}</p>
         </div>
       </div>
       ${shots ? `<div class="roster-pop_shots">${shots}</div>` : ""}
@@ -599,14 +616,16 @@ function syncMap(list) {
   resultMarkers.clear();
   const counts = {};
   list.forEach((record) => {
-    counts[record.city] = (counts[record.city] || 0) + 1;
+    const city = pinCity(record);
+    counts[city] = (counts[city] || 0) + 1;
   });
   const seen = {};
   const points = [];
   list.forEach((record) => {
-    const indexInCity = seen[record.city] || 0;
-    seen[record.city] = indexInCity + 1;
-    const point = pinPoint(record, indexInCity, counts[record.city] || 1);
+    const city = pinCity(record);
+    const indexInCity = seen[city] || 0;
+    seen[city] = indexInCity + 1;
+    const point = pinPoint(record, indexInCity, counts[city] || 1, city);
     if (!point) return;
     const marker = L.marker(point, { icon: pinIcon(record), zIndexOffset: indexInCity });
     marker.bindPopup(mapPopup(record), {
@@ -667,8 +686,10 @@ function renderResults(list) {
   const more = document.getElementById("nearby-more");
   if (more) more.href = city ? `results.html?city=${encodeURIComponent(city)}` : "results.html";
   empty.hidden = nearby.length !== 0;
-  empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives on the roster yet.";
+  empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives yet.";
   grid.innerHTML = "";
+  grid.removeAttribute("aria-busy");
+  grid.removeAttribute("aria-label");
 
   nearby.forEach((record) => {
     const card = document.createElement("article");
@@ -687,6 +708,31 @@ function renderResults(list) {
   });
 
   renderNearby(list);
+}
+
+function pastProjectCards(record) {
+  const items = record.past || [];
+  if (!items.length) {
+    return `<div class="past-projects"><div class="past-card past-card_empty"><span class="past-card_copy"><span>No 10K projects on file yet.</span></span></div></div>`;
+  }
+  const catalog = typeof PROJECTS === "undefined" ? [] : PROJECTS;
+  return `<div class="past-projects">${items
+    .map((item) => {
+      const project = catalog.find((entry) => entry.id === item.id);
+      const title = project?.title || item.project || "Project";
+      const image = project?.images?.[0] || "";
+      const media = image
+        ? `<img src="${escapeHtml(image)}" alt="" />`
+        : `<span class="past-card_fallback" aria-hidden="true"></span>`;
+      return `<button class="past-card" type="button" data-project="${escapeHtml(item.id || "")}">
+        ${media}
+        <span class="past-card_copy">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(item.role || "")}</span>
+        </span>
+      </button>`;
+    })
+    .join("")}</div>`;
 }
 
 function contactRows(record) {
@@ -713,35 +759,31 @@ function renderProfile() {
   if (!record) {
     root.hidden = true;
     root.innerHTML = "";
-    document.title = isResultsPage() ? "Search · 10K Roster" : "10K Roster";
+    document.title = isResultsPage() ? "Search · 10K Creatives" : "10K Creatives";
     return;
   }
 
   root.hidden = false;
-  document.title = `${record.name} · 10K Roster`;
-  const projects = (record.past || []).length
-    ? record.past
-        .map(
-          (item) =>
-            `<div class="project"><strong>${escapeHtml(item.project)}</strong><span>${escapeHtml(item.role)}</span><span>${escapeHtml(item.artist)}</span></div>`
-        )
-        .join("")
-    : "<p>No 10K projects on file yet.</p>";
+  document.title = `${record.name} · 10K Creatives`;
+  const projects = pastProjectCards(record);
   const city = cityRecord(record.city);
   const place = city?.place || record.city || "";
-  const also = (record.also || []).length ? `Also works in ${record.also.join(", ")}.` : "";
+  const also = (record.also || []).length ? `Also travels to ${record.also.join(", ")}.` : "";
   const genreLabel = { Concert: "Concerts" };
   const genres = [...(record.genres || [])].sort((a, b) => a.localeCompare(b)).map((genre) => genreLabel[genre] || genre);
+  const secondary = (record.secondary || []).filter((role) => !(record.roles || []).includes(role));
   const roleLine = [...(record.roles || []), genres.join("/")].filter(Boolean).join(", ");
+  const secondaryLine = secondary.length ? `<p class="profile_secondary"><span>Secondary</span> ${escapeHtml(secondary.join(", "))}</p>` : "";
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
 
   root.innerHTML = `
-    <a class="back" href="#results"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${isResultsPage() ? "Back to results" : "Back to roster"}</span></a>
+    <a class="back" href="#results"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${isResultsPage() ? "Back to results" : "Back to creatives"}</span></a>
     <header class="profile_head">
       ${avatarHtml(record, "profile_avatar")}
       <div class="profile_id">
       <h1>${escapeHtml(record.name)}</h1>
       ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
+      ${secondaryLine}
       ${place ? `<p class="profile_place">${escapeHtml(place)}</p>` : ""}
       </div>
       <div class="profile_icons">
@@ -765,21 +807,68 @@ function renderProfile() {
         ${record.compensation ? `<section><h2>Compensation notes</h2><p>${escapeHtml(record.compensation)}</p></section>` : ""}
         <section>
           <h2>Contact</h2>
-          <label class="sr" for="intro">Intro message</label>
-          <div class="intro-shell">
-            <button class="intro-copy" type="button" id="copy-intro" aria-label="Copy intro message">
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-            </button>
-            <textarea class="intro" id="intro" rows="4"></textarea>
+          <div class="contact-card">
+            <div class="contact-card_glass">
+              <div class="contact" id="contact"></div>
+              <label class="sr" for="intro">Intro message</label>
+              <div class="intro-shell">
+                <button class="intro-copy" type="button" id="copy-intro" aria-label="Copy intro message">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                </button>
+                <textarea class="intro" id="intro" rows="4"></textarea>
+              </div>
+            </div>
           </div>
         </section>
       </div>
     </div>
   `;
 
+  root.querySelectorAll(".past-card").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (typeof openProject === "function") openProject(button.dataset.project);
+    });
+  });
+
   root.querySelector(".back").addEventListener("click", (event) => {
     event.preventDefault();
     closeProfile();
+  });
+
+  const contact = root.querySelector("#contact");
+  contactRows(record).forEach((row) => {
+    const line = document.createElement("div");
+    line.className = "contact_row";
+    const copy = document.createElement("div");
+    copy.innerHTML = `<strong>${row.label}${row.key === record.preferred ? ' <span class="preferred">Preferred</span>' : ""}</strong>`;
+    copy.append(document.createTextNode(row.value));
+    const button = document.createElement(row.href ? "a" : "button");
+    if (row.href) {
+      button.className = "contact_icon";
+      button.href = row.href;
+      button.target = "_blank";
+      button.rel = "noreferrer";
+      button.setAttribute("aria-label", `Open ${row.label}`);
+      button.innerHTML = tinyIcon(CONTACT_PATHS.instagram);
+    } else {
+      button.type = "button";
+      button.className = "text-button";
+      button.textContent = row.action;
+    }
+    button.addEventListener("click", async () => {
+      if (row.href) return;
+      try {
+        await navigator.clipboard.writeText(row.value);
+        button.textContent = "Copied";
+      } catch {
+        button.textContent = "Select to copy";
+      }
+      setTimeout(() => {
+        button.textContent = row.action;
+      }, 1200);
+    });
+    line.append(copy, button);
+    contact.append(line);
   });
 
   const intro = root.querySelector("#intro");
@@ -960,14 +1049,14 @@ function paintWhoSub() {
     ...genres.map((genre) => ({ label: genre, checked: !allOn && picked.includes(genre), genre })),
   ];
   sub.hidden = false;
-  sub.innerHTML = rows
+  sub.innerHTML = `<div class="who-sub_menu">${rows
     .map(
       (row) => `<button class="filter-sub_row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-genre="${escapeHtml(row.genre)}">
         ${checkHtml()}
         <span class="filter-row_label">${escapeHtml(row.label)}</span>
       </button>`
     )
-    .join("");
+    .join("")}</div>`;
   sub.querySelectorAll(".filter-sub_row").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -976,7 +1065,7 @@ function paintWhoSub() {
     });
   });
   const row = [...document.querySelectorAll("#who-options .pick")].find((button) => button.dataset.role === openWhoRole);
-  alignSubmenu(sub, row, 10);
+  alignSubmenu(sub, row, 8);
 }
 
 function renderWhoOptions() {
@@ -1093,7 +1182,7 @@ function filterAllLabel(role) {
 }
 
 function filterMenu() {
-  const used = new Set(PEOPLE.flatMap((record) => record.roles));
+  const used = new Set(PEOPLE.flatMap((record) => roleNames(record)));
   const ordered = [
     ...FILTER_ORDER.filter((role) => used.has(role)),
     ...ROLES.map((role) => role.name).filter((role) => used.has(role) && !FILTER_ORDER.includes(role)),
@@ -1101,7 +1190,7 @@ function filterMenu() {
   return ordered.map((role) => {
     const genres = new Set();
     PEOPLE.forEach((record) => {
-      if (!record.roles.includes(role)) return;
+      if (!roleNames(record).includes(role)) return;
       (record.genres || []).forEach((genre) => genres.add(genre));
     });
     return {
@@ -1369,32 +1458,65 @@ function buildFilters() {
   });
 }
 
+let resultsViewSettled = false;
+let resultsViewGeneration = 0;
+
 function setResultsView(view) {
   if (view !== "map" && view !== "list") return;
+  const page = document.querySelector(".results-page");
   const scroller = document.querySelector(".results");
   const savedTop = resultsView === "map" ? scroller?.scrollTop || 0 : window.scrollY;
+  const changed = view !== resultsView;
+  const animate =
+    changed &&
+    resultsViewSettled &&
+    page &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const generation = ++resultsViewGeneration;
   resultsView = view;
-  const page = document.querySelector(".results-page");
-  if (page) page.dataset.resultsView = view;
   document.querySelectorAll(".view-toggle_btn").forEach((button) => {
     const on = button.dataset.view === view;
     button.classList.toggle("is-on", on);
     button.setAttribute("aria-pressed", String(on));
   });
-  const summary = document.getElementById("summary");
-  if (summary && isResultsPage()) {
-    const list = filteredPeople();
-    summary.textContent =
-      view === "list" ? summaryText(list) : "Hover a card to find them on the map. Click the card to open their profile.";
-  }
-  requestAnimationFrame(() => {
-    if (view === "list") window.scrollTo(0, savedTop);
-    else if (scroller) scroller.scrollTop = savedTop;
-    if (view === "map" && resultMap) {
-      resultMap.invalidateSize();
-      syncMap(filteredPeople());
+
+  const commit = () => {
+    if (generation !== resultsViewGeneration) return;
+    if (page) page.dataset.resultsView = view;
+    const summary = document.getElementById("summary");
+    if (summary && isResultsPage()) {
+      const list = filteredPeople();
+      summary.textContent =
+        view === "list" ? summaryText(list) : "Hover a card to find them on the map. Click the card to open their profile.";
     }
-  });
+    requestAnimationFrame(() => {
+      if (generation !== resultsViewGeneration) return;
+      if (view === "list") window.scrollTo(0, savedTop);
+      else if (scroller) scroller.scrollTop = savedTop;
+      if (view === "map" && resultMap) {
+        resultMap.invalidateSize();
+        syncMap(filteredPeople());
+      }
+    });
+  };
+
+  if (!animate) {
+    page?.classList.remove("is-view-out", "is-view-in");
+    commit();
+    return;
+  }
+
+  page.classList.remove("is-view-in");
+  page.classList.add("is-view-out");
+  window.setTimeout(() => {
+    if (generation !== resultsViewGeneration) return;
+    commit();
+    page.classList.add("is-view-in");
+    page.classList.remove("is-view-out");
+    window.setTimeout(() => {
+      if (generation === resultsViewGeneration) page.classList.remove("is-view-in");
+    }, 240);
+  }, 120);
 }
 
 function clearLocation() {
@@ -1617,6 +1739,7 @@ function bind() {
     openPanel = "";
     document.getElementById("where-filter").value = "";
     if (!isResultsPage()) {
+      markSkeletonNav();
       location.href = resultsQuery();
       return;
     }
@@ -1646,6 +1769,15 @@ function bind() {
     if (event.key !== "Escape") return;
     if (document.getElementById("project-modal") && !document.getElementById("project-modal").hidden) return;
     if (addDialogOpen()) {
+      if (document.querySelector(".add-city.is-open")) {
+        closeCityMenus();
+        return;
+      }
+      if (mainPicker.isOpen() || secondaryPickers.some((picker) => picker.isOpen())) {
+        mainPicker.close();
+        secondaryPickers.forEach((picker) => picker.close());
+        return;
+      }
       setAddOpen(false);
       return;
     }
@@ -1693,6 +1825,7 @@ function loadAddedPeople() {
     .forEach((record) => {
       if (!record || !record.id || !record.name || PEOPLE.some((item) => item.id === record.id)) return;
       record.roles = record.roles || [];
+      record.secondary = record.secondary || [];
       record.genres = record.genres || [];
       record.also = record.also || [];
       record.images = record.images || [];
@@ -1732,21 +1865,487 @@ function cleanUrl(value) {
   return `https://${raw}`;
 }
 
+function createRolePicker(config) {
+  const pick = { roles: [], roleGenres: {}, openRole: "" };
+  const single = Boolean(config.single);
+
+  function blocked() {
+    return config.blockedRoles ? config.blockedRoles() : [];
+  }
+
+  function isAll(role) {
+    return pick.roles.includes(role) && !(pick.roleGenres[role] || []).length;
+  }
+
+  function labelText() {
+    if (!pick.roles.length) return config.emptyLabel;
+    const role = pick.roles[0];
+    const picked = pick.roleGenres[role] || [];
+    const detail = picked.length === 1 ? `${picked[0]} ${role.toLowerCase()}` : picked.length > 1 ? `${picked[0]} +${picked.length - 1}` : filterLabel(role);
+    if (single || pick.roles.length === 1) return detail;
+    return `${detail} +${pick.roles.length - 1}`;
+  }
+
+  function isOpen() {
+    const panel = document.getElementById(config.panel);
+    return Boolean(panel && !panel.hidden);
+  }
+
+  function close() {
+    const panel = document.getElementById(config.panel);
+    const toggle = document.getElementById(config.toggle);
+    if (!panel || !toggle) return;
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+    pick.openRole = "";
+    paintSub();
+  }
+
+  function setOpen(open) {
+    const panel = document.getElementById(config.panel);
+    const toggle = document.getElementById(config.toggle);
+    if (!panel || !toggle) return;
+    if (open) {
+      config.beforeOpen?.();
+      build();
+    }
+    panel.hidden = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+    if (!open) {
+      pick.openRole = "";
+      paintSub();
+    }
+  }
+
+  function paintLabel() {
+    const label = document.getElementById(config.label);
+    const toggle = document.getElementById(config.toggle);
+    if (!label || !toggle) return;
+    label.textContent = labelText();
+    toggle.classList.toggle("is-set", pick.roles.length > 0);
+  }
+
+  function paintSub() {
+    const sub = document.getElementById(config.sub);
+    if (!sub) return;
+    const item = filterMenu().find((entry) => entry.role === pick.openRole && entry.genres.length);
+    if (!item || blocked().includes(item.role)) {
+      sub.hidden = true;
+      sub.innerHTML = "";
+      return;
+    }
+    sub.hidden = false;
+    sub.setAttribute("aria-label", item.label);
+    const allOn = isAll(item.role);
+    const picked = pick.roleGenres[item.role] || [];
+    const rows = [
+      { label: item.all, checked: allOn, genre: "" },
+      ...item.genres.map((genre) => ({ label: genre, checked: !allOn && picked.includes(genre), genre })),
+    ];
+    sub.innerHTML = rows
+      .map(
+        (row) => `<button class="filter-sub_row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-genre="${escapeHtml(row.genre)}">
+        ${checkHtml()}
+        <span class="filter-row_label">${escapeHtml(row.label)}</span>
+      </button>`
+      )
+      .join("");
+    sub.querySelectorAll(".filter-sub_row").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!button.dataset.genre) toggleAll(item.role);
+        else toggleGenre(item.role, button.dataset.genre);
+      });
+    });
+    const row = [...document.querySelectorAll(`#${config.menu} .filter-row`)].find((button) => button.dataset.role === item.role);
+    alignSubmenu(sub, row, 8);
+  }
+
+  function paint() {
+    document.querySelectorAll(`#${config.menu} .filter-row`).forEach((button) => {
+      const role = button.dataset.role;
+      const genres = (button.dataset.genres || "").split("|").filter(Boolean);
+      button.classList.toggle("is-open", role === pick.openRole && genres.length > 0);
+      if (button.hasAttribute("aria-checked")) button.setAttribute("aria-checked", String(isAll(role)));
+      if (genres.length) button.setAttribute("aria-expanded", String(role === pick.openRole));
+    });
+    paintSub();
+    paintLabel();
+  }
+
+  function showSub(role) {
+    pick.openRole = role && !blocked().includes(role) ? role : "";
+    paint();
+  }
+
+  function changed() {
+    config.onChange?.();
+  }
+
+  function toggleAll(role) {
+    if (blocked().includes(role)) return;
+    if (isAll(role)) {
+      pick.roles = pick.roles.filter((item) => item !== role);
+      delete pick.roleGenres[role];
+    } else if (single) {
+      pick.roles = [role];
+      pick.roleGenres = { [role]: [] };
+    } else {
+      if (!pick.roles.includes(role)) pick.roles = [...pick.roles, role];
+      pick.roleGenres[role] = [];
+    }
+    paint();
+    changed();
+    const flat = !filterMenu().some((item) => item.role === role && item.genres.length);
+    if (single && flat && pick.roles.length) close();
+  }
+
+  function toggleGenre(role, genre) {
+    if (blocked().includes(role)) return;
+    const owned = pick.roles.includes(role) && !isAll(role) ? pick.roleGenres[role] || [] : [];
+    const base = single && pick.roles[0] !== role ? [] : owned;
+    const next = base.includes(genre) ? base.filter((item) => item !== genre) : [...base, genre];
+    if (!next.length) {
+      pick.roles = pick.roles.filter((item) => item !== role);
+      delete pick.roleGenres[role];
+    } else if (single) {
+      pick.roles = [role];
+      pick.roleGenres = { [role]: next };
+    } else {
+      if (!pick.roles.includes(role)) pick.roles = [...pick.roles, role];
+      pick.roleGenres[role] = next;
+    }
+    paint();
+    changed();
+    if (single && pick.roles.length) close();
+  }
+
+  function build() {
+    const menu = document.getElementById(config.menu);
+    const panel = document.getElementById(config.panel);
+    if (!menu || !panel) return;
+    if (!panel.dataset.ready) {
+      panel.dataset.ready = "1";
+      panel.addEventListener("mouseleave", (event) => {
+        if (panel.contains(event.relatedTarget)) return;
+        showSub("");
+      });
+    }
+    const skip = new Set(blocked());
+    menu.innerHTML = "";
+    filterMenu().forEach((item) => {
+      if (skip.has(item.role)) return;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "filter-row";
+      button.dataset.role = item.role;
+      button.dataset.genres = item.genres.join("|");
+      if (item.genres.length) {
+        button.setAttribute("aria-haspopup", "menu");
+        button.setAttribute("aria-expanded", "false");
+        button.innerHTML = `<span class="filter-row_label">${escapeHtml(item.label)}</span><span class="filter-row_chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+      } else {
+        button.setAttribute("role", "menuitemcheckbox");
+        button.setAttribute("aria-checked", "false");
+        button.innerHTML = `${checkHtml()}<span class="filter-row_label">${escapeHtml(item.label)}</span>`;
+      }
+      button.addEventListener("mouseenter", () => showSub(item.genres.length ? item.role : ""));
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (item.genres.length) showSub(item.role);
+        toggleAll(item.role);
+      });
+      menu.append(button);
+    });
+    paint();
+  }
+
+  function bind() {
+    const toggle = document.getElementById(config.toggle);
+    if (!toggle || toggle.dataset.bound) return;
+    toggle.dataset.bound = "1";
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setOpen(!isOpen());
+    });
+  }
+
+  return {
+    bind,
+    build,
+    close,
+    drop(roles) {
+      const remove = new Set(roles);
+      const next = pick.roles.filter((role) => !remove.has(role));
+      if (next.length === pick.roles.length) return;
+      pick.roles = next;
+      roles.forEach((role) => delete pick.roleGenres[role]);
+      if (remove.has(pick.openRole)) pick.openRole = "";
+      paint();
+    },
+    genres() {
+      return pick.roles.flatMap((role) => pick.roleGenres[role] || []);
+    },
+    isOpen,
+    reset() {
+      pick.roles = [];
+      pick.roleGenres = {};
+      pick.openRole = "";
+      close();
+      paintLabel();
+    },
+    roles() {
+      return pick.roles.slice();
+    },
+    open() {
+      setOpen(true);
+    },
+    wrap() {
+      return document.getElementById(config.wrap);
+    },
+  };
+}
+
+const secondaryPickers = [];
+let secondaryCount = 0;
+
+const mainPicker = createRolePicker({
+  single: true,
+  emptyLabel: "Add a main role",
+  toggle: "add-main-toggle",
+  label: "add-main-label",
+  panel: "add-main-panel",
+  menu: "add-main-roles",
+  sub: "add-main-sub",
+  wrap: "add-main-wrap",
+  beforeOpen() {
+    closeCityMenus();
+    secondaryPickers.forEach((picker) => picker.close());
+  },
+  onChange() {
+    secondaryPickers.forEach((picker) => picker.drop(mainPicker.roles()));
+  },
+});
+
+function clearSecondaryFields() {
+  secondaryPickers.splice(0, secondaryPickers.length);
+  const list = document.getElementById("add-secondary-list");
+  if (list) list.replaceChildren();
+}
+
+function secondaryTaken(except) {
+  const taken = new Set(mainPicker.roles());
+  secondaryPickers.forEach((picker) => {
+    if (picker === except) return;
+    picker.roles().forEach((role) => taken.add(role));
+  });
+  return [...taken];
+}
+
+function addSecondaryField() {
+  const list = document.getElementById("add-secondary-list");
+  if (!list) return;
+  const id = `add-secondary-${secondaryCount}`;
+  secondaryCount += 1;
+  const wrap = document.createElement("div");
+  wrap.className = "add-role add-secondary_field";
+  wrap.id = id;
+  wrap.innerHTML = `
+    <button class="add-role_toggle" id="${id}-toggle" type="button" aria-expanded="false" aria-controls="${id}-panel">
+      <span id="${id}-label">Add a secondary role</span>
+      <svg class="add-field_chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="add-field_remove" type="button" aria-label="Remove secondary role">×</button>
+    <div class="filters-panel add-role_panel" id="${id}-panel" hidden>
+      <div class="filters-menu" id="${id}-roles" role="menu" aria-label="Secondary role"></div>
+      <div class="filters-sub" id="${id}-sub" hidden role="menu" aria-label="Genres"></div>
+    </div>
+  `;
+  list.append(wrap);
+  const picker = createRolePicker({
+    single: true,
+    emptyLabel: "Add a secondary role",
+    toggle: `${id}-toggle`,
+    label: `${id}-label`,
+    panel: `${id}-panel`,
+    menu: `${id}-roles`,
+    sub: `${id}-sub`,
+    wrap: id,
+    blockedRoles: () => secondaryTaken(picker),
+    beforeOpen() {
+      closeCityMenus();
+      mainPicker.close();
+      secondaryPickers.forEach((other) => {
+        if (other !== picker) other.close();
+      });
+    },
+  });
+  secondaryPickers.push(picker);
+  picker.bind();
+  wrap.querySelector(".add-field_remove").addEventListener("click", (event) => {
+    event.stopPropagation();
+    picker.close();
+    const index = secondaryPickers.indexOf(picker);
+    if (index >= 0) secondaryPickers.splice(index, 1);
+    wrap.remove();
+  });
+  picker.open();
+}
+
+function closeCityMenus(except) {
+  document.querySelectorAll(".add-city.is-open").forEach((wrap) => {
+    if (wrap !== except) setCityOpen(wrap, false);
+  });
+}
+
+function setCityOpen(wrap, open) {
+  const panel = wrap.querySelector(".add-city_panel");
+  const toggle = wrap.querySelector(".add-city_toggle");
+  if (!panel || !toggle) return;
+  wrap.classList.toggle("is-open", open);
+  panel.hidden = !open;
+  toggle.setAttribute("aria-expanded", String(open));
+}
+
+function paintCityMenu(wrap) {
+  const input = wrap.querySelector("input");
+  const label = wrap.querySelector(".add-city_label");
+  const panel = wrap.querySelector(".add-city_panel");
+  const toggle = wrap.querySelector(".add-city_toggle");
+  if (!input || !label || !panel || !toggle) return;
+  const selected = input.value;
+  const blocked = (wrap.dataset.blocked || "").split("|").filter(Boolean);
+  const current = CITIES.find((item) => item.name === selected);
+  label.textContent = current ? current.place || current.name : "Select a city";
+  toggle.classList.toggle("is-set", Boolean(current));
+  panel.innerHTML = CITIES.filter((item) => item.name === selected || !blocked.includes(item.name))
+    .map((item) => {
+      const on = item.name === selected;
+      return `<button class="add-city_option${on ? " is-on" : ""}" type="button" role="option" aria-selected="${on}" data-city="${escapeHtml(item.name)}">${escapeHtml(item.place || item.name)}</button>`;
+    })
+    .join("");
+  panel.querySelectorAll(".add-city_option").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      input.value = button.dataset.city;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      paintCityMenu(wrap);
+      setCityOpen(wrap, false);
+    });
+  });
+}
+
+function bindCityPicker(wrap) {
+  if (!wrap || wrap.dataset.bound) return;
+  wrap.dataset.bound = "1";
+  wrap.querySelector(".add-city_toggle").addEventListener("click", (event) => {
+    event.stopPropagation();
+    const open = wrap.classList.contains("is-open");
+    closeCityMenus();
+    mainPicker.close();
+    secondaryPickers.forEach((picker) => picker.close());
+    if (!open) {
+      paintCityMenu(wrap);
+      const panel = wrap.querySelector(".add-city_panel");
+      const room = window.innerHeight - wrap.querySelector(".add-city_toggle").getBoundingClientRect().bottom - 20;
+      panel.style.maxHeight = `${Math.max(140, Math.min(240, room))}px`;
+      setCityOpen(wrap, true);
+      wrap.querySelector(".add-city_option")?.focus();
+    }
+  });
+  wrap.querySelector(".add-city_panel").addEventListener("keydown", (event) => {
+    const options = [...wrap.querySelectorAll(".add-city_option")];
+    const index = options.indexOf(document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = event.key === "ArrowDown" ? Math.min(index + 1, options.length - 1) : Math.max(index - 1, 0);
+      options[next]?.focus();
+    }
+    if (event.key === "Enter" && index >= 0) {
+      event.preventDefault();
+      options[index].click();
+    }
+  });
+}
+
+function travelCityWraps() {
+  return [...document.querySelectorAll("#add-travel-list .add-city")];
+}
+
+function refreshTravelSelects() {
+  const home = document.getElementById("add-city").value;
+  const wraps = travelCityWraps();
+  wraps.forEach((wrap) => {
+    const input = wrap.querySelector("input");
+    if (input.value === home) input.value = "";
+    wrap.dataset.blocked = [home, ...wraps.filter((other) => other !== wrap).map((other) => other.querySelector("input").value)].filter(Boolean).join("|");
+    paintCityMenu(wrap);
+  });
+}
+
+function addTravelCity() {
+  const list = document.getElementById("add-travel-list");
+  const row = document.createElement("div");
+  row.className = "add-travel_row";
+  row.innerHTML = `<div class="add-city add-combo"><button class="add-role_toggle add-city_toggle" type="button" aria-expanded="false" aria-haspopup="listbox" aria-label="Travel city"><span class="add-city_label">Select a city</span><svg class="add-field_chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="add-field_remove" type="button" aria-label="Remove city">×</button><div class="add-city_panel" hidden role="listbox" aria-label="Travel city"></div><input class="add-city_value" type="hidden" value="" /></div>`;
+  const wrap = row.querySelector(".add-city");
+  bindCityPicker(wrap);
+  row.querySelector(".add-field_remove").addEventListener("click", () => {
+    setCityOpen(wrap, false);
+    row.remove();
+    refreshTravelSelects();
+  });
+  wrap.querySelector("input").addEventListener("change", refreshTravelSelects);
+  list.append(row);
+  refreshTravelSelects();
+}
+
+function clearTravel() {
+  const box = document.getElementById("add-travel");
+  const places = document.getElementById("add-travel-places");
+  const list = document.getElementById("add-travel-list");
+  if (box) box.checked = false;
+  if (list) list.innerHTML = "";
+  if (places) places.hidden = true;
+}
+
+function syncTravel() {
+  const on = document.getElementById("add-travel").checked;
+  const places = document.getElementById("add-travel-places");
+  places.hidden = !on;
+  if (!on) {
+    document.getElementById("add-travel-list").innerHTML = "";
+    return;
+  }
+  if (!travelCityWraps().length) addTravelCity();
+}
+
+function travelCities() {
+  if (!document.getElementById("add-travel")?.checked) return [];
+  const home = document.getElementById("add-city").value;
+  const seen = new Set();
+  return travelCityWraps()
+    .map((wrap) => wrap.querySelector("input").value)
+    .filter((city) => {
+      if (!city || city === home || seen.has(city) || !CITIES.some((item) => item.name === city)) return false;
+      seen.add(city);
+      return true;
+    });
+}
+
 function checkedValues(name) {
   return [...document.querySelectorAll(`#add-form input[name="${name}"]:checked`)].map((input) => input.value);
 }
 
 function fillAddForm() {
   const city = document.getElementById("add-city");
-  city.innerHTML = `<option value="">Select a city</option>${CITIES.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.place || item.name)}</option>`).join("")}`;
-  const roles = document.getElementById("add-roles");
-  roles.innerHTML = ROLES.map(
-    (role) => `<label class="add-check"><input type="checkbox" name="add-role" value="${escapeHtml(role.name)}" /><span>${escapeHtml(role.name)}</span></label>`
-  ).join("");
-  const genres = [...new Set(PEOPLE.flatMap((record) => record.genres || []))].sort((a, b) => a.localeCompare(b));
-  document.getElementById("add-genres").innerHTML = genres
-    .map((genre) => `<label class="add-check"><input type="checkbox" name="add-genre" value="${escapeHtml(genre)}" /><span>${escapeHtml(genre)}</span></label>`)
-    .join("");
+  const wrap = document.getElementById("add-city-wrap");
+  city.value = "";
+  wrap.dataset.blocked = "";
+  paintCityMenu(wrap);
+  mainPicker.reset();
+  clearSecondaryFields();
+  mainPicker.build();
 }
 
 function addDialogOpen() {
@@ -1769,6 +2368,7 @@ function setAddOpen(open) {
   paintSearch();
   fillAddForm();
   document.getElementById("add-form").reset();
+  clearTravel();
   document.getElementById("add-error").textContent = "";
   document.getElementById("add-name").focus();
 }
@@ -1776,8 +2376,17 @@ function setAddOpen(open) {
 function addPersonFromForm() {
   const name = document.getElementById("add-name").value.trim();
   const city = document.getElementById("add-city").value;
-  const roles = checkedValues("add-role");
-  const genres = checkedValues("add-genre");
+  const mainRoles = mainPicker.roles();
+  const extraRoles = [];
+  const extraGenres = [];
+  secondaryPickers.forEach((picker) => {
+    picker.roles().forEach((role) => {
+      if (!mainRoles.includes(role) && !extraRoles.includes(role)) extraRoles.push(role);
+    });
+    extraGenres.push(...picker.genres());
+  });
+  const roles = mainRoles;
+  const genres = [...new Set([...mainPicker.genres(), ...extraGenres])];
   const instagram = cleanHandle(document.getElementById("add-instagram").value);
   const email = document.getElementById("add-email").value.trim();
   const phone = document.getElementById("add-phone").value.trim();
@@ -1791,11 +2400,12 @@ function addPersonFromForm() {
   }
   if (!city) {
     error.textContent = "Choose a city.";
-    document.getElementById("add-city").focus();
+    document.getElementById("add-city-toggle").focus();
     return;
   }
-  if (!roles.length) {
-    error.textContent = "Choose at least one role.";
+  if (!mainPicker.roles().length) {
+    error.textContent = "Choose a main role.";
+    document.getElementById("add-main-toggle")?.focus();
     return;
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -1818,11 +2428,12 @@ function addPersonFromForm() {
     error.textContent = "Preferred contact needs a value.";
     return;
   }
-  const record = person(rosterId(name), name, city, [], roles, genres, false, {
+  const record = person(rosterId(name), name, city, travelCities(), roles, genres, false, {
     instagram,
     email,
     phone,
     preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
+    secondary: extraRoles,
     referredBy: "",
     rate: "",
     compensation: "",
@@ -1854,14 +2465,81 @@ function bindAddRoster() {
   if (!button || !dialog) return;
   button.addEventListener("click", () => setAddOpen(true));
   document.getElementById("add-cancel").addEventListener("click", () => setAddOpen(false));
+  document.getElementById("add-close").addEventListener("click", () => setAddOpen(false));
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) setAddOpen(false);
+  });
+  mainPicker.bind();
+  document.getElementById("add-secondary-add")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    addSecondaryField();
+  });
+  document.getElementById("add-travel")?.addEventListener("change", syncTravel);
+  document.getElementById("add-travel-add")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    addTravelCity();
+  });
+  bindCityPicker(document.getElementById("add-city-wrap"));
+  document.getElementById("add-city")?.addEventListener("change", refreshTravelSelects);
+  document.getElementById("add-form").addEventListener("click", (event) => {
+    [mainPicker, ...secondaryPickers].forEach((picker) => {
+      const wrap = picker.wrap();
+      if (wrap && picker.isOpen() && !wrap.contains(event.target)) picker.close();
+    });
+    if (!event.target.closest(".add-city")) closeCityMenus();
   });
   document.getElementById("add-form").addEventListener("submit", (event) => {
     event.preventDefault();
     addPersonFromForm();
   });
 }
+
+function markSkeletonNav() {
+  try { sessionStorage.setItem("10k-skeleton", String(Date.now())); } catch (error) {}
+}
+
+function skeletonDelay() {
+  let started = 0;
+  try {
+    started = Number(sessionStorage.getItem("10k-skeleton") || 0);
+    sessionStorage.removeItem("10k-skeleton");
+  } catch (error) {}
+  if (!started) return 0;
+  const elapsed = Date.now() - started;
+  if (elapsed < 0 || elapsed > 4000) return 0;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
+  return Math.max(180, 560 - elapsed);
+}
+
+function prepareSkeletonFrame() {
+  const params = new URLSearchParams(location.search);
+  if (params.has("person")) {
+    const root = document.getElementById("profile");
+    if (root) {
+      document.body.dataset.view = "profile";
+      root.hidden = false;
+    }
+  }
+  if (isResultsPage() && params.get("view") === "map") {
+    const page = document.querySelector(".results-page");
+    if (page) page.dataset.resultsView = "map";
+  }
+}
+
+document.addEventListener("click", (event) => {
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const anchor = event.target.closest("a");
+  if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+  const href = anchor.getAttribute("href") || "";
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+  let url;
+  try { url = new URL(anchor.href, location.href); } catch (error) { return; }
+  if (url.origin !== location.origin) return;
+  if (url.pathname === location.pathname && url.search === location.search) return;
+  markSkeletonNav();
+}, true);
 
 loadAddedPeople();
 
@@ -1872,11 +2550,7 @@ PEOPLE.forEach((record) => {
 bind();
 bindAddRoster();
 readUrl();
-if (isResultsPage() && new URLSearchParams(location.search).get("view") === "map") setResultsView("map");
-render({ url: "replace" });
-if (typeof initProjects === "function") initProjects({ people: PEOPLE, openProfile });
-initHeroMap();
-
+syncControls();
 function initHeroMap() {
   const stage = document.getElementById("hero-stage");
   const svg = document.getElementById("hero-map");
@@ -1896,6 +2570,37 @@ function initHeroMap() {
     { name: "Randy", caption: place(["Animator"], "London"), src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 146, y: 194, w: 68, h: 68, inn: [222, 228], bend: 30 },
     { name: "Michele Perna", caption: place(["Designer"], "Atlanta"), src: "posts/michele-perna-micheleperna/1.jpg", href: "https://www.instagram.com/p/Dew7glWDK1d/?img_index=1", x: 12, y: 122, w: 62, h: 78, inn: [82, 161], bend: -46 },
   ];
+
+  const NEON = [
+    ["#ff2bd6", "#ff8ae0"],
+    ["#c6ff00", "#ffe600"],
+    ["#00e8ff", "#4d7cff"],
+    ["#ff5a00", "#ff2d6a"],
+    ["#b44dff", "#ff2bd6"],
+    ["#00ffc8", "#d6ff00"],
+    ["#ffe14a", "#ff4d00"],
+  ];
+
+  const defs = document.createElementNS(ns, "defs");
+  const glow = document.createElementNS(ns, "filter");
+  glow.id = "hero-neon";
+  glow.setAttribute("x", "-60%");
+  glow.setAttribute("y", "-60%");
+  glow.setAttribute("width", "220%");
+  glow.setAttribute("height", "220%");
+  const blur = document.createElementNS(ns, "feGaussianBlur");
+  blur.setAttribute("in", "SourceGraphic");
+  blur.setAttribute("stdDeviation", "1.5");
+  blur.setAttribute("result", "blur");
+  const merge = document.createElementNS(ns, "feMerge");
+  const soft = document.createElementNS(ns, "feMergeNode");
+  soft.setAttribute("in", "blur");
+  const crisp = document.createElementNS(ns, "feMergeNode");
+  crisp.setAttribute("in", "SourceGraphic");
+  merge.append(soft, crisp);
+  glow.append(blur, merge);
+  defs.append(glow);
+  svg.append(defs);
 
   const frames = steps.map((step) => {
     const link = document.createElement("a");
@@ -1946,13 +2651,34 @@ function initHeroMap() {
     return dot;
   };
 
-  const addPath = (from, to, bend) => {
+  const addPath = (from, to, bend, index) => {
+    const id = `hero-line-${index}`;
+    let grad = svg.querySelector(`#${id}`);
+    if (!grad) {
+      grad = document.createElementNS(ns, "linearGradient");
+      grad.id = id;
+      grad.setAttribute("gradientUnits", "userSpaceOnUse");
+      const [start, end] = NEON[index % NEON.length];
+      const fromStop = document.createElementNS(ns, "stop");
+      fromStop.setAttribute("offset", "0%");
+      fromStop.setAttribute("stop-color", start);
+      const toStop = document.createElementNS(ns, "stop");
+      toStop.setAttribute("offset", "100%");
+      toStop.setAttribute("stop-color", end);
+      grad.append(fromStop, toStop);
+      defs.append(grad);
+    }
+    grad.setAttribute("x1", from[0]);
+    grad.setAttribute("y1", from[1]);
+    grad.setAttribute("x2", to[0]);
+    grad.setAttribute("y2", to[1]);
     const path = document.createElementNS(ns, "path");
     path.setAttribute("d", curve(from, to, bend));
     path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "#161616");
-    path.setAttribute("stroke-width", "1.25");
+    path.setAttribute("stroke", `url(#${id})`);
+    path.setAttribute("stroke-width", "3.6");
     path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("filter", "url(#hero-neon)");
     svg.append(path);
     return path;
   };
@@ -1965,8 +2691,8 @@ function initHeroMap() {
 
   if (reduced) {
     addDot(origin, 3.4);
-    frames.forEach((frame) => {
-      addPath(origin, frame.step.inn, frame.step.bend);
+    frames.forEach((frame, index) => {
+      addPath(origin, frame.step.inn, frame.step.bend, index);
       showFrame(frame);
     });
     return;
@@ -1996,7 +2722,7 @@ function initHeroMap() {
       for (let index = 0; index < frames.length; index += 1) {
         if (!svg.isConnected) return;
         const frame = frames[index];
-        const path = addPath(origin, frame.step.inn, frame.step.bend);
+        const path = addPath(origin, frame.step.inn, frame.step.bend, index);
         drawn.push(path);
         await drawLine(path);
         if (!svg.isConnected) return;
@@ -2020,3 +2746,141 @@ function initHeroMap() {
 
   play();
 }
+
+function revealPage() {
+  if (isResultsPage() && new URLSearchParams(location.search).get("view") === "map") setResultsView("map");
+  render({ url: "replace" });
+  resultsViewSettled = true;
+  if (typeof initProjects === "function") {
+    const open = document.body.dataset.page === "explore"
+      ? (id) => {
+          markSkeletonNav();
+          location.href = `./?person=${encodeURIComponent(id)}`;
+        }
+      : openProfile;
+    initProjects({ people: PEOPLE, openProfile: open });
+  }
+  initHeroMap();
+  initGlassCursor();
+}
+
+function initGlassCursor() {
+  const hero = document.querySelector(".home-view .hero");
+  const projects = document.getElementById("projects");
+  if (!hero || !projects) return;
+  const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (!fine.matches || reduce.matches) return;
+
+  const svgNs = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNs, "svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.cssText = "position:absolute;width:0;height:0";
+  const filter = document.createElementNS(svgNs, "filter");
+  filter.id = "glass-lens";
+  filter.setAttribute("x", "-20%");
+  filter.setAttribute("y", "-20%");
+  filter.setAttribute("width", "140%");
+  filter.setAttribute("height", "140%");
+  filter.setAttribute("color-interpolation-filters", "sRGB");
+  const turbulence = document.createElementNS(svgNs, "feTurbulence");
+  turbulence.setAttribute("type", "fractalNoise");
+  turbulence.setAttribute("baseFrequency", "0.012");
+  turbulence.setAttribute("numOctaves", "2");
+  turbulence.setAttribute("seed", "3");
+  turbulence.setAttribute("result", "noise");
+  const displace = document.createElementNS(svgNs, "feDisplacementMap");
+  displace.setAttribute("in", "SourceGraphic");
+  displace.setAttribute("in2", "noise");
+  displace.setAttribute("scale", "26");
+  displace.setAttribute("xChannelSelector", "R");
+  displace.setAttribute("yChannelSelector", "G");
+  filter.append(turbulence, displace);
+  svg.append(filter);
+  document.body.append(svg);
+  if (!CSS.supports("backdrop-filter", "url(#glass-lens)") && !CSS.supports("-webkit-backdrop-filter", "url(#glass-lens)")) {
+    svg.remove();
+    return;
+  }
+
+  const lens = document.createElement("div");
+  lens.className = "glass-cursor";
+  lens.setAttribute("aria-hidden", "true");
+  document.body.append(lens);
+
+  let pointer = null;
+  let current = { x: 0, y: 0 };
+  let frame = 0;
+
+  const lensFade = () => {
+    const projectsTop = projects.getBoundingClientRect().top + window.scrollY;
+    const end = Math.max(projectsTop - window.innerHeight * 0.55, 140);
+    return 1 - Math.min(1, Math.max(0, window.scrollY / end));
+  };
+
+  const inHero = (x, y) => {
+    if (document.body.dataset.view === "profile") return false;
+    if (y >= projects.getBoundingClientRect().top - 12) return false;
+    const hit = document.elementFromPoint(x, y);
+    return !!hit && !hit.closest(".navbar") && !!hit.closest(".hero");
+  };
+
+  const sync = () => {
+    const fade = lens.classList.contains("is-on") ? lensFade() : 0;
+    lens.style.opacity = String(fade);
+    document.body.classList.toggle("is-glass", fade > 0.2);
+  };
+
+  const paint = () => {
+    frame = 0;
+    if (!pointer) return;
+    current.x += (pointer.x - current.x) * 0.28;
+    current.y += (pointer.y - current.y) * 0.28;
+    const vx = pointer.x - current.x;
+    const vy = pointer.y - current.y;
+    const stretch = Math.min(Math.hypot(vx, vy) / 90, 0.28);
+    const angle = Math.atan2(vy, vx);
+    lens.style.transform = `translate3d(${current.x}px, ${current.y}px, 0) translate(-50%, -50%) rotate(${angle}rad) scale(${1 + stretch}, ${1 - stretch * 0.55})`;
+    if (Math.hypot(pointer.x - current.x, pointer.y - current.y) > 0.4) frame = requestAnimationFrame(paint);
+  };
+
+  const show = (x, y) => {
+    if (!lens.classList.contains("is-on")) {
+      current = { x, y };
+      lens.classList.add("is-on");
+      document.body.classList.add("is-glass");
+    }
+    pointer = { x, y };
+    sync();
+    if (!frame) frame = requestAnimationFrame(paint);
+  };
+
+  const hide = () => {
+    pointer = null;
+    lens.classList.remove("is-on");
+    cancelAnimationFrame(frame);
+    frame = 0;
+    sync();
+  };
+
+  window.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse") return;
+    if (inHero(event.clientX, event.clientY)) show(event.clientX, event.clientY);
+    else hide();
+  });
+  window.addEventListener("pointerleave", hide);
+  window.addEventListener("scroll", () => {
+    sync();
+    if (!pointer) return;
+    if (!inHero(pointer.x, pointer.y)) hide();
+  }, { passive: true });
+}
+
+const delay = skeletonDelay();
+if (delay) {
+  prepareSkeletonFrame();
+  setTimeout(revealPage, delay);
+} else {
+  revealPage();
+}
+

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Projects · 10K Roster</title>
+    <title>Projects · 10K Creatives</title>
     <meta name="description" content="Explore previous 10K projects and the creatives who worked them." />
     <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,9 +13,10 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=109" />
+    <link rel="stylesheet" href="styles.css?v=162" />
   </head>
   <body data-page="explore">
+    <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <header class="navbar results-top">
       <a class="nav_brand" href="/" aria-label="10K Projects, home">
         <img
@@ -66,11 +67,79 @@
 
     <main class="explore">
       <h1>Projects</h1>
-      <div class="masonry" id="project-grid"></div>
+      <div class="project-tools" id="project-filters" aria-label="Filter projects">
+        <div class="filter-wrap" id="project-creative-wrap">
+          <button class="tool-pill" id="project-creative-toggle" type="button" aria-expanded="false" aria-controls="project-creative-panel">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path d="M5.6 19.2c.7-3.1 3-4.7 6.4-4.7s5.7 1.6 6.4 4.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+            Creatives
+            <span class="tool-pill_count" id="project-creative-count" hidden>
+              <span class="tool-pill_num"></span>
+              <svg class="tool-pill_x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+            </span>
+          </button>
+          <div class="filters-panel" id="project-creative-panel" hidden>
+            <label class="location-search">
+              <input id="project-creative-filter" type="search" placeholder="Search creatives" autocomplete="off" aria-label="Search creatives" />
+            </label>
+            <div class="filters-menu" id="project-creative-menu" role="menu" aria-label="Creatives"></div>
+          </div>
+        </div>
+        <div class="filter-wrap" id="project-place-wrap">
+          <button class="tool-pill" id="project-place-toggle" type="button" aria-expanded="false" aria-controls="project-place-panel">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <circle cx="12" cy="10" r="2.2" fill="currentColor" />
+            </svg>
+            Location
+            <span class="tool-pill_count" id="project-place-count" hidden>
+              <span class="tool-pill_num"></span>
+              <svg class="tool-pill_x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+            </span>
+          </button>
+          <div class="filters-panel" id="project-place-panel" hidden>
+            <label class="location-search">
+              <input id="project-place-filter" type="search" placeholder="Search locations" autocomplete="off" aria-label="Search locations" />
+            </label>
+            <div class="filters-menu" id="project-place-menu" role="menu" aria-label="Locations"></div>
+          </div>
+        </div>
+        <div class="filter-wrap" id="project-type-wrap">
+          <button class="tool-pill" id="project-type-toggle" type="button" aria-expanded="false" aria-controls="project-type-panel">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+              <path d="M4.5 12.4 12 4.9h6.6v6.6l-7.5 7.5-6.6-6.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              <circle cx="15.3" cy="8.2" r="1" fill="currentColor" />
+            </svg>
+            Project type
+            <span class="tool-pill_count" id="project-type-count" hidden>
+              <span class="tool-pill_num"></span>
+              <svg class="tool-pill_x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+            </span>
+          </button>
+          <div class="filters-panel" id="project-type-panel" hidden>
+            <div class="filters-menu" id="project-type-menu" role="menu" aria-label="Project types"></div>
+          </div>
+        </div>
+      </div>
+      <p class="project-empty" id="project-empty" hidden>No projects match that yet.</p>
+      <div class="masonry" id="project-grid" aria-busy="true" aria-label="Loading projects">
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+        <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
+      </div>
     </main>
 
-    <script src="people.js?v=5"></script>
-    <script src="projects.js?v=34"></script>
-    <script src="app.js?v=93"></script>
+    <script src="people.js?v=8"></script>
+    <script src="projects.js?v=39"></script>
+    <script src="app.js?v=109"></script>
   </body>
 </html>

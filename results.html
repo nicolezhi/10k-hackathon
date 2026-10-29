@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Search · 10K Roster</title>
+    <title>Search · 10K Creatives</title>
     <meta name="description" content="Creatives that match a 10K search." />
     <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,9 +15,10 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=109" />
+    <link rel="stylesheet" href="styles.css?v=162" />
   </head>
   <body data-page="results" data-view="home">
+    <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <header class="results-top">
       <a class="nav_brand" href="/" aria-label="10K Projects, home">
         <img
@@ -122,6 +123,7 @@
             </svg>
           </button>
         </div>
+        <button class="tool-pill tool-pill_add" id="add-roster" type="button">Add a creative</button>
       </div>
 
       <div class="results-split">
@@ -131,74 +133,149 @@
           <p class="count" id="count" hidden></p>
           <p class="nearby" id="nearby" hidden></p>
           <p class="empty" id="empty" hidden>No one matches that yet.</p>
-          <div class="grid" id="grid"></div>
+          <div class="grid" id="grid" aria-busy="true" aria-label="Loading creatives">
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+            <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
+          </div>
         </section>
         <div class="map-pane">
+          <div class="map-skeleton" aria-hidden="true"></div>
           <div id="map" role="region" aria-label="Map of matching creatives"></div>
         </div>
       </div>
     </main>
 
-    <article class="profile-view" id="profile" hidden></article>
+    <article class="profile-view" id="profile" hidden>
+      <div class="profile-skeleton" aria-hidden="true">
+        <span class="skeleton_block skeleton_line skeleton_line-back"></span>
+        <div class="profile-skeleton_head">
+          <span class="skeleton_block skeleton_avatar skeleton_avatar-lg"></span>
+          <span class="skeleton_copy">
+            <span class="skeleton_block skeleton_line skeleton_line-name"></span>
+            <span class="skeleton_block skeleton_line skeleton_line-short"></span>
+            <span class="skeleton_tags"><span class="skeleton_block"></span><span class="skeleton_block"></span><span class="skeleton_block"></span></span>
+          </span>
+        </div>
+        <div class="profile-skeleton_shots">
+          <span class="skeleton_block skeleton_shot"></span>
+          <span class="skeleton_block skeleton_shot"></span>
+          <span class="skeleton_block skeleton_shot"></span>
+        </div>
+      </div>
+    </article>
 
     <div class="add-dialog" id="add-dialog" hidden>
       <form class="add-dialog_panel" id="add-form" novalidate role="dialog" aria-modal="true" aria-labelledby="add-title">
-        <h2 id="add-title">Add a roster</h2>
-        <p class="add-dialog_lede">Add someone to the roster and link how to reach them.</p>
+        <button class="add-dialog_close" id="add-close" type="button" aria-label="Close">×</button>
+        <h2 id="add-title">Add a creative</h2>
+        <p class="add-dialog_lede">Add someone to the creatives and link how to reach them.</p>
         <label class="add-field">
           <span>Name</span>
           <input id="add-name" name="name" type="text" autocomplete="name" />
         </label>
-        <label class="add-field">
-          <span>City</span>
-          <select id="add-city" name="city"></select>
-        </label>
-        <fieldset class="add-field">
-          <legend>Role</legend>
-          <div class="add-checks" id="add-roles"></div>
-        </fieldset>
-        <fieldset class="add-field">
-          <legend>Genre</legend>
-          <div class="add-checks" id="add-genres"></div>
-        </fieldset>
+        <div class="add-field">
+          <span id="add-city-caption">City</span>
+          <div class="add-city" id="add-city-wrap">
+            <button class="add-role_toggle add-city_toggle" id="add-city-toggle" type="button" aria-expanded="false" aria-haspopup="listbox" aria-controls="add-city-panel" aria-labelledby="add-city-caption add-city-label">
+              <span class="add-city_label" id="add-city-label">Select a city</span>
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </button>
+            <div class="add-city_panel" id="add-city-panel" hidden role="listbox" aria-label="City"></div>
+            <input id="add-city" name="city" type="hidden" value="" />
+          </div>
+        </div>
+        <div class="add-field add-travel_field">
+          <label class="add-radio">
+            <input id="add-travel" name="travel" type="checkbox" value="yes" />
+            <span class="add-radio_face" aria-hidden="true"></span>
+            <span>Willing to travel</span>
+          </label>
+          <div class="add-travel_places" id="add-travel-places" hidden>
+            <span class="add-group_label">Also travels to</span>
+            <div class="add-travel_list" id="add-travel-list"></div>
+            <button class="add-more" id="add-travel-add" type="button">
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <span>Add another city</span>
+            </button>
+          </div>
+        </div>
+        <div class="add-field">
+          <span>Main role</span>
+          <div class="add-roles">
+            <div class="add-role" id="add-main-wrap">
+              <button class="add-role_toggle" id="add-main-toggle" type="button" aria-expanded="false" aria-controls="add-main-panel">
+                <span id="add-main-label">Add a main role</span>
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+              </button>
+              <div class="filters-panel add-role_panel" id="add-main-panel" hidden>
+                <div class="filters-menu" id="add-main-roles" role="menu" aria-label="Main role"></div>
+                <div class="filters-sub" id="add-main-sub" hidden role="menu" aria-label="Genres"></div>
+              </div>
+            </div>
+            <div class="add-secondary" id="add-secondary-list"></div>
+            <button class="add-more" id="add-secondary-add" type="button">
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+              <span>Add secondary role</span>
+            </button>
+          </div>
+        </div>
         <h3 class="add-section">Contact</h3>
         <div class="add-contact">
           <label class="add-field">
             <span>Instagram</span>
-            <input id="add-instagram" name="instagram" type="text" autocomplete="off" placeholder="username" />
+            <span class="add-input">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/></svg>
+              <input id="add-instagram" name="instagram" type="text" autocomplete="off" placeholder="username" />
+            </span>
           </label>
           <label class="add-field">
             <span>Email</span>
-            <input id="add-email" name="email" type="email" autocomplete="email" placeholder="name@email.com" />
+            <span class="add-input">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+              <input id="add-email" name="email" type="email" autocomplete="email" placeholder="name@email.com" />
+            </span>
           </label>
           <label class="add-field">
             <span>Phone</span>
-            <input id="add-phone" name="phone" type="tel" autocomplete="tel" placeholder="(000) 000-0000" />
+            <span class="add-input">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              <input id="add-phone" name="phone" type="tel" autocomplete="tel" placeholder="(000) 000-0000" />
+            </span>
           </label>
           <label class="add-field">
             <span>Portfolio</span>
-            <input id="add-portfolio" name="portfolio" type="text" inputmode="url" autocomplete="url" placeholder="https://" />
+            <span class="add-input">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="7.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4.6 12h14.8M12 4.6c2 2.2 3 4.7 3 7.4s-1 5.2-3 7.4c-2-2.2-3-4.7-3-7.4s1-5.2 3-7.4z" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+              <input id="add-portfolio" name="portfolio" type="text" inputmode="url" autocomplete="url" placeholder="https://" />
+            </span>
           </label>
         </div>
         <fieldset class="add-field">
           <legend>Preferred contact</legend>
           <div class="add-checks" id="add-preferred">
-            <label class="add-check"><input type="radio" name="preferred" value="instagram" /><span>Instagram</span></label>
-            <label class="add-check"><input type="radio" name="preferred" value="email" /><span>Email</span></label>
-            <label class="add-check"><input type="radio" name="preferred" value="phone" /><span>Phone</span></label>
+            <label class="add-check"><input type="radio" name="preferred" value="instagram" /><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/></svg><span>Instagram</span></label>
+            <label class="add-check"><input type="radio" name="preferred" value="email" /><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/></svg><span>Email</span></label>
+            <label class="add-check"><input type="radio" name="preferred" value="phone" /><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Phone</span></label>
           </div>
         </fieldset>
         <p class="add-dialog_error" id="add-error" role="alert"></p>
         <div class="add-dialog_actions">
           <button class="add-cancel" id="add-cancel" type="button">Cancel</button>
-          <button class="add-submit" type="submit">Add to roster</button>
+          <button class="add-submit" type="submit">Add to creatives</button>
         </div>
       </form>
     </div>
 
-    <script src="people.js?v=5"></script>
+    <script src="people.js?v=8"></script>
+    <script src="projects.js?v=39"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=93"></script>
+    <script src="app.js?v=109"></script>
   </body>
 </html>

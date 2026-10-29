@@ -1,5 +1,5 @@
 const PROJECTS = [
-  {
+{
     id: "pay-gotti-dnd",
     title: "Pay Gotti — DnD ft. Luhh Dyl",
     summary: "Official music video. The YouTube description credits the artists and does not list a production crew.",
@@ -95,6 +95,160 @@ const PROJECTS = [
     images: ["images/projects/W7Ey1JZpEoc.jpg"],
     creatives: [{ name: "Girlfriend, Wife", role: "Artist" }],
   },
+{
+    id: "trippy-red",
+    title: "Trippy Red Music Video",
+    home: false,
+    summary: "A night shoot soaked in red light. The look was built around wardrobe, practicals, and a tight camera crew.",
+    date: "September 14, 2025",
+    place: "New York, NY",
+    type: "Music video",
+    images: [
+      "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "aiden-zamiri", role: "Director" },
+      { id: "alliyah-alliyah", role: "MUA" },
+      { id: "stephanie-ocean-stephanieocean", role: "Gaffer" },
+      { id: "isaac-wheatley-ikeview", role: "Photographer" },
+    ],
+  },
+  {
+    id: "warehouse-editorial",
+    title: "Warehouse Night Editorial",
+    home: false,
+    summary: "An empty warehouse, one set wall, and a small team. Styling and set design carried the frame.",
+    date: "November 2, 2025",
+    place: "New York, NY",
+    type: "Editorial",
+    images: [
+      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "hameem-hameem", role: "Stylist" },
+      { id: "talia-restrepo-taliarestrepo", role: "Stylist" },
+      { id: "ayden-starr-fatecapture", role: "Photographer" },
+    ],
+  },
+  {
+    id: "festival-stage",
+    title: "Festival Main Stage",
+    home: false,
+    summary: "Day-into-night coverage from the pit and the side stage. Fast calls, a lot of light, and a director on comms.",
+    date: "June 21, 2026",
+    place: "New York, NY",
+    type: "Festival",
+    images: [
+      "https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "simon-bradley-simonbradleyx", role: "Director" },
+      { id: "nick-wheat-nickywheat", role: "Gaffer" },
+      { id: "alex-olesky-alexolesky", role: "Photographer" },
+      { id: "vika-vikasfotos", role: "Photographer" },
+    ],
+  },
+  {
+    id: "studio-35",
+    title: "Studio 35mm Portraits",
+    home: false,
+    summary: "A quiet studio day. Film stills, a simple set, and makeup that reads on a close crop.",
+    date: "January 18, 2026",
+    place: "New York, NY",
+    type: "Portrait",
+    images: [
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "aiden-zamiri", role: "Photographer" },
+      { id: "alliyah-alliyah", role: "MUA" },
+      { id: "anna-koblish-annakoblish", role: "Photographer" },
+    ],
+  },
+  {
+    id: "after-hours",
+    title: "After Hours Lookbook",
+    home: false,
+    summary: "Street-to-studio looks shot after call time. Wardrobe led, with a photographer working the available light.",
+    date: "August 8, 2025",
+    place: "New York, NY",
+    type: "Lookbook",
+    images: [
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "talia-restrepo-taliarestrepo", role: "Stylist" },
+      { id: "hameem-hameem", role: "Stylist" },
+      { id: "oliver-oliverstemmler", role: "Photographer" },
+    ],
+  },
+  {
+    id: "cover-day",
+    title: "Cover Day in Color",
+    home: false,
+    summary: "A cover setup with a painted backdrop. Set, styling, and stills, all in one room.",
+    date: "March 4, 2026",
+    place: "New York, NY",
+    type: "Cover",
+    images: [
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "simon-bradley-simonbradleyx", role: "Director" },
+      { id: "alliyah-alliyah", role: "MUA" },
+      { id: "aiden-zamiri", role: "Photographer" },
+    ],
+  },
+  {
+    id: "late-set-portraits",
+    title: "Late Set Portraits",
+    home: false,
+    summary: "Portraits made after the set, while the room was still lit. A small crew, one backdrop, and a photographer working close.",
+    date: "October 12, 2025",
+    place: "New York, NY",
+    type: "Portrait",
+    images: [
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "isaac-wheatley-ikeview", role: "Photographer" },
+      { id: "alliyah-alliyah", role: "MUA" },
+      { id: "hameem-hameem", role: "Stylist" },
+    ],
+  },
+  {
+    id: "side-stage",
+    title: "Side Stage Coverage",
+    home: false,
+    summary: "Concert stills from the side of the stage. Fast light, a tight crop, and a photographer staying out of the shot.",
+    date: "May 3, 2026",
+    place: "New York, NY",
+    type: "Concert",
+    images: [
+      "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1459749411177-04de2b3705b9?auto=format&fit=crop&w=900&h=1125&q=80",
+      "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=900&h=1125&q=80",
+    ],
+    creatives: [
+      { id: "isaac-wheatley-ikeview", role: "Photographer" },
+      { id: "vika-vikasfotos", role: "Photographer" },
+      { id: "nick-wheat-nickywheat", role: "Gaffer" },
+    ],
+  }
 ];
 
 function escapeProjectText(value) {
@@ -145,16 +299,21 @@ function linkIcon(label, href, path) {
   return `<a class="roster-icon" href="${escapeProjectText(href)}" target="_blank" rel="noreferrer" aria-label="${escapeProjectText(label)}">${icon}</a>`;
 }
 
+function openProject(id) {
+  const project = PROJECTS.find((item) => item.id === id);
+  if (project && openProjectImpl) openProjectImpl(project);
+}
+
+let openProjectImpl = null;
+
 function initProjects({ people, openProfile }) {
-  const grid = document.getElementById("project-grid");
-  if (!grid || grid.dataset.ready) return;
-  grid.dataset.ready = "1";
+  if (document.getElementById("project-modal")) return;
 
   let active = null;
   let slide = 0;
   let player = null;
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const playIcon = `<svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 7.2v9.6l8.2-4.8L9 7.2z" fill="currentColor"/></svg>`;
+  const playIcon = `<svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8.4 6.7c0-.86.94-1.4 1.68-.96l8.15 4.8c.72.42.72 1.5 0 1.92l-8.15 4.8c-.74.44-1.68-.1-1.68-.96V6.7z" fill="currentColor"/></svg>`;
   const pauseIcon = `<svg class="icon-pause" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 6.5h3.2v11H8v-11zm4.8 0H16v11h-3.2v-11z" fill="currentColor"/></svg>`;
 
   const modal = document.createElement("div");
@@ -421,6 +580,8 @@ function initProjects({ people, openProfile }) {
     document.body.classList.remove("modal-open");
   }
 
+  openProjectImpl = open;
+
   function step(delta) {
     if (!active) return;
     const next = slide + delta;
@@ -431,6 +592,13 @@ function initProjects({ people, openProfile }) {
     slide = next;
     syncSlide();
   }
+
+  const grid = document.getElementById("project-grid");
+  if (grid && !grid.dataset.ready) {
+  grid.dataset.ready = "1";
+  grid.replaceChildren();
+  grid.removeAttribute("aria-busy");
+  grid.removeAttribute("aria-label");
 
   function crewHtml(project) {
     const records = (project.creatives || []).map((creative) => {
@@ -456,8 +624,9 @@ function initProjects({ people, openProfile }) {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "project-card";
+    card.dataset.project = project.id;
     const videoId = youtubeId(project.href);
-    const preview = videoId && !reduceMotion
+    const preview = videoId && project.id !== "trim-get-hit" && !reduceMotion
       ? `<img class="project-card_preview" src="images/projects/${escapeProjectText(videoId)}.gif" alt="" aria-hidden="true" />`
       : "";
     card.innerHTML = `
@@ -471,27 +640,240 @@ function initProjects({ people, openProfile }) {
         ${crewHtml(project)}
       </span>
     `;
+    if (project.id === "trim-get-hit") bindTrimPreview(card);
     card.addEventListener("click", () => open(project));
     grid.append(card);
   });
+  projectFiltersController?.apply();
+  }
 
   modal.addEventListener("click", (event) => {
     if (event.target === modal) close();
   });
   modal.querySelector(".project-close").addEventListener("click", close);
+  const filters = bindProjectFilters(people, () => modal.hidden);
   document.addEventListener("keydown", (event) => {
-    if (modal.hidden) return;
-    if (event.key === "Escape") close();
-    if (event.key === "ArrowLeft") step(-1);
-    if (event.key === "ArrowRight") step(1);
+    if (!modal.hidden) {
+      if (event.key === "Escape") close();
+      if (event.key === "ArrowLeft") step(-1);
+      if (event.key === "ArrowRight") step(1);
+      return;
+    }
+    if (event.key === "Escape") filters.close();
   });
 }
 
-if (document.body.dataset.page === "explore") {
-  initProjects({
-    people: typeof PEOPLE !== "undefined" ? PEOPLE : [{ id: "aiden-zamiri", name: "Aiden Zamiri" }],
-    openProfile(id) {
-      location.href = `./?person=${encodeURIComponent(id)}`;
-    },
+const TRIM_CLIP = { id: "Ca77yvpNdfA", start: 20, end: 34 };
+
+function bindTrimPreview(card) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const media = card.querySelector(".project-card_media");
+  let preview = null;
+
+  const stop = () => {
+    preview?.remove();
+    preview = null;
+  };
+
+  const start = () => {
+    if (preview) return;
+    const frame = document.createElement("iframe");
+    const params = new URLSearchParams({
+      autoplay: "1",
+      mute: "1",
+      controls: "0",
+      start: String(TRIM_CLIP.start),
+      end: String(TRIM_CLIP.end),
+      rel: "0",
+      playsinline: "1",
+    });
+    frame.src = `https://www.youtube.com/embed/${TRIM_CLIP.id}?${params}`;
+    frame.allow = "autoplay; encrypted-media";
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.title = "Trim — Get Hit preview";
+    frame.tabIndex = -1;
+    preview = document.createElement("span");
+    preview.className = "project-card_preview is-on";
+    preview.append(frame);
+    media.append(preview);
+  };
+
+  card.addEventListener("pointerenter", start);
+  card.addEventListener("pointerleave", stop);
+  card.addEventListener("focus", start);
+  card.addEventListener("blur", stop);
+  card.addEventListener("click", stop);
+}
+
+const PROJECT_CHECK = `<span class="filter-check" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+
+let projectFiltersController = null;
+
+function bindProjectFilters(people, modalClosed) {
+  if (projectFiltersController) return projectFiltersController;
+  const root = document.getElementById("project-filters");
+  const noop = { close() {}, apply() {} };
+  if (!root || root.dataset.ready) return noop;
+  root.dataset.ready = "1";
+
+  const selected = { creative: new Set(), place: new Set(), type: new Set() };
+  let open = "";
+
+  const creatives = [];
+  const seen = new Set();
+  PROJECTS.forEach((project) => {
+    (project.creatives || []).forEach((creative) => {
+      if (!creative.id || seen.has(creative.id)) return;
+      seen.add(creative.id);
+      const match = people.find((person) => person.id === creative.id);
+      creatives.push({ id: creative.id, name: match?.name || creative.name || "Creative" });
+    });
   });
+  creatives.sort((a, b) => a.name.localeCompare(b.name));
+  const places = [...new Set(PROJECTS.map((project) => project.place).filter(Boolean))];
+  const types = [...new Set(PROJECTS.map((project) => project.type).filter(Boolean))];
+
+  const groups = {
+    creative: {
+      options: () => {
+        const query = (document.getElementById("project-creative-filter")?.value || "").trim().toLowerCase();
+        return creatives
+          .filter((creative) => !query || creative.name.toLowerCase().includes(query))
+          .map((creative) => ({ value: creative.id, label: creative.name }));
+      },
+      empty: "No creatives match.",
+    },
+    place: {
+      options: () => {
+        const query = (document.getElementById("project-place-filter")?.value || "").trim().toLowerCase();
+        return places
+          .filter((place) => !query || place.toLowerCase().includes(query))
+          .map((place) => ({ value: place, label: place }));
+      },
+      empty: "No locations match.",
+    },
+    type: {
+      options: () => types.map((type) => ({ value: type, label: type })),
+      empty: "No project types match.",
+    },
+  };
+
+  function paintGroup(key) {
+    const menu = document.getElementById(`project-${key}-menu`);
+    const toggle = document.getElementById(`project-${key}-toggle`);
+    const panel = document.getElementById(`project-${key}-panel`);
+    const badge = document.getElementById(`project-${key}-count`);
+    if (!menu || !toggle || !panel) return;
+    const picked = selected[key];
+    const rows = groups[key].options();
+    menu.innerHTML = rows.length
+      ? rows
+          .map(
+            (row) => `<button class="filter-row" type="button" role="menuitemcheckbox" aria-checked="${picked.has(row.value)}" data-value="${escapeProjectText(row.value)}">
+        ${PROJECT_CHECK}
+        <span class="filter-row_label">${escapeProjectText(row.label)}</span>
+      </button>`
+          )
+          .join("")
+      : `<p class="location-empty">${groups[key].empty}</p>`;
+    menu.querySelectorAll(".filter-row").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const value = button.dataset.value;
+        if (picked.has(value)) picked.delete(value);
+        else picked.add(value);
+        paintGroup(key);
+        apply();
+      });
+    });
+    const on = open === key;
+    panel.hidden = !on;
+    toggle.setAttribute("aria-expanded", on ? "true" : "false");
+    toggle.classList.toggle("is-on", picked.size > 0);
+    if (badge) {
+      badge.hidden = picked.size === 0;
+      const num = badge.querySelector(".tool-pill_num");
+      if (num) num.textContent = picked.size ? String(picked.size) : "";
+    }
+  }
+
+  function apply() {
+    const grid = document.getElementById("project-grid");
+    if (grid?.getAttribute("aria-busy") === "true") return;
+    const empty = document.getElementById("project-empty");
+    let shown = 0;
+    document.querySelectorAll(".project-card[data-project]").forEach((card) => {
+      const project = PROJECTS.find((item) => item.id === card.dataset.project);
+      const creativeHit = !selected.creative.size || (project?.creatives || []).some((creative) => selected.creative.has(creative.id));
+      const placeHit = !selected.place.size || selected.place.has(project?.place);
+      const typeHit = !selected.type.size || selected.type.has(project?.type);
+      const match = Boolean(project) && creativeHit && placeHit && typeHit;
+      card.hidden = !match;
+      if (match) shown += 1;
+    });
+    if (empty) empty.hidden = shown > 0;
+  }
+
+  function paint() {
+    Object.keys(groups).forEach(paintGroup);
+  }
+
+  function close() {
+    if (!open) return;
+    open = "";
+    paint();
+  }
+
+  Object.keys(groups).forEach((key) => {
+    document.getElementById(`project-${key}-toggle`)?.addEventListener("click", () => {
+      open = open === key ? "" : key;
+      paint();
+    });
+    document.getElementById(`project-${key}-count`)?.addEventListener("click", (event) => {
+      if (!selected[key].size) return;
+      event.preventDefault();
+      event.stopPropagation();
+      selected[key].clear();
+      open = "";
+      paint();
+      apply();
+    });
+    document.getElementById(`project-${key}-filter`)?.addEventListener("input", () => paintGroup(key));
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!open || root.contains(event.target)) return;
+    if (typeof modalClosed === "function" && !modalClosed()) return;
+    close();
+  });
+
+  paint();
+  projectFiltersController = { close, apply };
+  return projectFiltersController;
+}
+
+function skeletonNavPending() {
+  try {
+    const started = Number(sessionStorage.getItem("10k-skeleton") || 0);
+    return started > 0 && Date.now() - started < 4000;
+  } catch (error) {
+    return false;
+  }
+}
+
+if (document.body.dataset.page === "explore") {
+  const roster = typeof PEOPLE !== "undefined" ? PEOPLE : [{ id: "aiden-zamiri", name: "Aiden Zamiri" }];
+  bindProjectFilters(roster, () => {
+    const modal = document.getElementById("project-modal");
+    return !modal || modal.hidden;
+  });
+  if (!skeletonNavPending()) {
+    initProjects({
+      people: roster,
+      openProfile(id) {
+        try { sessionStorage.setItem("10k-skeleton", String(Date.now())); } catch (error) {}
+        location.href = `./?person=${encodeURIComponent(id)}`;
+      },
+    });
+  }
 }
