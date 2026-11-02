@@ -1722,6 +1722,547 @@ body.modal-open {
   text-transform: none;
 }
 
+.survey {
+  max-width: 560px;
+}
+
+.survey p {
+  margin: 0 0 22px;
+  color: #3a3a3a;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.survey label {
+  display: block;
+  margin: 0 0 16px;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.survey fieldset {
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.survey legend {
+  margin: 0;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.survey input,
+.survey textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-weight: 400;
+}
+
+.survey textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.survey-choice {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.survey-choice label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  font-weight: 500;
+}
+
+.survey-choice input {
+  width: auto;
+  margin: 0;
+}
+
+.survey button {
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.survey-thanks {
+  margin: 0;
+  color: #111;
+  font-weight: 650;
+}
+
+.phone-stage {
+  display: flex;
+  justify-content: center;
+  padding: calc(var(--nav-h) + 48px) 24px 72px;
+}
+
+.phone {
+  width: 340px;
+  height: 700px;
+  max-height: calc(100vh - 180px);
+  padding: 12px;
+  border-radius: 48px;
+  background: #111;
+  box-shadow:
+    0 28px 60px rgba(17, 17, 17, 0.28),
+    inset 0 0 0 2px #3a3a3a;
+}
+
+.phone-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 36px;
+  background: #fff;
+  color: #111;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.phone-island {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  width: 92px;
+  height: 26px;
+  border-radius: 20px;
+  background: #000;
+  transform: translateX(-50%);
+}
+
+.phone-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.phone-status_icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.phone-status svg {
+  display: block;
+}
+
+.imessage-head {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid #ececec;
+  text-align: center;
+}
+
+.imessage-back {
+  color: #007aff;
+}
+
+.imessage-who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.imessage-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.imessage-who strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.imessage-who span {
+  color: #8e8e93;
+  font-size: 11px;
+}
+
+.imessage-thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 16px 14px 12px;
+  overflow: auto;
+  background: #fff;
+  scrollbar-width: none;
+}
+
+.imessage-thread::-webkit-scrollbar {
+  display: none;
+}
+
+.imessage-time {
+  margin: 4px 0 6px;
+  color: #8e8e93;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.imessage-bubble {
+  align-self: flex-start;
+  max-width: 84%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: #e9e9eb;
+  color: #111;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.imessage-bubble.is-in {
+  transform-origin: left bottom;
+  animation: imessage-in 0.32s ease;
+}
+
+.imessage-typing {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 5px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: #e9e9eb;
+}
+
+.imessage-typing span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8e8e93;
+  animation: imessage-dot 1.05s infinite ease-in-out;
+}
+
+.imessage-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.imessage-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes imessage-dot {
+  0%,
+  70%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes imessage-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imessage-typing span,
+  .imessage-bubble.is-in {
+    animation: none;
+  }
+}
+
+.imessage-link {
+  color: #007aff;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.imessage-compose {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 16px;
+  border-top: 1px solid #ececec;
+}
+
+.imessage-compose span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #8e8e93;
+}
+
+.imessage-field {
+  flex: 1;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid #e5e5ea;
+  border-radius: 18px;
+  color: #8e8e93;
+  font-size: 15px;
+  line-height: 34px;
+}
+
+.phone-survey {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #f4f1ee;
+  cursor: grab;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.phone-survey::-webkit-scrollbar {
+  display: none;
+}
+
+.phone-survey.is-dragging,
+.phone-survey.is-dragging * {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.phone-survey input,
+.phone-survey textarea {
+  cursor: text;
+}
+
+.phone-survey .add-dialog_panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 24px 12px 16px;
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.phone-survey .add-dialog_panel h2 {
+  padding-right: 0;
+  font-family: "Bootzy TM", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.phone-survey .add-dialog_lede {
+  margin: 6px 0 10px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.phone-survey .add-section {
+  margin: 2px 0 6px;
+  font-size: 11px;
+}
+
+.phone-survey .add-field {
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.phone-survey .add-field > span,
+.phone-survey .add-field > legend,
+.phone-survey .add-group_label {
+  font-size: 11px;
+}
+
+.phone-survey input[type="text"],
+.phone-survey input[type="email"],
+.phone-survey input[type="tel"],
+.phone-survey .add-input,
+.phone-survey .add-role_toggle,
+.phone-survey .add-more {
+  height: 32px;
+  font-size: 13px;
+}
+
+.phone-survey input[type="text"],
+.phone-survey input[type="email"],
+.phone-survey input[type="tel"] {
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.phone-survey .add-input {
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
+.phone-survey .add-input input {
+  height: auto;
+  padding: 0;
+  border: 0;
+  font-size: 13px;
+}
+
+.phone-survey .add-travel_row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phone-survey .add-travel_label {
+  color: #6b7280;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.phone-survey .add-travel_row .add-role_toggle {
+  border-style: dashed;
+  border-color: #d1d5db;
+  background: #f7f7f7;
+}
+
+.phone-survey .add-secondary {
+  gap: 6px;
+}
+
+.phone-survey .add-check {
+  height: 30px;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.phone-survey .add-check svg {
+  width: 13px;
+  height: 13px;
+}
+
+.phone-survey .add-dialog_error {
+  min-height: 0;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.phone-survey .add-dialog_actions {
+  position: static;
+  justify-content: stretch;
+  margin: auto 0 0;
+  padding: 12px 0 0;
+  background: transparent;
+}
+
+.phone-survey .add-cancel,
+.phone-survey .add-submit {
+  flex: 1;
+  height: 36px;
+  font-size: 13px;
+}
+
+.phone-survey .add-more:focus,
+.phone-survey .add-more:focus-visible {
+  outline: none;
+}
+
+.phone-survey .add-contact {
+  grid-template-columns: 1fr;
+}
+
+.phone-survey .add-city_panel,
+.phone-survey .filters-panel {
+  position: static;
+  width: auto;
+  margin-top: 6px;
+}
+
+.phone-survey .filters-sub {
+  position: static;
+  width: auto;
+  margin-top: 6px;
+}
+
+.join-done {
+  margin: 0;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.join-done a {
+  color: #111;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 980px) {
+  .phone-stage {
+    padding-top: 196px;
+  }
+
+  .phone {
+    height: 640px;
+  }
+}
+
 .project-tools {
   display: flex;
   flex-wrap: wrap;
@@ -3074,6 +3615,7 @@ body.add-open {
 }
 
 .add-role_toggle {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3236,6 +3778,23 @@ body.add-open {
 
 .add-city {
   position: relative;
+}
+
+.add-city_control {
+  position: relative;
+}
+
+.add-role_control {
+  position: relative;
+}
+
+.phone-survey .add-role_control .add-field_remove,
+.phone-survey .add-city_control .add-field_remove {
+  top: 0;
+  right: 32px;
+  width: 24px;
+  height: 100%;
+  font-size: 16px;
 }
 
 .add-city_panel {

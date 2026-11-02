@@ -1967,7 +1967,10 @@ function readAddedPeople() {
 
 function loadAddedPeople() {
   const saved = readAddedPeople();
-  const kept = saved.filter((record) => !/^nicole(\s|$)/i.test(String(record?.name || "").trim()));
+  const kept = saved.filter((record) => {
+    const name = String(record?.name || "").trim();
+    return !/^nicole(\s|$)/i.test(name) && !/^hamna ahmed$/i.test(name);
+  });
   if (kept.length !== saved.length) localStorage.setItem(ADDED_KEY, JSON.stringify(kept));
   kept
     .slice()
