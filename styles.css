@@ -1343,6 +1343,16 @@ a:hover {
   margin-top: 40px;
 }
 
+.profile_bio {
+  margin: 0 0 16px;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
 .work_grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1430,9 +1440,11 @@ a:hover {
   grid-template-columns: 1fr;
   padding: 16px 18px;
   cursor: default;
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: #d9d9d9;
+  border-color: transparent;
   box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .past-card_empty .past-card_copy span {
@@ -1518,13 +1530,42 @@ a:hover {
   color: var(--black);
 }
 
+.contact_preferred_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0 0;
+}
+
+.contact_preferred_head strong {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.contact_preferred .contact_row {
+  border-top: 0;
+  padding-top: 8px;
+  padding-bottom: 4px;
+}
+
 .contact_icon {
+  position: relative;
   display: grid;
   place-items: center;
   width: 36px;
   height: 36px;
   color: #111;
   text-decoration: none;
+}
+
+button.contact_icon {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .contact_icon svg {
@@ -1534,6 +1575,66 @@ a:hover {
 
 .contact_icon:hover {
   color: #000;
+}
+
+.contact_actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.intro-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 20px 0 8px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  text-align: left;
+}
+
+.intro-toggle .intro-label {
+  margin: 0;
+}
+
+.intro-toggle svg {
+  flex: none;
+  margin-right: 11px;
+  transition: transform 0.18s ease;
+}
+
+.intro-toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.intro-toggle:hover {
+  background: transparent;
+}
+
+.intro-panel {
+  padding: 0 0 8px;
+}
+
+.intro-label {
+  display: block;
+  margin: 0 0 8px;
+  color: #111;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.intro-panel[hidden] {
+  display: none;
+}
+
+.contact .intro-shell {
+  margin: 0 0 4px;
 }
 
 .intro-shell {
@@ -2878,7 +2979,8 @@ body.add-open {
 .add-dialog input[type="text"],
 .add-dialog input[type="email"],
 .add-dialog input[type="tel"],
-.add-dialog select {
+.add-dialog select,
+.add-dialog textarea {
   width: 100%;
   height: 44px;
   padding: 0 12px;
@@ -2888,6 +2990,14 @@ body.add-open {
   color: #111;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 15px;
+}
+
+.add-dialog textarea {
+  height: auto;
+  min-height: 96px;
+  padding: 12px;
+  line-height: 1.45;
+  resize: vertical;
 }
 
 .add-input {
@@ -2928,6 +3038,7 @@ body.add-open {
 }
 
 .add-dialog input:focus,
+.add-dialog textarea:focus,
 .add-dialog select:focus,
 .add-role_toggle:focus {
   outline: 2px solid #111;
@@ -3806,6 +3917,33 @@ body[data-page="results"]:has([data-results-view="map"]) {
   color: #111;
 }
 
+.result-card_shots {
+  display: none;
+}
+
+.results-page[data-results-view="list"] .result-card_shots {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.results-page[data-results-view="list"] .result-card_shot {
+  display: block;
+  min-width: 0;
+  color: inherit;
+}
+
+.results-page[data-results-view="list"] .result-card_shots img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 2px;
+  background: #dedee2;
+}
+
 .roster-icon {
   position: relative;
   display: grid;
@@ -4112,6 +4250,7 @@ button.roster-icon {
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   margin-top: 12px;
+  cursor: pointer;
 }
 
 .roster-pop_shot {

@@ -3,6 +3,7 @@ const ROLES = [
   { name: "Videographer / DP", icon: "videocam", line: "Camera, coverage, and the moving image", tint: "#fde8ea" },
   { name: "Director", icon: "movie", line: "Calls the shots and shapes the piece", tint: "#f3e8fb" },
   { name: "Stylist", icon: "checkroom", line: "Wardrobe, looks, and what goes on camera", tint: "#fde8f3" },
+  { name: "Producer", icon: "assignment", line: "Runs the production and keeps the shoot moving", tint: "#e7f3ff" },
   { name: "Set designer", icon: "chair", line: "Builds the room the shoot lives in", tint: "#f8efe4" },
   { name: "MUA", icon: "brush", line: "Makeup, glam, and the face on camera", tint: "#fdecef" },
   { name: "Gaffer", icon: "lightbulb", line: "Lights the set and sets the mood", tint: "#fff4d6" },
@@ -128,6 +129,7 @@ const FILTER_ORDER = [
   "Graphic designer",
   "Model",
   "Stylist",
+  "Producer",
   "MUA",
   "Casting director",
   "Choreographer",
@@ -138,6 +140,11 @@ const FILTER_COPY = {
   Photographer: ["Photography", "All photography"],
   "Videographer / DP": ["Videography", "All videography"],
   "Graphic designer": ["Graphic design", "All graphic design"],
+};
+
+const ROLE_GENRES = {
+  Stylist: ["Hair", "Wardrobe"],
+  Editor: ["VFX"],
 };
 
 const state = {
@@ -412,7 +419,7 @@ function cardBio(record) {
     Concert: "concerts",
     Events: "events",
     Product: "product",
-    Club: "club portraits",
+    Nightlife: "nightlife",
     "Lo-fi": "lo-fi work",
     Film: "film portraits",
     Fashion: "fashion",
@@ -451,6 +458,22 @@ const CONTACT_PATHS = {
     '<rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/>',
 };
 
+function instagramStrip(record, className, linked = true) {
+  const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
+  const shotClass = className.slice(0, -1);
+  const shots = instagramShots(record)
+    .map((item) => {
+      const href = item.href || instagramHref;
+      const img = `<img src="${escapeHtml(item.src)}" alt="" />`;
+      if (linked && href) {
+        return `<a class="${shotClass}" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${img}</a>`;
+      }
+      return `<span class="${shotClass}">${img}</span>`;
+    })
+    .join("");
+  return shots ? `<div class="${className}">${shots}</div>` : "";
+}
+
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
   const tags = (record.genres || []).join(" · ");
@@ -469,6 +492,7 @@ function rosterCardHtml(record) {
         ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
       </div>
     </div>
+    ${instagramStrip(record, "result-card_shots", false)}
   `;
 }
 
@@ -575,15 +599,7 @@ function mapPopup(record) {
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
   const phoneHref = record.phone ? `tel:${record.phone}` : "";
   const mailHref = record.email ? `mailto:${record.email}` : "";
-  const shots = instagramShots(record)
-    .map((item) => {
-      const href = item.href || instagramHref;
-      const img = `<img src="${escapeHtml(item.src)}" alt="" />`;
-      return href
-        ? `<a class="roster-pop_shot" href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${img}</a>`
-        : img;
-    })
-    .join("");
+  const shots = instagramStrip(record, "roster-pop_shots", false);
   return `
     <div class="roster-pop">
       <button class="roster-pop_close" type="button" aria-label="Close">
@@ -596,7 +612,7 @@ function mapPopup(record) {
           <p>${escapeHtml(roleNames(record).join(" · "))}</p>
         </div>
       </div>
-      ${shots ? `<div class="roster-pop_shots">${shots}</div>` : ""}
+      ${shots ? shots : ""}
       <p class="roster-pop_bio">${escapeHtml(cardBio(record))}</p>
       <div class="roster-pop_icons">
         ${externalControl("roster-pop_icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
@@ -712,6 +728,22 @@ function syncMap(list) {
     marker.on("popupopen", (event) => {
       paintPopupGlass(event.popup);
       requestAnimationFrame(() => paintPopupGlass(event.popup));
+      const shots = event.popup.getElement()?.querySelector(".roster-pop_shots");
+      if (shots) {
+        shots.tabIndex = 0;
+        shots.setAttribute("role", "button");
+        shots.setAttribute("aria-label", `Open ${record.name}'s page`);
+        shots.addEventListener("click", (clickEvent) => {
+          clickEvent.preventDefault();
+          clickEvent.stopPropagation();
+          openProfile(record.id);
+        });
+        shots.addEventListener("keydown", (keyEvent) => {
+          if (keyEvent.key !== "Enter" && keyEvent.key !== " ") return;
+          keyEvent.preventDefault();
+          openProfile(record.id);
+        });
+      }
       resultMarkers.forEach((item, id) => {
         item.getElement()?.classList.toggle("is-selected", id === record.id);
         if (id === record.id) item.setZIndexOffset(1000);
@@ -807,15 +839,53 @@ function pastProjectCards(record) {
     .join("")}</div>`;
 }
 
+function preferredKeys(record) {
+  const value = record.preferred;
+  const list = Array.isArray(value) ? value : String(value || "").split(",");
+  return [...new Set(list.map((item) => String(item).trim().toLowerCase()).filter(Boolean))];
+}
+
 function contactRows(record) {
   const rows = [];
   if (record.instagram) {
-    rows.push({ key: "instagram", label: "Instagram", value: `@${record.instagram}`, action: "Open", href: `https://instagram.com/${record.instagram}` });
+    rows.push({ key: "instagram", label: "Instagram", value: `@${record.instagram}`, href: `https://instagram.com/${record.instagram}` });
   }
-  if (record.email) rows.push({ key: "email", label: "Email", value: record.email, action: "Copy" });
-  if (record.phone) rows.push({ key: "phone", label: "Phone", value: record.phone, action: "Copy" });
-  rows.sort((a, b) => (a.key === record.preferred ? -1 : b.key === record.preferred ? 1 : 0));
+  if (record.email) rows.push({ key: "email", label: "Email", value: record.email });
+  if (record.phone) rows.push({ key: "phone", label: "Phone", value: record.phone });
+  const preferred = new Set(preferredKeys(record));
+  rows.sort((a, b) => Number(preferred.has(b.key)) - Number(preferred.has(a.key)));
   return rows;
+}
+
+function contactAction(row) {
+  const icon = tinyIcon(CONTACT_PATHS[row.key] || "");
+  if (row.href) {
+    return `<a class="contact_icon" href="${escapeHtml(row.href)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(row.label)}">${icon}</a>`;
+  }
+  const copied = row.key === "phone" ? "Copied phone number" : row.key === "email" ? "Copied email" : "Copied";
+  return `<button type="button" class="contact_icon copy-icon" data-copy="${escapeHtml(row.value)}" data-copied="${escapeHtml(copied)}" aria-label="Copy ${escapeHtml(row.label)}">${icon}<span class="copy-tip" role="tooltip">${escapeHtml(row.value)}</span></button>`;
+}
+
+function contactLine(row) {
+  return `<div class="contact_row">
+    <div><strong>${escapeHtml(row.label)}</strong>${escapeHtml(row.value)}</div>
+    <div class="contact_actions">${contactAction(row)}</div>
+  </div>`;
+}
+
+function introToggleHtml() {
+  return `<button type="button" class="intro-toggle" aria-expanded="false" aria-controls="intro-panel"><span class="intro-label">Intro message</span><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+}
+
+function introPanelHtml() {
+  return `<div class="intro-panel" id="intro-panel" hidden>
+    <div class="intro-shell">
+      <button class="intro-copy" type="button" id="copy-intro" aria-label="Copy intro message">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </button>
+      <textarea class="intro" id="intro" rows="4" aria-label="Intro message"></textarea>
+    </div>
+  </div>`;
 }
 
 function introText(record) {
@@ -866,6 +936,7 @@ function renderProfile() {
     ${record.referredBy ? `<p>Referred by ${escapeHtml(record.referredBy)}.</p>` : ""}
     <div class="profile_layout">
       <div>
+        ${`<p class="profile_bio">${escapeHtml(cardBio(record))}</p>`}
         ${workGridHtml(record)}
       </div>
       <div>
@@ -879,13 +950,6 @@ function renderProfile() {
           <div class="contact-card">
             <div class="contact-card_glass">
               <div class="contact" id="contact"></div>
-              <label class="sr" for="intro">Intro message</label>
-              <div class="intro-shell">
-                <button class="intro-copy" type="button" id="copy-intro" aria-label="Copy intro message">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-                </button>
-                <textarea class="intro" id="intro" rows="4"></textarea>
-              </div>
             </div>
           </div>
         </section>
@@ -905,44 +969,41 @@ function renderProfile() {
   });
 
   const contact = root.querySelector("#contact");
-  contactRows(record).forEach((row) => {
-    const line = document.createElement("div");
-    line.className = "contact_row";
-    const copy = document.createElement("div");
-    copy.innerHTML = `<strong>${row.label}${row.key === record.preferred ? ' <span class="preferred">Preferred</span>' : ""}</strong>`;
-    copy.append(document.createTextNode(row.value));
-    const button = document.createElement(row.href ? "a" : "button");
-    if (row.href) {
-      button.className = "contact_icon";
-      button.href = row.href;
-      button.target = "_blank";
-      button.rel = "noreferrer";
-      button.setAttribute("aria-label", `Open ${row.label}`);
-      button.innerHTML = tinyIcon(CONTACT_PATHS.instagram);
-    } else {
-      button.type = "button";
-      button.className = "text-button";
-      button.textContent = row.action;
-    }
-    button.addEventListener("click", async () => {
-      if (row.href) return;
-      try {
-        await navigator.clipboard.writeText(row.value);
-        button.textContent = "Copied";
-      } catch {
-        button.textContent = "Select to copy";
-      }
-      setTimeout(() => {
-        button.textContent = row.action;
-      }, 1200);
-    });
-    line.append(copy, button);
-    contact.append(line);
+  const rows = contactRows(record);
+  const preferred = new Set(preferredKeys(record));
+  const preferredRows = rows.filter((row) => preferred.has(row.key));
+  const otherRows = rows.filter((row) => !preferred.has(row.key));
+  if (preferredRows.length) {
+    contact.insertAdjacentHTML("beforeend", `
+      <div class="contact_preferred">
+        <div class="contact_preferred_head">
+          <strong>Preferred</strong>
+        </div>
+        ${preferredRows.map((row) => contactLine(row)).join("")}
+        ${introToggleHtml()}
+        ${introPanelHtml()}
+      </div>`);
+  }
+  otherRows.forEach((row) => {
+    contact.insertAdjacentHTML("beforeend", contactLine(row));
   });
+  if (!preferredRows.length && rows.length) {
+    contact.insertAdjacentHTML("beforeend", `${introToggleHtml()}${introPanelHtml()}`);
+  }
 
   const intro = root.querySelector("#intro");
-  intro.value = introText(record);
   const copyIntro = root.querySelector("#copy-intro");
+  const toggle = root.querySelector(".intro-toggle");
+  const panel = root.querySelector("#intro-panel");
+  if (toggle && panel) {
+    toggle.addEventListener("click", () => {
+      const open = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!open));
+      panel.hidden = open;
+    });
+  }
+  if (intro && copyIntro) {
+  intro.value = introText(record);
   const copyIcon = copyIntro.innerHTML;
   const copiedIcon = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   copyIntro.addEventListener("click", async () => {
@@ -960,6 +1021,7 @@ function renderProfile() {
       copyIntro.setAttribute("aria-label", "Copy intro message");
     }, 1600);
   });
+  }
   window.scrollTo(0, 0);
 }
 
@@ -1023,6 +1085,7 @@ const ROLE_ICONS = {
     '<rect x="3.5" y="7.5" width="12" height="9" rx="1.6"/><path d="M15.5 11.2 20.2 8.8v6.4l-4.7-2.4z"/>',
   Director: '<path d="M8 7.2 10.2 9H20v8.2H4V9h3.2L8 7.2z"/><path d="M4 9.2 8.2 6.4h4.2L9.8 9.2"/>',
   Stylist: '<path d="M12 8.2a3.2 3.2 0 0 1 3.2 3.2l-1.1 7.2h-4.2L8.8 11.4A3.2 3.2 0 0 1 12 8.2z"/><path d="M12 8.2V5.6"/>',
+  Producer: '<rect x="7" y="6.2" width="10" height="12.6" rx="1.4"/><path d="M9.2 6.2V5.2a1.2 1.2 0 0 1 1.2-1.2h3.2a1.2 1.2 0 0 1 1.2 1.2v1M9.4 11h5.2M9.4 14.2h3.4"/>',
   "Set designer": '<path d="M6 10.5h12v2.2H6z"/><path d="M7.2 12.7v5.2M16.8 12.7v5.2M4.8 17.9h14.4"/>',
   MUA: '<path d="M15.8 5.6 8.2 18.4"/><path d="M14.2 5.2c1.3.2 2.2 1.2 2.2 1.2M7.2 16.6l-1.4 2.2h3.2"/>',
   Gaffer: '<path d="M9 15.2a3.6 3.6 0 1 1 6 0"/><path d="M9.4 15.2h5.2v1.4H9.4zM10 18.2h4M10.6 19.6h2.8"/>',
@@ -1252,21 +1315,24 @@ function filterAllLabel(role) {
 
 function filterMenu() {
   const used = new Set(PEOPLE.flatMap((record) => roleNames(record)));
+  const listed = (role) => used.has(role) || Boolean(ROLE_GENRES[role]) || role === "Producer";
   const ordered = [
-    ...FILTER_ORDER.filter((role) => used.has(role)),
-    ...ROLES.map((role) => role.name).filter((role) => used.has(role) && !FILTER_ORDER.includes(role)),
+    ...FILTER_ORDER.filter(listed),
+    ...ROLES.map((role) => role.name).filter((role) => listed(role) && !FILTER_ORDER.includes(role)),
   ];
   return ordered.map((role) => {
-    const genres = new Set();
+    const pinned = ROLE_GENRES[role] || [];
+    const found = new Set();
     PEOPLE.forEach((record) => {
       if (!roleNames(record).includes(role)) return;
-      (record.genres || []).forEach((genre) => genres.add(genre));
+      (record.genres || []).forEach((genre) => found.add(genre));
     });
+    pinned.forEach((genre) => found.delete(genre));
     return {
       role,
       label: filterLabel(role),
       all: filterAllLabel(role),
-      genres: [...genres].sort((a, b) => a.localeCompare(b)),
+      genres: [...[...found].sort((a, b) => a.localeCompare(b)), ...pinned],
     };
   });
 }
@@ -2507,6 +2573,7 @@ function addPersonFromForm() {
   const email = document.getElementById("add-email").value.trim();
   const phone = document.getElementById("add-phone").value.trim();
   const portfolio = cleanUrl(document.getElementById("add-portfolio").value);
+  const bio = document.getElementById("add-bio")?.value.trim() || "";
   const preferred = document.querySelector('#add-form input[name="preferred"]:checked')?.value || "";
   const error = document.getElementById("add-error");
   if (!name) {
@@ -2554,7 +2621,7 @@ function addPersonFromForm() {
     rate: "",
     compensation: "",
     portfolio,
-    bio: "",
+    bio,
     past: [],
     avatar: "",
     images: [],
