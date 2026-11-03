@@ -4673,7 +4673,9 @@ button.roster-icon {
 }
 
 .map-pin:hover .map-pin-face,
-.map-pin.is-hot .map-pin-face {
+.map-pin.is-hot .map-pin-face,
+.map-cluster:hover .map-cluster-face,
+.map-cluster.is-hot .map-cluster-face {
   transform: translateY(-7px) scale(1.08);
 }
 
@@ -4696,7 +4698,8 @@ button.roster-icon {
   }
 }
 
-.map-pin.is-hot .map-pin-face {
+.map-pin.is-hot .map-pin-face,
+.map-cluster.is-hot .map-cluster-face {
   outline: 2px solid #111;
 }
 

@@ -560,22 +560,45 @@ function renderNearby(list) {
 }
 
 let resultMap = null;
-let resultClusters = null;
+let resultCityLayer = null;
+let resultPinLayer = null;
 const resultMarkers = new Map();
+const resultCityMarkers = new Map();
+const CITY_MAX_ZOOM = 11;
+const CITY_EXPAND_ZOOM = 11;
 
-function showcasePoint(record, index, total) {
-  const cols = Math.max(1, Math.ceil(Math.sqrt(Math.max(total, 1) * 1.7)));
-  const rows = Math.max(1, Math.ceil(total / cols));
-  const col = index % cols;
-  const row = Math.floor(index / cols);
-  let hash = 2166136261;
-  for (let i = 0; i < record.id.length; i += 1) {
-    hash ^= record.id.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+function cityFanPoint(center, indexInCity, cityCount) {
+  if (cityCount <= 1) return center;
+  const spacingPx = 52;
+  const centerPt = resultMap ? resultMap.project(center, CITY_MAX_ZOOM) : null;
+  let dx = 0;
+  let dy = 0;
+  if (cityCount <= 7) {
+    const angle = (indexInCity / cityCount) * Math.PI * 2 - Math.PI / 2;
+    const radius = cityCount <= 3 ? spacingPx * 0.72 : spacingPx;
+    dx = Math.cos(angle) * radius;
+    dy = Math.sin(angle) * radius;
+  } else if (indexInCity > 0) {
+    let rem = indexInCity - 1;
+    let ring = 1;
+    while (rem >= ring * 6) {
+      rem -= ring * 6;
+      ring += 1;
+    }
+    const priorPlaced = 1 + 3 * (ring - 1) * ring;
+    const countInRing = Math.min(ring * 6, cityCount - priorPlaced);
+    const angle = (rem / countInRing) * Math.PI * 2 - Math.PI / 2 + (ring % 2) * (Math.PI / countInRing);
+    const radius = ring * spacingPx;
+    dx = Math.cos(angle) * radius;
+    dy = Math.sin(angle) * radius;
   }
-  const jx = (((hash >>> 0) % 1000) / 1000 - 0.5) * 0.7;
-  const jy = (((hash >>> 8) % 1000) / 1000 - 0.5) * 0.7;
-  return [40.87 - ((row + 0.5 + jy) / rows) * 0.25, -74.08 + ((col + 0.5 + jx) / cols) * 0.42];
+  if (centerPt && resultMap) {
+    const ll = resultMap.unproject(L.point(centerPt.x + dx, centerPt.y + dy), CITY_MAX_ZOOM);
+    return [ll.lat, ll.lng];
+  }
+  const latPerPx = 0.00052;
+  const lngPerPx = latPerPx / Math.max(0.45, Math.cos((center[0] * Math.PI) / 180));
+  return [center[0] - dy * latPerPx, center[1] + dx * lngPerPx];
 }
 
 function pinCity(record) {
@@ -588,11 +611,8 @@ function pinCity(record) {
 
 function pinPoint(record, indexInCity, cityCount, cityName = record.city) {
   const city = cityRecord(cityName);
-  if (!city?.at) return showcasePoint(record, indexInCity, cityCount);
-  if (cityCount < 2) return city.at;
-  if (cityCount > 12) return showcasePoint(record, indexInCity, cityCount);
-  const angle = (indexInCity / cityCount) * Math.PI * 2;
-  return [city.at[0] + Math.sin(angle) * 0.035, city.at[1] + Math.cos(angle) * 0.045];
+  if (!city?.at) return null;
+  return cityFanPoint(city.at, indexInCity, cityCount);
 }
 
 function mapPopup(record) {
@@ -652,6 +672,19 @@ function paintPopupGlass(popup) {
   wrap.style.webkitBackdropFilter = "blur(18px) saturate(1.6)";
 }
 
+function updateMapZoomLayer() {
+  if (!resultMap || !resultCityLayer || !resultPinLayer) return;
+  const expanded = resultMap.getZoom() >= CITY_EXPAND_ZOOM;
+  if (expanded) {
+    if (resultMap.hasLayer(resultCityLayer)) resultMap.removeLayer(resultCityLayer);
+    if (!resultMap.hasLayer(resultPinLayer)) resultMap.addLayer(resultPinLayer);
+  } else {
+    resultMap.closePopup();
+    if (resultMap.hasLayer(resultPinLayer)) resultMap.removeLayer(resultPinLayer);
+    if (!resultMap.hasLayer(resultCityLayer)) resultMap.addLayer(resultCityLayer);
+  }
+}
+
 let mapSyncTries = 0;
 
 function syncMap(list) {
@@ -669,10 +702,15 @@ function syncMap(list) {
   }
   mapSyncTries = 0;
   if (!resultMap) {
-    resultMap = L.map(mount, { zoomControl: false, scrollWheelZoom: true });
+    resultMap = L.map(mount, {
+      zoomControl: false,
+      scrollWheelZoom: true,
+      minZoom: 2,
+      maxZoom: CITY_MAX_ZOOM,
+    });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap",
-      maxZoom: 19,
+      maxZoom: CITY_MAX_ZOOM,
     }).addTo(resultMap);
     L.control.zoom({ position: "topright" }).addTo(resultMap);
     resultMap.getContainer().addEventListener("click", (event) => {
@@ -680,99 +718,120 @@ function syncMap(list) {
       event.preventDefault();
       resultMap.closePopup();
     });
-    if (typeof L.markerClusterGroup === "function") {
-      resultClusters = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        maxClusterRadius: 24,
-        spiderfyOnMaxZoom: true,
-        iconCreateFunction(cluster) {
-          return L.divIcon({
+    resultCityLayer = L.layerGroup();
+    resultPinLayer = L.layerGroup();
+    resultMap.on("zoomend", updateMapZoomLayer);
+  }
+  resultCityLayer.clearLayers();
+  resultPinLayer.clearLayers();
+  resultMarkers.clear();
+  resultCityMarkers.clear();
+
+  const cityGroups = new Map();
+  list.forEach((record) => {
+    const cityName = canonicalCity(pinCity(record));
+    const city = cityRecord(cityName);
+    if (!city?.at) return;
+    if (!cityGroups.has(city.name)) cityGroups.set(city.name, { city, records: [] });
+    cityGroups.get(city.name).records.push(record);
+  });
+
+  const points = [];
+  cityGroups.forEach(({ city, records }) => {
+    const count = records.length;
+    const cityMarker = L.marker(city.at, {
+      icon: count === 1
+        ? pinIcon(records[0])
+        : L.divIcon({
             className: "map-cluster",
-            html: `<div class="map-cluster-face"><span>${cluster.getChildCount()}</span></div>`,
+            html: `<div class="map-cluster-face"><span>${count}</span></div>`,
             iconSize: [46, 58],
             iconAnchor: [23, 54],
+          }),
+    });
+    cityMarker.on("click", () => {
+      resultMap.setView(city.at, CITY_MAX_ZOOM, { animate: true });
+    });
+    resultCityLayer.addLayer(cityMarker);
+    records.forEach((record) => resultCityMarkers.set(record.id, cityMarker));
+
+    records.forEach((record, indexInCity) => {
+      const point = pinPoint(record, indexInCity, count, city.name);
+      if (!point) return;
+      const marker = L.marker(point, { icon: pinIcon(record), zIndexOffset: indexInCity });
+      marker.bindPopup(mapPopup(record), {
+        className: "map-card",
+        closeButton: false,
+        autoPan: true,
+        keepInView: true,
+        autoPanPaddingTopLeft: [24, 24],
+        autoPanPaddingBottomRight: [24, 96],
+        offset: [0, -78],
+        maxWidth: 380,
+        minWidth: 340,
+      });
+      marker.on("popupopen", (event) => {
+        paintPopupGlass(event.popup);
+        requestAnimationFrame(() => paintPopupGlass(event.popup));
+        const shots = event.popup.getElement()?.querySelector(".roster-pop_shots");
+        if (shots) {
+          shots.tabIndex = 0;
+          shots.setAttribute("role", "button");
+          shots.setAttribute("aria-label", `Open ${record.name}'s page`);
+          shots.addEventListener("click", (clickEvent) => {
+            clickEvent.preventDefault();
+            clickEvent.stopPropagation();
+            openProfile(record.id);
           });
-        },
-      });
-      resultMap.addLayer(resultClusters);
-    }
-  }
-  if (resultClusters) resultClusters.clearLayers();
-  resultMarkers.forEach((marker) => marker.remove());
-  resultMarkers.clear();
-  const counts = {};
-  list.forEach((record) => {
-    const city = pinCity(record);
-    counts[city] = (counts[city] || 0) + 1;
-  });
-  const seen = {};
-  const points = [];
-  list.forEach((record) => {
-    const city = pinCity(record);
-    const indexInCity = seen[city] || 0;
-    seen[city] = indexInCity + 1;
-    const point = pinPoint(record, indexInCity, counts[city] || 1, city);
-    if (!point) return;
-    const marker = L.marker(point, { icon: pinIcon(record), zIndexOffset: indexInCity });
-    marker.bindPopup(mapPopup(record), {
-      className: "map-card",
-      closeButton: false,
-      autoPan: true,
-      keepInView: true,
-      autoPanPaddingTopLeft: [24, 24],
-      autoPanPaddingBottomRight: [24, 96],
-      offset: [0, -78],
-      maxWidth: 380,
-      minWidth: 340,
-    });
-    marker.on("popupopen", (event) => {
-      paintPopupGlass(event.popup);
-      requestAnimationFrame(() => paintPopupGlass(event.popup));
-      const shots = event.popup.getElement()?.querySelector(".roster-pop_shots");
-      if (shots) {
-        shots.tabIndex = 0;
-        shots.setAttribute("role", "button");
-        shots.setAttribute("aria-label", `Open ${record.name}'s page`);
-        shots.addEventListener("click", (clickEvent) => {
-          clickEvent.preventDefault();
-          clickEvent.stopPropagation();
-          openProfile(record.id);
+          shots.addEventListener("keydown", (keyEvent) => {
+            if (keyEvent.key !== "Enter" && keyEvent.key !== " ") return;
+            keyEvent.preventDefault();
+            openProfile(record.id);
+          });
+        }
+        resultMarkers.forEach((item, id) => {
+          item.getElement()?.classList.toggle("is-selected", id === record.id);
+          if (id === record.id) item.setZIndexOffset(1000);
         });
-        shots.addEventListener("keydown", (keyEvent) => {
-          if (keyEvent.key !== "Enter" && keyEvent.key !== " ") return;
-          keyEvent.preventDefault();
-          openProfile(record.id);
-        });
-      }
-      resultMarkers.forEach((item, id) => {
-        item.getElement()?.classList.toggle("is-selected", id === record.id);
-        if (id === record.id) item.setZIndexOffset(1000);
       });
+      marker.on("popupclose", () => {
+        marker.getElement()?.classList.remove("is-selected");
+        marker.setZIndexOffset(0);
+      });
+      resultPinLayer.addLayer(marker);
+      resultMarkers.set(record.id, marker);
+      points.push(point);
     });
-    marker.on("popupclose", () => {
-      marker.getElement()?.classList.remove("is-selected");
-      marker.setZIndexOffset(0);
-    });
-    if (resultClusters) resultClusters.addLayer(marker);
-    else marker.addTo(resultMap);
-    resultMarkers.set(record.id, marker);
-    points.push(point);
   });
+
   const focus = state.city ? cityRecord(state.city)?.at : null;
-  if (points.length === 1) resultMap.setView(points[0], 12);
-  else if (!state.city && points.length > 24) resultMap.setView([40.748, -73.985], 12);
-  else if (points.length) resultMap.fitBounds(points, { padding: [36, 36], maxZoom: 12 });
-  else if (focus) resultMap.setView(focus, 11);
+  if (focus) resultMap.setView(focus, CITY_MAX_ZOOM);
+  else if (cityGroups.size === 1) {
+    const onlyCity = [...cityGroups.values()][0].city;
+    resultMap.setView(onlyCity.at, CITY_MAX_ZOOM);
+  } else if (!state.city && points.length > 24) resultMap.setView([40.7128, -74.006], CITY_MAX_ZOOM);
+  else if (points.length) resultMap.fitBounds(points, { padding: [36, 36], maxZoom: CITY_MAX_ZOOM });
   else resultMap.setView([39.5, -98.35], 4);
-  requestAnimationFrame(() => resultMap.invalidateSize());
+  updateMapZoomLayer();
+  requestAnimationFrame(() => {
+    resultMap.invalidateSize();
+    updateMapZoomLayer();
+  });
 }
 
 function highlightPin(id, on) {
   const marker = resultMarkers.get(id);
   const element = marker?.getElement();
-  if (!element) return;
-  element.classList.toggle("is-hot", on);
-  marker.setZIndexOffset(on ? 1000 : 0);
+  if (element) {
+    element.classList.toggle("is-hot", on);
+    marker.setZIndexOffset(on ? 1000 : 0);
+    return;
+  }
+  const cityMarker = resultCityMarkers.get(id);
+  const cityEl = cityMarker?.getElement();
+  if (!cityEl) return;
+  cityEl.classList.toggle("is-hot", on);
+  cityMarker.setZIndexOffset(on ? 1000 : 0);
 }
 
 function renderResults(list) {
