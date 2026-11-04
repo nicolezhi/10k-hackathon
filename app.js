@@ -804,12 +804,15 @@ function syncMap(list) {
     });
   });
 
-  const focus = state.city ? cityRecord(state.city)?.at : null;
-  if (focus) resultMap.setView(focus, CITY_MAX_ZOOM);
-  else if (cityGroups.size === 1) {
-    const onlyCity = [...cityGroups.values()][0].city;
-    resultMap.setView(onlyCity.at, CITY_MAX_ZOOM);
-  } else if (!state.city && points.length > 24) resultMap.setView([40.7128, -74.006], CITY_MAX_ZOOM);
+  const selected = activeCities();
+  const centers = [...cityGroups.values()].map(({ city }) => city.at);
+  if (selected.length > 1 && centers.length > 1) {
+    resultMap.fitBounds(centers, { padding: [72, 72], maxZoom: CITY_EXPAND_ZOOM - 1 });
+  } else if (selected.length === 1 && cityRecord(selected[0])?.at) {
+    resultMap.setView(cityRecord(selected[0]).at, CITY_MAX_ZOOM);
+  } else if (centers.length === 1) {
+    resultMap.setView(centers[0], CITY_MAX_ZOOM);
+  } else if (!selected.length && points.length > 24) resultMap.setView([40.7128, -74.006], CITY_MAX_ZOOM);
   else if (points.length) resultMap.fitBounds(points, { padding: [36, 36], maxZoom: CITY_MAX_ZOOM });
   else resultMap.setView([39.5, -98.35], 4);
   updateMapZoomLayer();

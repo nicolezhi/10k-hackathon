@@ -4438,6 +4438,10 @@ body[data-page="results"]:has([data-results-view="map"]) {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.results-page[data-results-view="list"] .result-card:not(.skeleton) {
+  background: rgba(255, 255, 255, 0.55);
+}
+
 .results-split {
   display: grid;
   flex: 1;
