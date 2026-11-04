@@ -2369,10 +2369,16 @@ const mainPicker = createRolePicker({
   },
 });
 
+function syncSecondaryAdd() {
+  const button = document.getElementById("add-secondary-add");
+  if (button) button.hidden = secondaryPickers.length >= 1;
+}
+
 function clearSecondaryFields() {
   secondaryPickers.splice(0, secondaryPickers.length);
   const list = document.getElementById("add-secondary-list");
   if (list) list.replaceChildren();
+  syncSecondaryAdd();
 }
 
 function secondaryTaken(except) {
@@ -2386,7 +2392,7 @@ function secondaryTaken(except) {
 
 function addSecondaryField() {
   const list = document.getElementById("add-secondary-list");
-  if (!list) return;
+  if (!list || secondaryPickers.length >= 1) return;
   const id = `add-secondary-${secondaryCount}`;
   secondaryCount += 1;
   const wrap = document.createElement("div");
@@ -2430,7 +2436,9 @@ function addSecondaryField() {
     const index = secondaryPickers.indexOf(picker);
     if (index >= 0) secondaryPickers.splice(index, 1);
     wrap.remove();
+    syncSecondaryAdd();
   });
+  syncSecondaryAdd();
   picker.open();
 }
 
@@ -2680,10 +2688,10 @@ function addPersonFromForm() {
     preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
     secondary: extraRoles,
     referredBy: "",
-    rate: "",
     compensation: "",
     portfolio,
     bio,
+    rate: "",
     past: [],
     avatar: "",
     images: [],

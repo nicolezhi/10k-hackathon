@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=197" />
+    <link rel="stylesheet" href="styles.css?v=215" />
   </head>
   <body data-page="results" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -150,6 +150,7 @@
         <div class="map-pane">
           <div class="map-skeleton" aria-hidden="true"></div>
           <div id="map" role="region" aria-label="Map of matching creatives"></div>
+          <p class="map-note"><span>Map locations are approximate and indicate the city each freelancer is based in, rather than their exact location.</span></p>
         </div>
       </div>
     </main>
@@ -177,7 +178,7 @@
       <form class="add-dialog_panel" id="add-form" novalidate role="dialog" aria-modal="true" aria-labelledby="add-title">
         <button class="add-dialog_close" id="add-close" type="button" aria-label="Close">×</button>
         <h2 id="add-title">Add a creative</h2>
-        <p class="add-dialog_lede">Add someone to the creatives and link how to reach them.</p>
+        <p class="add-dialog_lede">Add a creative to the database and enter their information</p>
         <label class="add-field">
           <span>Name</span>
           <input id="add-name" name="name" type="text" autocomplete="name" />
@@ -280,10 +281,10 @@
       </form>
     </div>
 
-    <script src="people.js?v=14"></script>
+    <script src="people.js?v=17"></script>
     <script src="projects.js?v=45"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=148"></script>
+    <script src="app.js?v=160"></script>
   </body>
 </html>
