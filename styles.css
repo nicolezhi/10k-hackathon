@@ -3648,13 +3648,102 @@ body.add-open {
 
 .add-secondary_field {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
   max-width: 100%;
+}
+
+.add-secondary_label {
+  color: #374151;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .add-secondary_field .add-role_toggle {
   width: 100%;
   padding-right: 72px;
+}
+
+.add-role_group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.add-role_group:has(.add-genres:not([hidden])) {
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.add-role_group:has(.add-genres:not([hidden])) .add-role_toggle {
+  background: #fff;
+}
+
+.add-role_group .add-genre.is-on {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.add-secondary_field:has(.add-genres:not([hidden])) .add-field_remove {
+  top: 16px;
+  right: 42px;
+}
+
+.add-genres {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 0;
+}
+
+.add-genres_label {
+  color: #8a8a8a;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.add-genres_list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.add-genres[hidden] {
+  display: none;
+}
+
+.add-genre {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.add-genre.is-on {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.add-genre:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
 }
 
 .add-field_chevron {

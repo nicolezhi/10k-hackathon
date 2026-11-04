@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=215" />
+    <link rel="stylesheet" href="styles.css?v=221" />
   </head>
   <body data-page="results" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -213,13 +213,13 @@
           <span>Main role</span>
           <div class="add-roles">
             <div class="add-role" id="add-main-wrap">
-              <button class="add-role_toggle" id="add-main-toggle" type="button" aria-expanded="false" aria-controls="add-main-panel">
-                <span id="add-main-label">Add a main role</span>
-                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
-              </button>
-              <div class="filters-panel add-role_panel" id="add-main-panel" hidden>
-                <div class="filters-menu" id="add-main-roles" role="menu" aria-label="Main role"></div>
-                <div class="filters-sub" id="add-main-sub" hidden role="menu" aria-label="Genres"></div>
+              <div class="add-role_group">
+                <button class="add-role_toggle" id="add-main-toggle" type="button" aria-expanded="false" aria-controls="add-main-panel">
+                  <span id="add-main-label">Add a main role</span>
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </button>
+                <div class="add-city_panel" id="add-main-panel" hidden role="listbox" aria-label="Main role"></div>
+                <div class="add-genres" id="add-main-genres" hidden></div>
               </div>
             </div>
             <div class="add-secondary" id="add-secondary-list"></div>
@@ -285,6 +285,6 @@
     <script src="projects.js?v=45"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=160"></script>
+    <script src="app.js?v=164"></script>
   </body>
 </html>

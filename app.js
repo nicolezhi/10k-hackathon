@@ -2106,24 +2106,18 @@ function placeDialogMenu(panel) {
 }
 
 function createRolePicker(config) {
-  const pick = { roles: [], roleGenres: {}, openRole: "" };
+  const pick = { roles: [], roleGenres: {} };
   const single = Boolean(config.single);
 
   function blocked() {
     return config.blockedRoles ? config.blockedRoles() : [];
   }
 
-  function isAll(role) {
-    return pick.roles.includes(role) && !(pick.roleGenres[role] || []).length;
-  }
-
   function labelText() {
     if (!pick.roles.length) return config.emptyLabel;
-    const role = pick.roles[0];
-    const picked = pick.roleGenres[role] || [];
-    const detail = picked.length === 1 ? `${picked[0]} ${role.toLowerCase()}` : picked.length > 1 ? `${picked[0]} +${picked.length - 1}` : filterLabel(role);
-    if (single || pick.roles.length === 1) return detail;
-    return `${detail} +${pick.roles.length - 1}`;
+    const names = pick.roles.map((role) => filterLabel(role));
+    if (names.length === 1) return names[0];
+    return `${names[0]} +${names.length - 1}`;
   }
 
   function isOpen() {
@@ -2137,8 +2131,7 @@ function createRolePicker(config) {
     if (!panel || !toggle) return;
     panel.hidden = true;
     toggle.setAttribute("aria-expanded", "false");
-    pick.openRole = "";
-    paintSub();
+    clearDialogMenu(panel);
   }
 
   function setOpen(open) {
@@ -2153,10 +2146,6 @@ function createRolePicker(config) {
     toggle.setAttribute("aria-expanded", String(open));
     if (open) placeDialogMenu(panel);
     else clearDialogMenu(panel);
-    if (!open) {
-      pick.openRole = "";
-      paintSub();
-    }
   }
 
   function paintLabel() {
@@ -2167,135 +2156,95 @@ function createRolePicker(config) {
     toggle.classList.toggle("is-set", pick.roles.length > 0);
   }
 
-  function paintSub() {
-    const sub = document.getElementById(config.sub);
-    if (!sub) return;
-    const item = filterMenu().find((entry) => entry.role === pick.openRole && entry.genres.length);
-    if (!item || blocked().includes(item.role)) {
-      sub.hidden = true;
-      sub.innerHTML = "";
+  function paintGenres() {
+    const box = document.getElementById(config.genres);
+    if (!box) return;
+    const role = single ? pick.roles[0] || "" : "";
+    const item = role ? filterMenu().find((entry) => entry.role === role) : null;
+    const genres = item && !blocked().includes(role) ? item.genres : [];
+    if (!genres.length) {
+      box.hidden = true;
+      box.innerHTML = "";
       return;
     }
-    sub.hidden = false;
-    sub.setAttribute("aria-label", item.label);
-    const allOn = isAll(item.role);
-    const picked = pick.roleGenres[item.role] || [];
-    const rows = [
-      { label: item.all, checked: allOn, genre: "" },
-      ...item.genres.map((genre) => ({ label: genre, checked: !allOn && picked.includes(genre), genre })),
-    ];
-    sub.innerHTML = rows
-      .map(
-        (row) => `<button class="filter-sub_row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-genre="${escapeHtml(row.genre)}">
-        ${checkHtml()}
-        <span class="filter-row_label">${escapeHtml(row.label)}</span>
-      </button>`
-      )
-      .join("");
-    sub.querySelectorAll(".filter-sub_row").forEach((button) => {
+    const picked = pick.roleGenres[role] || [];
+    box.hidden = false;
+    box.innerHTML = `<span class="add-genres_label">Genre</span><div class="add-genres_list">${genres
+      .map((genre) => {
+        const on = picked.includes(genre);
+        return `<button class="add-genre${on ? " is-on" : ""}" type="button" aria-pressed="${on}" data-genre="${escapeHtml(genre)}">${escapeHtml(genre)}</button>`;
+      })
+      .join("")}</div>`;
+    box.querySelectorAll(".add-genre").forEach((button) => {
       button.addEventListener("click", (event) => {
+        event.preventDefault();
         event.stopPropagation();
-        if (!button.dataset.genre) toggleAll(item.role);
-        else toggleGenre(item.role, button.dataset.genre);
+        toggleGenre(role, button.dataset.genre);
       });
     });
-    const row = [...document.querySelectorAll(`#${config.menu} .filter-row`)].find((button) => button.dataset.role === item.role);
-    alignSubmenu(sub, row, 8);
   }
 
   function paint() {
-    document.querySelectorAll(`#${config.menu} .filter-row`).forEach((button) => {
-      const role = button.dataset.role;
-      const genres = (button.dataset.genres || "").split("|").filter(Boolean);
-      button.classList.toggle("is-open", role === pick.openRole && genres.length > 0);
-      if (button.hasAttribute("aria-checked")) button.setAttribute("aria-checked", String(isAll(role)));
-      if (genres.length) button.setAttribute("aria-expanded", String(role === pick.openRole));
+    document.querySelectorAll(`#${config.menu} .add-city_option`).forEach((button) => {
+      const on = pick.roles.includes(button.dataset.role);
+      button.classList.toggle("is-on", on);
+      button.setAttribute("aria-selected", String(on));
     });
-    paintSub();
+    paintGenres();
     paintLabel();
-  }
-
-  function showSub(role) {
-    pick.openRole = role && !blocked().includes(role) ? role : "";
-    paint();
   }
 
   function changed() {
     config.onChange?.();
   }
 
-  function toggleAll(role) {
+  function selectRole(role) {
     if (blocked().includes(role)) return;
-    if (isAll(role)) {
-      pick.roles = pick.roles.filter((item) => item !== role);
-      delete pick.roleGenres[role];
+    if (single && pick.roles.length === 1 && pick.roles[0] === role) {
+      pick.roles = [];
+      pick.roleGenres = {};
     } else if (single) {
       pick.roles = [role];
-      pick.roleGenres = { [role]: [] };
+      pick.roleGenres = { [role]: pick.roleGenres[role] || [] };
+    } else if (pick.roles.includes(role)) {
+      pick.roles = pick.roles.filter((item) => item !== role);
+      delete pick.roleGenres[role];
     } else {
-      if (!pick.roles.includes(role)) pick.roles = [...pick.roles, role];
-      pick.roleGenres[role] = [];
+      pick.roles = [...pick.roles, role];
+      pick.roleGenres[role] = pick.roleGenres[role] || [];
     }
     paint();
     changed();
-    const flat = !filterMenu().some((item) => item.role === role && item.genres.length);
-    if (single && flat && pick.roles.length) close();
+    if (single) close();
   }
 
   function toggleGenre(role, genre) {
-    if (blocked().includes(role)) return;
-    const owned = pick.roles.includes(role) && !isAll(role) ? pick.roleGenres[role] || [] : [];
-    const base = single && pick.roles[0] !== role ? [] : owned;
-    const next = base.includes(genre) ? base.filter((item) => item !== genre) : [...base, genre];
-    if (!next.length) {
-      pick.roles = pick.roles.filter((item) => item !== role);
-      delete pick.roleGenres[role];
-    } else if (single) {
-      pick.roles = [role];
-      pick.roleGenres = { [role]: next };
-    } else {
-      if (!pick.roles.includes(role)) pick.roles = [...pick.roles, role];
-      pick.roleGenres[role] = next;
-    }
+    if (blocked().includes(role) || !pick.roles.includes(role)) return;
+    const owned = pick.roleGenres[role] || [];
+    const next = owned.includes(genre) ? owned.filter((item) => item !== genre) : [...owned, genre];
+    pick.roleGenres[role] = next;
     paint();
     changed();
-    if (single && pick.roles.length) close();
   }
 
   function build() {
     const menu = document.getElementById(config.menu);
     const panel = document.getElementById(config.panel);
     if (!menu || !panel) return;
-    if (!panel.dataset.ready) {
-      panel.dataset.ready = "1";
-      panel.addEventListener("mouseleave", (event) => {
-        if (panel.contains(event.relatedTarget)) return;
-        showSub("");
-      });
-    }
     const skip = new Set(blocked());
     menu.innerHTML = "";
     filterMenu().forEach((item) => {
       if (skip.has(item.role)) return;
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "filter-row";
+      button.className = "add-city_option";
       button.dataset.role = item.role;
-      button.dataset.genres = item.genres.join("|");
-      if (item.genres.length) {
-        button.setAttribute("aria-haspopup", "menu");
-        button.setAttribute("aria-expanded", "false");
-        button.innerHTML = `<span class="filter-row_label">${escapeHtml(item.label)}</span><span class="filter-row_chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
-      } else {
-        button.setAttribute("role", "menuitemcheckbox");
-        button.setAttribute("aria-checked", "false");
-        button.innerHTML = `${checkHtml()}<span class="filter-row_label">${escapeHtml(item.label)}</span>`;
-      }
-      button.addEventListener("mouseenter", () => showSub(item.genres.length ? item.role : ""));
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", "false");
+      button.textContent = item.label;
       button.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (item.genres.length) showSub(item.role);
-        toggleAll(item.role);
+        selectRole(item.role);
       });
       menu.append(button);
     });
@@ -2322,7 +2271,6 @@ function createRolePicker(config) {
       if (next.length === pick.roles.length) return;
       pick.roles = next;
       roles.forEach((role) => delete pick.roleGenres[role]);
-      if (remove.has(pick.openRole)) pick.openRole = "";
       paint();
     },
     genres() {
@@ -2332,9 +2280,9 @@ function createRolePicker(config) {
     reset() {
       pick.roles = [];
       pick.roleGenres = {};
-      pick.openRole = "";
       close();
       paintLabel();
+      paintGenres();
     },
     roles() {
       return pick.roles.slice();
@@ -2357,8 +2305,8 @@ const mainPicker = createRolePicker({
   toggle: "add-main-toggle",
   label: "add-main-label",
   panel: "add-main-panel",
-  menu: "add-main-roles",
-  sub: "add-main-sub",
+  menu: "add-main-panel",
+  genres: "add-main-genres",
   wrap: "add-main-wrap",
   beforeOpen() {
     closeCityMenus();
@@ -2399,14 +2347,15 @@ function addSecondaryField() {
   wrap.className = "add-role add-secondary_field";
   wrap.id = id;
   wrap.innerHTML = `
-    <button class="add-role_toggle" id="${id}-toggle" type="button" aria-expanded="false" aria-controls="${id}-panel">
-      <span id="${id}-label">Add a secondary role</span>
-      <svg class="add-field_chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
-    <button class="add-field_remove" type="button" aria-label="Remove secondary role">×</button>
-    <div class="filters-panel add-role_panel" id="${id}-panel" hidden>
-      <div class="filters-menu" id="${id}-roles" role="menu" aria-label="Secondary role"></div>
-      <div class="filters-sub" id="${id}-sub" hidden role="menu" aria-label="Genres"></div>
+    <span class="add-secondary_label">Secondary role</span>
+    <div class="add-role_group">
+      <button class="add-role_toggle" id="${id}-toggle" type="button" aria-expanded="false" aria-controls="${id}-panel">
+        <span id="${id}-label">Add a secondary role</span>
+        <svg class="add-field_chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="add-field_remove" type="button" aria-label="Remove secondary role">×</button>
+      <div class="add-city_panel" id="${id}-panel" hidden role="listbox" aria-label="Secondary role"></div>
+      <div class="add-genres" id="${id}-genres" hidden></div>
     </div>
   `;
   list.append(wrap);
@@ -2416,8 +2365,8 @@ function addSecondaryField() {
     toggle: `${id}-toggle`,
     label: `${id}-label`,
     panel: `${id}-panel`,
-    menu: `${id}-roles`,
-    sub: `${id}-sub`,
+    menu: `${id}-panel`,
+    genres: `${id}-genres`,
     wrap: id,
     blockedRoles: () => secondaryTaken(picker),
     beforeOpen() {
