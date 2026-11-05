@@ -474,11 +474,61 @@ function instagramStrip(record, className, linked = true) {
   return shots ? `<div class="${className}">${shots}</div>` : "";
 }
 
+const BOARDS_KEY = "10k-boards";
+
+function readBoards() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BOARDS_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((board) => board && typeof board.id === "string" && typeof board.name === "string")
+      .map((board) => ({
+        id: board.id,
+        name: board.name,
+        people: Array.isArray(board.people) ? [...new Set(board.people.filter(Boolean))] : [],
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveBoards(boards) {
+  try {
+    localStorage.setItem(BOARDS_KEY, JSON.stringify(boards));
+  } catch {}
+}
+
+function isPersonStarred(personId) {
+  return readBoards().some((board) => board.people.includes(personId));
+}
+
+function starIconSvg(filled) {
+  return `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3.4l2.62 5.31 5.86.85-4.24 4.13 1 5.84L12 16.77l-5.24 2.76 1-5.84-4.24-4.13 5.86-.85L12 3.4z" fill="${filled ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+}
+
+function starButtonHtml(personId, extraClass = "") {
+  const starred = isPersonStarred(personId);
+  const cls = ["star-btn", extraClass, starred ? "is-starred" : ""].filter(Boolean).join(" ");
+  return `<button type="button" class="${cls}" data-star-person="${escapeHtml(personId)}" aria-label="${starred ? "Saved to board" : "Save to board"}" aria-pressed="${starred}">${starIconSvg(starred)}</button>`;
+}
+
+function syncStarButtons() {
+  document.querySelectorAll(".star-btn[data-star-person]").forEach((btn) => {
+    const id = btn.dataset.starPerson;
+    const starred = isPersonStarred(id);
+    btn.classList.toggle("is-starred", starred);
+    btn.setAttribute("aria-pressed", String(starred));
+    btn.setAttribute("aria-label", starred ? "Saved to board" : "Save to board");
+    btn.innerHTML = starIconSvg(starred);
+  });
+}
+
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
   const tags = (record.genres || []).join(" · ");
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
   return `
+    ${starButtonHtml(record.id, "result-card_star")}
     ${avatarHtml(record, "result-card_avatar")}
     <div class="result-card_body">
       <h3>${escapeHtml(record.name)}</h3>
@@ -521,11 +571,11 @@ function renderMapResults(list) {
     card.innerHTML = rosterCardHtml(record);
     const open = () => openProfile(record.id);
     card.addEventListener("click", (event) => {
-      if (event.target.closest("a, .copy-icon")) return;
+      if (event.target.closest("a, .copy-icon, .star-btn")) return;
       open();
     });
     card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.target.closest("a, .copy-icon")) open();
+      if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
     });
     card.addEventListener("mouseenter", () => highlightPin(record.id, true));
     card.addEventListener("mouseleave", () => highlightPin(record.id, false));
@@ -622,6 +672,7 @@ function mapPopup(record) {
   const shots = instagramStrip(record, "roster-pop_shots", false);
   return `
     <div class="roster-pop">
+      ${starButtonHtml(record.id, "roster-pop_star")}
       <button class="roster-pop_close" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -864,11 +915,11 @@ function renderResults(list) {
     card.innerHTML = rosterCardHtml(record);
     const open = () => openProfile(record.id);
     card.addEventListener("click", (event) => {
-      if (event.target.closest("a, .copy-icon")) return;
+      if (event.target.closest("a, .copy-icon, .star-btn")) return;
       open();
     });
     card.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.target.closest("a, .copy-icon")) open();
+      if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
     });
     grid.appendChild(card);
   });
@@ -963,7 +1014,11 @@ function renderProfile() {
   if (!record) {
     root.hidden = true;
     root.innerHTML = "";
-    document.title = isResultsPage() ? "Search · 10K Creatives" : "10K Creatives";
+    document.title = isResultsPage()
+      ? "Search · 10K Creatives"
+      : isBoardsPage()
+      ? "Boards · 10K Creatives"
+      : "10K Creatives";
     return;
   }
 
@@ -978,12 +1033,23 @@ function renderProfile() {
   const roleLine = [...(record.roles || []), genres.join("/")].filter(Boolean).join(", ");
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
 
+  const backLabel = isBoardsPage()
+    ? state.board
+      ? "Back to board"
+      : "Back to boards"
+    : isResultsPage()
+    ? "Back to results"
+    : "Back to creatives";
+
   root.innerHTML = `
-    <a class="back" href="#results"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${isResultsPage() ? "Back to results" : "Back to creatives"}</span></a>
+    <a class="back" href="#results"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${backLabel}</span></a>
     <header class="profile_head">
       ${avatarHtml(record, "profile_avatar")}
       <div class="profile_id">
-      <h1>${escapeHtml(record.name)}</h1>
+      <div class="profile_title_row">
+        <h1>${escapeHtml(record.name)}</h1>
+        ${starButtonHtml(record.id, "profile_star")}
+      </div>
       ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
       ${place ? `<p class="profile_place">${escapeHtml(place)}</p>` : ""}
       </div>
@@ -1752,6 +1818,10 @@ function isResultsPage() {
   return document.body.dataset.page === "results";
 }
 
+function isBoardsPage() {
+  return document.body.dataset.page === "boards";
+}
+
 function resultsQuery() {
   const params = new URLSearchParams();
   if (state.query) params.set("q", state.query);
@@ -1779,10 +1849,16 @@ function writeFilterParams(params) {
 
 function render(options = {}) {
   syncControls();
-  if (!state.profile) renderResults(isResultsPage() ? filteredPeople() : PEOPLE);
+  if (!state.profile) {
+    if (isBoardsPage()) renderBoards();
+    else {
+      renderResults(isResultsPage() ? filteredPeople() : PEOPLE);
+      renderHomeBoards();
+    }
+  }
   renderProfile();
   if (!skipUrl) {
-    if (isResultsPage()) writeUrl(options.url || "replace");
+    if (isResultsPage() || isBoardsPage()) writeUrl(options.url || "replace");
     else if (state.profile || new URLSearchParams(location.search).has("person")) writeUrl(options.url || "replace");
   }
 }
@@ -1795,6 +1871,7 @@ function writeUrl(mode) {
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
   if (resultsView === "map") params.set("view", "map");
+  if (state.board) params.set("board", state.board);
   if (state.profile) params.set("person", state.profile);
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
   if (next === `${location.pathname}${location.search}`) return;
@@ -1827,6 +1904,7 @@ function readUrl() {
     state.genres = rawGenres;
   }
   state.tenk = params.get("tenk") === "1";
+  state.board = params.get("board") || "";
   state.profile = params.get("person") || "";
 }
 
@@ -2031,7 +2109,7 @@ function loadAddedPeople() {
   const saved = readAddedPeople();
   const kept = saved.filter((record) => {
     const name = String(record?.name || "").trim();
-    return !/^nicole(\s|$)/i.test(name) && !/^hamna ahmed$/i.test(name);
+    return !/^nicole(\s|$)/i.test(name) && !/^hamna(\s|$)/i.test(name) && !/^betty(\s|$)/i.test(name);
   });
   if (kept.length !== saved.length) localStorage.setItem(ADDED_KEY, JSON.stringify(kept));
   kept
@@ -2721,6 +2799,475 @@ function skeletonDelay() {
   return Math.max(180, 560 - elapsed);
 }
 
+function createBoard(rawName, initialPersonId = "") {
+  const name = String(rawName || "").trim();
+  if (!name) return null;
+  const boards = readBoards();
+  const baseSlug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "board";
+  let id = baseSlug;
+  let counter = 2;
+  while (boards.some((item) => item.id === id)) {
+    id = `${baseSlug}-${counter}`;
+    counter += 1;
+  }
+  const board = {
+    id,
+    name,
+    people: initialPersonId ? [initialPersonId] : [],
+  };
+  boards.unshift(board);
+  saveBoards(boards);
+  syncStarButtons();
+  renderHomeBoards();
+  if (isBoardsPage() && !state.profile) renderBoards();
+  return board;
+}
+
+function deleteBoard(boardId) {
+  const boards = readBoards().filter((item) => item.id !== boardId);
+  saveBoards(boards);
+  syncStarButtons();
+  renderHomeBoards();
+  if (state.board === boardId) state.board = "";
+  if (isBoardsPage()) render({ url: "push" });
+}
+
+function togglePersonInBoard(personId, boardId) {
+  const boards = readBoards();
+  const board = boards.find((item) => item.id === boardId);
+  if (!board) return false;
+  const idx = board.people.indexOf(personId);
+  const added = idx === -1;
+  if (added) board.people.push(personId);
+  else board.people.splice(idx, 1);
+  saveBoards(boards);
+  syncStarButtons();
+  renderHomeBoards();
+  if (isBoardsPage() && !state.profile) renderBoards();
+  return added;
+}
+
+function boardPreviewSources(board) {
+  const srcs = [];
+  const records = (board.people || [])
+    .map((personId) => PEOPLE.find((item) => item.id === personId))
+    .filter(Boolean);
+  records.forEach((record) => {
+    if (srcs.length >= 3) return;
+    const firstShot = instagramShots(record)[0]?.src || record.avatar || "";
+    if (firstShot && !srcs.includes(firstShot)) srcs.push(firstShot);
+  });
+  records.forEach((record) => {
+    if (srcs.length >= 3) return;
+    instagramShots(record).forEach((shot) => {
+      if (shot?.src && srcs.length < 3 && !srcs.includes(shot.src)) srcs.push(shot.src);
+    });
+    if (record.avatar && srcs.length < 3 && !srcs.includes(record.avatar)) srcs.push(record.avatar);
+  });
+  return srcs;
+}
+
+let activePickerPerson = "";
+let activePickerAnchor = null;
+
+function ensureBoardPicker() {
+  let picker = document.getElementById("board-picker");
+  if (picker) return picker;
+  picker = document.createElement("div");
+  picker.id = "board-picker";
+  picker.className = "board-picker";
+  picker.hidden = true;
+  picker.setAttribute("role", "dialog");
+  picker.setAttribute("aria-label", "Save to board");
+  document.body.appendChild(picker);
+  return picker;
+}
+
+function positionBoardPicker(picker, anchor) {
+  if (!picker || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const pickerWidth = 280;
+  const margin = 12;
+  let left = rect.right - pickerWidth;
+  if (left < margin) left = Math.min(rect.left, window.innerWidth - pickerWidth - margin);
+  if (left + pickerWidth > window.innerWidth - margin) left = window.innerWidth - pickerWidth - margin;
+  let top = rect.bottom + 8;
+  const pickerHeight = picker.offsetHeight || 260;
+  if (top + pickerHeight > window.innerHeight - margin && rect.top - pickerHeight - 8 > margin) {
+    top = rect.top - pickerHeight - 8;
+  }
+  picker.style.left = `${Math.max(margin, left)}px`;
+  picker.style.top = `${Math.max(margin, top)}px`;
+}
+
+function paintBoardPicker() {
+  const picker = ensureBoardPicker();
+  if (!activePickerPerson) return;
+  const record = PEOPLE.find((item) => item.id === activePickerPerson);
+  const boards = readBoards();
+  const rowsHtml = boards.length
+    ? boards
+        .map((board) => {
+          const saved = board.people.includes(activePickerPerson);
+          const thumb = boardPreviewSources(board)[0] || "";
+          const count = board.people.length;
+          const countLabel = count === 1 ? "1 creative" : `${count} creatives`;
+          return `
+            <button type="button" class="board-picker_row${saved ? " is-saved" : ""}" data-board-id="${escapeHtml(board.id)}">
+              <span class="board-picker_thumb">
+                ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" />` : `<span class="board-picker_thumb_empty" aria-hidden="true"></span>`}
+              </span>
+              <span class="board-picker_meta">
+                <strong>${escapeHtml(board.name)}</strong>
+                <span>${escapeHtml(countLabel)}</span>
+              </span>
+              <span class="board-picker_pill">${saved ? "Saved" : "Save"}</span>
+            </button>
+          `;
+        })
+        .join("")
+    : `<p class="board-picker_empty">Create your first board below to save ${escapeHtml(record?.name || "this creative")}.</p>`;
+
+  picker.innerHTML = `
+    <div class="board-picker_head">
+      <strong>Save to board</strong>
+      <button type="button" class="board-picker_close" aria-label="Close">×</button>
+    </div>
+    <div class="board-picker_list">${rowsHtml}</div>
+    <form class="board-picker_form" id="board-picker-form">
+      <input
+        type="text"
+        class="board-picker_input"
+        placeholder="New board name..."
+        aria-label="New board name"
+        maxlength="60"
+        required
+      />
+      <button type="submit" class="board-picker_create">+ Create</button>
+    </form>
+  `;
+
+  picker.querySelector(".board-picker_close")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeBoardPicker();
+  });
+
+  picker.querySelectorAll(".board-picker_row").forEach((row) => {
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      togglePersonInBoard(activePickerPerson, row.dataset.boardId);
+      paintBoardPicker();
+    });
+  });
+
+  const form = picker.querySelector("#board-picker-form");
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const input = form.querySelector(".board-picker_input");
+    const name = input?.value.trim();
+    if (!name) return;
+    createBoard(name, activePickerPerson);
+    paintBoardPicker();
+  });
+
+  if (activePickerAnchor) positionBoardPicker(picker, activePickerAnchor);
+}
+
+function openBoardPicker(personId, anchor) {
+  const picker = ensureBoardPicker();
+  if (!picker.hidden && activePickerPerson === personId && activePickerAnchor === anchor) {
+    closeBoardPicker();
+    return;
+  }
+  activePickerPerson = personId;
+  activePickerAnchor = anchor;
+  picker.hidden = false;
+  paintBoardPicker();
+  requestAnimationFrame(() => positionBoardPicker(picker, anchor));
+}
+
+function closeBoardPicker() {
+  const picker = document.getElementById("board-picker");
+  if (picker) picker.hidden = true;
+  activePickerPerson = "";
+  activePickerAnchor = null;
+}
+
+function buildBoardCardElement(board, { onOpen, onDelete }) {
+  const srcs = boardPreviewSources(board);
+  const count = board.people.filter((id) => PEOPLE.some((p) => p.id === id)).length;
+  const countText = count === 1 ? "1 creative" : `${count} creatives`;
+  const card = document.createElement("article");
+  card.className = "board-card";
+  card.tabIndex = 0;
+  card.innerHTML = `
+    <div class="board-card_cover">
+      <div class="board-card_tile board-card_tile-main">
+        ${srcs[0] ? `<img src="${escapeHtml(srcs[0])}" alt="" />` : `<span class="board-card_placeholder"></span>`}
+      </div>
+      <div class="board-card_side">
+        <div class="board-card_tile">
+          ${srcs[1] ? `<img src="${escapeHtml(srcs[1])}" alt="" />` : `<span class="board-card_placeholder"></span>`}
+        </div>
+        <div class="board-card_tile">
+          ${srcs[2] ? `<img src="${escapeHtml(srcs[2])}" alt="" />` : `<span class="board-card_placeholder"></span>`}
+        </div>
+      </div>
+    </div>
+    <div class="board-card_body">
+      <div class="board-card_copy">
+        <h3>${escapeHtml(board.name)}</h3>
+        <p>${escapeHtml(countText)}</p>
+      </div>
+      ${
+        onDelete
+          ? `<button type="button" class="board-card_delete" aria-label="Delete ${escapeHtml(board.name)}">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>`
+          : ""
+      }
+    </div>
+  `;
+  card.addEventListener("click", (event) => {
+    if (event.target.closest(".board-card_delete")) return;
+    onOpen();
+  });
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.target.closest(".board-card_delete")) onOpen();
+  });
+  if (onDelete) {
+    card.querySelector(".board-card_delete")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      onDelete();
+    });
+  }
+  return card;
+}
+
+function buildAddBoardCardElement(onClick) {
+  const addCard = document.createElement("button");
+  addCard.type = "button";
+  addCard.className = "board-card board-card_add";
+  addCard.innerHTML = `
+    <span class="board-card_add_cover">
+      <span class="board-card_add_label">+ Add board</span>
+    </span>
+    <span class="board-card_body">
+      <span class="board-card_copy">
+        <h3>New board</h3>
+        <p>Create a moodboard</p>
+      </span>
+    </span>
+  `;
+  addCard.addEventListener("click", onClick);
+  return addCard;
+}
+
+function renderHomeBoards() {
+  const section = document.getElementById("home-boards");
+  const grid = document.getElementById("home-boards-grid");
+  if (!section || !grid) return;
+  const boards = readBoards();
+  if (!boards.length) {
+    section.hidden = true;
+    grid.innerHTML = "";
+    return;
+  }
+  section.hidden = false;
+  grid.innerHTML = "";
+  boards.slice(0, 3).forEach((board) => {
+    grid.appendChild(
+      buildBoardCardElement(board, {
+        onOpen: () => {
+          markSkeletonNav();
+          location.href = `boards.html?board=${encodeURIComponent(board.id)}`;
+        },
+      })
+    );
+  });
+  grid.appendChild(
+    buildAddBoardCardElement(() => {
+      markSkeletonNav();
+      location.href = "boards.html?create=1";
+    })
+  );
+}
+
+function renderBoards() {
+  const overview = document.getElementById("boards-overview");
+  const detail = document.getElementById("board-detail");
+  if (!overview || !detail) return;
+
+  const boards = readBoards();
+  const activeBoard = state.board ? boards.find((item) => item.id === state.board) : null;
+  if (state.board && !activeBoard) {
+    state.board = "";
+  }
+
+  if (activeBoard) {
+    overview.hidden = true;
+    detail.hidden = false;
+    document.title = `${activeBoard.name} · Boards · 10K Creatives`;
+    const titleEl = document.getElementById("board-detail-title");
+    const countEl = document.getElementById("board-detail-count");
+    const emptyEl = document.getElementById("board-detail-empty");
+    const gridEl = document.getElementById("board-detail-grid");
+    const members = activeBoard.people
+      .map((id) => PEOPLE.find((person) => person.id === id))
+      .filter(Boolean);
+    if (titleEl) titleEl.textContent = activeBoard.name;
+    if (countEl) countEl.textContent = members.length === 1 ? "1 creative saved" : `${members.length} creatives saved`;
+    if (emptyEl) emptyEl.hidden = members.length !== 0;
+    if (gridEl) {
+      gridEl.innerHTML = "";
+      members.forEach((record) => {
+        const card = document.createElement("article");
+        card.className = "result-card";
+        card.tabIndex = 0;
+        card.dataset.id = record.id;
+        card.innerHTML = rosterCardHtml(record);
+        const open = () => openProfile(record.id);
+        card.addEventListener("click", (event) => {
+          if (event.target.closest("a, .copy-icon, .star-btn")) return;
+          open();
+        });
+        card.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
+        });
+        gridEl.appendChild(card);
+      });
+    }
+    return;
+  }
+
+  overview.hidden = false;
+  detail.hidden = true;
+  document.title = "Boards · 10K Creatives";
+  const recentSection = document.getElementById("boards-recent");
+  const grid = document.getElementById("boards-grid");
+  const empty = document.getElementById("boards-empty");
+  const summary = document.getElementById("boards-summary");
+  if (summary) {
+    const totalSaved = new Set(boards.flatMap((b) => b.people)).size;
+    summary.textContent = boards.length
+      ? `${boards.length === 1 ? "1 board" : `${boards.length} boards`} · ${totalSaved === 1 ? "1 starred creative" : `${totalSaved} starred creatives`}`
+      : "Star creatives and organize them into boards for upcoming shoots.";
+  }
+  if (recentSection) recentSection.hidden = boards.length === 0;
+  if (empty) empty.hidden = boards.length !== 0;
+  if (!grid) return;
+  grid.innerHTML = "";
+  boards.forEach((board) => {
+    grid.appendChild(
+      buildBoardCardElement(board, {
+        onOpen: () => {
+          state.board = board.id;
+          render({ url: "push" });
+          window.scrollTo(0, 0);
+        },
+        onDelete: () => deleteBoard(board.id),
+      })
+    );
+  });
+
+  if (boards.length) {
+    grid.appendChild(
+      buildAddBoardCardElement(() => {
+        const createForm = document.getElementById("boards-create-form");
+        const createInput = document.getElementById("boards-create-input");
+        if (!createForm) return;
+        createForm.hidden = false;
+        createInput?.focus();
+      })
+    );
+  }
+}
+
+function bindBoards() {
+  document.addEventListener("click", (event) => {
+    const starBtn = event.target.closest(".star-btn[data-star-person]");
+    if (starBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      openBoardPicker(starBtn.dataset.starPerson, starBtn);
+      return;
+    }
+    const picker = document.getElementById("board-picker");
+    if (picker && !picker.hidden && !picker.contains(event.target)) {
+      closeBoardPicker();
+    }
+  });
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      const picker = document.getElementById("board-picker");
+      if (picker && !picker.hidden && activePickerAnchor) {
+        if (!activePickerAnchor.isConnected) closeBoardPicker();
+        else positionBoardPicker(picker, activePickerAnchor);
+      }
+    },
+    { passive: true }
+  );
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeBoardPicker();
+  });
+
+  const createToggle = document.getElementById("boards-create-toggle");
+  const emptyCreate = document.getElementById("boards-empty-create");
+  const createForm = document.getElementById("boards-create-form");
+  const createInput = document.getElementById("boards-create-input");
+  const createCancel = document.getElementById("boards-create-cancel");
+
+  const openCreateForm = () => {
+    if (!createForm) return;
+    createForm.hidden = false;
+    createInput?.focus();
+  };
+
+  createToggle?.addEventListener("click", () => {
+    if (!createForm) return;
+    const next = createForm.hidden;
+    createForm.hidden = !next;
+    if (next) createInput?.focus();
+  });
+
+  emptyCreate?.addEventListener("click", openCreateForm);
+  if (isBoardsPage() && new URLSearchParams(location.search).get("create") === "1") {
+    requestAnimationFrame(openCreateForm);
+  }
+
+  createCancel?.addEventListener("click", () => {
+    if (!createForm) return;
+    createForm.hidden = true;
+    if (createInput) createInput.value = "";
+  });
+
+  createForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const name = createInput?.value.trim();
+    if (!name) return;
+    createBoard(name);
+    if (createInput) createInput.value = "";
+    createForm.hidden = true;
+  });
+
+  document.getElementById("board-back")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    state.board = "";
+    render({ url: "push" });
+  });
+
+  document.getElementById("board-delete-btn")?.addEventListener("click", () => {
+    if (state.board) deleteBoard(state.board);
+  });
+}
+
 function prepareSkeletonFrame() {
   const params = new URLSearchParams(location.search);
   if (params.has("person")) {
@@ -2758,6 +3305,7 @@ PEOPLE.forEach((record) => {
 
 bind();
 bindAddRoster();
+bindBoards();
 readUrl();
 syncControls();
 function initHeroMap() {
