@@ -485,11 +485,70 @@ function readBoards() {
       .map((board) => ({
         id: board.id,
         name: board.name,
+        description: typeof board.description === "string" ? board.description.trim() : "",
+        date: typeof board.date === "string" ? board.date.trim() : "",
         people: Array.isArray(board.people) ? [...new Set(board.people.filter(Boolean))] : [],
       }));
   } catch {
     return [];
   }
+}
+
+function parseIsoDateParts(iso) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || "").trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(year, month, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return { year, month, day, date };
+}
+
+function parseBoardDateRange(raw) {
+  const str = String(raw || "").trim();
+  if (!str) return { start: "", end: "" };
+  const parts = str.split(/\s*\.\.\s*/);
+  const first = parseIsoDateParts(parts[0]) ? parts[0].trim() : "";
+  const second = parts[1] && parseIsoDateParts(parts[1]) ? parts[1].trim() : "";
+  if (!first) return { start: "", end: "" };
+  if (!second || second === first) return { start: first, end: "" };
+  return first <= second ? { start: first, end: second } : { start: second, end: first };
+}
+
+function serializeBoardDateRange(start, end) {
+  const s = String(start || "").trim();
+  const e = String(end || "").trim();
+  if (!s) return "";
+  if (!e || e === s) return s;
+  return s <= e ? `${s}..${e}` : `${e}..${s}`;
+}
+
+function formatBoardDate(raw) {
+  const str = String(raw || "").trim();
+  if (!str) return "";
+  const { start, end } = parseBoardDateRange(str);
+  if (!start) return str;
+  const sParts = parseIsoDateParts(start);
+  if (!sParts) return str;
+  if (!end || end === start) {
+    return sParts.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  const eParts = parseIsoDateParts(end);
+  if (!eParts) {
+    return sParts.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  const sMonth = sParts.date.toLocaleDateString("en-US", { month: "short" });
+  const eMonth = eParts.date.toLocaleDateString("en-US", { month: "short" });
+  if (sParts.year === eParts.year && sParts.month === eParts.month) {
+    return `${sMonth} ${sParts.day}–${eParts.day}, ${sParts.year}`;
+  }
+  if (sParts.year === eParts.year) {
+    return `${sMonth} ${sParts.day} – ${eMonth} ${eParts.day}, ${sParts.year}`;
+  }
+  const sFull = sParts.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const eFull = eParts.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${sFull} – ${eFull}`;
 }
 
 function saveBoards(boards) {
@@ -1068,10 +1127,6 @@ function renderProfile() {
         ${workGridHtml(record)}
       </div>
       <div>
-        <section>
-          <h2>Past 10K projects</h2>
-          ${projects}
-        </section>
         ${record.compensation ? `<section><h2>Compensation notes</h2><p>${escapeHtml(record.compensation)}</p></section>` : ""}
         <section>
           <h2>Contact</h2>
@@ -2799,7 +2854,7 @@ function skeletonDelay() {
   return Math.max(180, 560 - elapsed);
 }
 
-function createBoard(rawName, initialPersonId = "") {
+function createBoard(rawName, initialPersonId = "", { description = "", date = "" } = {}) {
   const name = String(rawName || "").trim();
   if (!name) return null;
   const boards = readBoards();
@@ -2816,6 +2871,8 @@ function createBoard(rawName, initialPersonId = "") {
   const board = {
     id,
     name,
+    description: String(description || "").trim(),
+    date: String(date || "").trim(),
     people: initialPersonId ? [initialPersonId] : [],
   };
   boards.unshift(board);
@@ -2824,6 +2881,25 @@ function createBoard(rawName, initialPersonId = "") {
   renderHomeBoards();
   if (isBoardsPage() && !state.profile) renderBoards();
   return board;
+}
+
+function updateBoardDetails(boardId, { name, description, date }, { rerender = true } = {}) {
+  const boards = readBoards();
+  const board = boards.find((item) => item.id === boardId);
+  if (!board) return null;
+  if (typeof name === "string" && name.trim()) board.name = name.trim();
+  if (typeof description === "string") board.description = description.trim();
+  if (typeof date === "string") board.date = date.trim();
+  saveBoards(boards);
+  renderHomeBoards();
+  if (rerender && isBoardsPage() && !state.profile) renderBoards();
+  return board;
+}
+
+function sizeBoardDescInput(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${Math.max(24, el.scrollHeight)}px`;
 }
 
 function deleteBoard(boardId) {
@@ -2872,6 +2948,122 @@ function boardPreviewSources(board) {
 
 let activePickerPerson = "";
 let activePickerAnchor = null;
+let activePreviewAnchor = null;
+let starPreviewHideTimer = 0;
+
+function ensureStarPreview() {
+  let preview = document.getElementById("star-preview");
+  if (preview) return preview;
+  preview = document.createElement("div");
+  preview.id = "star-preview";
+  preview.className = "star-preview";
+  preview.hidden = true;
+  preview.setAttribute("role", "tooltip");
+  preview.addEventListener("mouseenter", () => {
+    if (starPreviewHideTimer) {
+      clearTimeout(starPreviewHideTimer);
+      starPreviewHideTimer = 0;
+    }
+  });
+  preview.addEventListener("mouseleave", () => {
+    scheduleHideStarPreview();
+  });
+  document.body.appendChild(preview);
+  return preview;
+}
+
+function positionStarPreview(preview, anchor) {
+  if (!preview || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const width = preview.offsetWidth || 236;
+  const height = preview.offsetHeight || 96;
+  const margin = 12;
+  let left = rect.right - width;
+  if (left < margin) left = Math.min(rect.left, window.innerWidth - width - margin);
+  if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+  let top = rect.bottom + 8;
+  if (top + height > window.innerHeight - margin && rect.top - height - 8 > margin) {
+    top = rect.top - height - 8;
+  }
+  preview.style.left = `${Math.max(margin, left)}px`;
+  preview.style.top = `${Math.max(margin, top)}px`;
+}
+
+function showStarPreview(personId, anchor) {
+  if (starPreviewHideTimer) {
+    clearTimeout(starPreviewHideTimer);
+    starPreviewHideTimer = 0;
+  }
+  const picker = document.getElementById("board-picker");
+  if (picker && !picker.hidden) return;
+  const memberBoards = readBoards().filter((board) => board.people.includes(personId));
+  const preview = ensureStarPreview();
+  activePreviewAnchor = anchor;
+  if (!memberBoards.length) {
+    preview.classList.add("is-empty");
+    preview.innerHTML = `<span class="star-preview_hint">Save to board</span>`;
+  } else {
+    preview.classList.remove("is-empty");
+    const heading = memberBoards.length === 1 ? "Saved on 1 board" : `Saved on ${memberBoards.length} boards`;
+    const itemsHtml = memberBoards
+      .map((board) => {
+        const thumb = boardPreviewSources(board)[0] || "";
+        const count = board.people.filter((id) => PEOPLE.some((p) => p.id === id)).length;
+        const countLabel = count === 1 ? "1 creative" : `${count} creatives`;
+        const dateLabel = formatBoardDate(board.date);
+        const sub = [countLabel, dateLabel].filter(Boolean).join(" · ");
+        return `
+          <a class="star-preview_row" href="boards.html?board=${encodeURIComponent(board.id)}" data-board-id="${escapeHtml(board.id)}">
+            <span class="star-preview_thumb">
+              ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" />` : `<span class="star-preview_thumb_empty" aria-hidden="true"></span>`}
+            </span>
+            <span class="star-preview_meta">
+              <strong>${escapeHtml(board.name)}</strong>
+              <span>${escapeHtml(sub)}</span>
+            </span>
+          </a>
+        `;
+      })
+      .join("");
+    preview.innerHTML = `
+      <div class="star-preview_head">${escapeHtml(heading)}</div>
+      <div class="star-preview_list">${itemsHtml}</div>
+    `;
+    preview.querySelectorAll(".star-preview_row").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        if (isBoardsPage()) {
+          event.preventDefault();
+          hideStarPreview();
+          state.profile = "";
+          state.board = link.dataset.boardId || "";
+          render({ url: "push" });
+          window.scrollTo(0, 0);
+        }
+      });
+    });
+  }
+  preview.hidden = false;
+  positionStarPreview(preview, anchor);
+  requestAnimationFrame(() => positionStarPreview(preview, anchor));
+}
+
+function hideStarPreview() {
+  if (starPreviewHideTimer) {
+    clearTimeout(starPreviewHideTimer);
+    starPreviewHideTimer = 0;
+  }
+  const preview = document.getElementById("star-preview");
+  if (preview) preview.hidden = true;
+  activePreviewAnchor = null;
+}
+
+function scheduleHideStarPreview() {
+  if (starPreviewHideTimer) clearTimeout(starPreviewHideTimer);
+  starPreviewHideTimer = window.setTimeout(() => {
+    starPreviewHideTimer = 0;
+    hideStarPreview();
+  }, 140);
+}
 
 function ensureBoardPicker() {
   let picker = document.getElementById("board-picker");
@@ -2978,6 +3170,7 @@ function paintBoardPicker() {
 }
 
 function openBoardPicker(personId, anchor) {
+  hideStarPreview();
   const picker = ensureBoardPicker();
   if (!picker.hidden && activePickerPerson === personId && activePickerAnchor === anchor) {
     closeBoardPicker();
@@ -3001,6 +3194,9 @@ function buildBoardCardElement(board, { onOpen, onDelete }) {
   const srcs = boardPreviewSources(board);
   const count = board.people.filter((id) => PEOPLE.some((p) => p.id === id)).length;
   const countText = count === 1 ? "1 creative" : `${count} creatives`;
+  const formattedDate = formatBoardDate(board.date);
+  const metaText = [countText, formattedDate].filter(Boolean).join(" · ");
+  const descText = String(board.description || "").trim();
   const card = document.createElement("article");
   card.className = "board-card";
   card.tabIndex = 0;
@@ -3021,7 +3217,8 @@ function buildBoardCardElement(board, { onOpen, onDelete }) {
     <div class="board-card_body">
       <div class="board-card_copy">
         <h3>${escapeHtml(board.name)}</h3>
-        <p>${escapeHtml(countText)}</p>
+        <p>${escapeHtml(metaText)}</p>
+        ${descText ? `<p class="board-card_desc">${escapeHtml(descText)}</p>` : ""}
       </div>
       ${
         onDelete
@@ -3079,7 +3276,7 @@ function renderHomeBoards() {
   }
   section.hidden = false;
   grid.innerHTML = "";
-  boards.slice(0, 3).forEach((board) => {
+  boards.slice(0, 4).forEach((board) => {
     grid.appendChild(
       buildBoardCardElement(board, {
         onOpen: () => {
@@ -3089,12 +3286,6 @@ function renderHomeBoards() {
       })
     );
   });
-  grid.appendChild(
-    buildAddBoardCardElement(() => {
-      markSkeletonNav();
-      location.href = "boards.html?create=1";
-    })
-  );
 }
 
 function renderBoards() {
@@ -3114,13 +3305,28 @@ function renderBoards() {
     document.title = `${activeBoard.name} · Boards · 10K Creatives`;
     const titleEl = document.getElementById("board-detail-title");
     const countEl = document.getElementById("board-detail-count");
+    const descEl = document.getElementById("board-detail-desc");
+    const dateEl = document.getElementById("board-detail-date");
+    const dateTextEl = document.getElementById("board-detail-date-text");
+    const dateWrapEl = document.getElementById("board-detail-date-wrap");
     const emptyEl = document.getElementById("board-detail-empty");
     const gridEl = document.getElementById("board-detail-grid");
     const members = activeBoard.people
       .map((id) => PEOPLE.find((person) => person.id === id))
       .filter(Boolean);
+    const countLabel = members.length === 1 ? "1 creative saved" : `${members.length} creatives saved`;
+    const dateLabel = formatBoardDate(activeBoard.date);
     if (titleEl) titleEl.textContent = activeBoard.name;
-    if (countEl) countEl.textContent = members.length === 1 ? "1 creative saved" : `${members.length} creatives saved`;
+    if (countEl) countEl.textContent = countLabel;
+    if (descEl && document.activeElement !== descEl) {
+      descEl.value = activeBoard.description || "";
+      requestAnimationFrame(() => sizeBoardDescInput(descEl));
+    }
+    if (dateEl) {
+      dateEl.value = activeBoard.date || "";
+    }
+    if (dateTextEl) dateTextEl.textContent = dateLabel || "Add date";
+    if (dateWrapEl) dateWrapEl.classList.toggle("is-empty", !dateLabel);
     if (emptyEl) emptyEl.hidden = members.length !== 0;
     if (gridEl) {
       gridEl.innerHTML = "";
@@ -3187,7 +3393,388 @@ function renderBoards() {
   }
 }
 
+function paintBoardAddPanel() {
+  const listEl = document.getElementById("board-add-list");
+  const searchEl = document.getElementById("board-add-search");
+  if (!listEl || !state.board) return;
+  const board = readBoards().find((item) => item.id === state.board);
+  if (!board) return;
+  const q = (searchEl?.value || "").trim().toLowerCase();
+  const matches = PEOPLE.filter((person) => {
+    if (!q) return true;
+    const hay = `${person.name} ${roleNames(person).join(" ")} ${person.city || ""} ${(person.genres || []).join(" ")}`.toLowerCase();
+    return hay.includes(q);
+  });
+  if (!matches.length) {
+    listEl.innerHTML = `<p class="board-picker_empty">No creatives match "${escapeHtml(searchEl?.value || "")}".</p>`;
+    return;
+  }
+  listEl.innerHTML = matches
+    .slice(0, 40)
+    .map((person) => {
+      const saved = board.people.includes(person.id);
+      const sub = [roleNames(person)[0] || "Creative", person.city || ""].filter(Boolean).join(" · ");
+      return `
+        <button type="button" class="board-picker_row${saved ? " is-saved" : ""}" data-add-person="${escapeHtml(person.id)}">
+          ${avatarHtml(person, "board-add_avatar")}
+          <span class="board-picker_meta">
+            <strong>${escapeHtml(person.name)}</strong>
+            <span>${escapeHtml(sub)}</span>
+          </span>
+          <span class="board-picker_pill">${saved ? "Added" : "Add"}</span>
+        </button>
+      `;
+    })
+    .join("");
+  listEl.querySelectorAll(".board-picker_row[data-add-person]").forEach((row) => {
+    row.addEventListener("click", (event) => {
+      event.stopPropagation();
+      togglePersonInBoard(row.dataset.addPerson, state.board);
+      paintBoardAddPanel();
+    });
+  });
+}
+
+function closeBoardAddPanel() {
+  const panel = document.getElementById("board-add-panel");
+  const btn = document.getElementById("board-add-creative-btn");
+  if (panel) panel.hidden = true;
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+let activeDateAnchor = null;
+let activeDateCallback = null;
+let activeDateMode = "single";
+let activeDateStart = "";
+let activeDateEnd = "";
+let activeDateHover = "";
+let activeDateViewYear = 2026;
+let activeDateViewMonth = 10;
+
+function ensureBoardDatePicker() {
+  let pop = document.getElementById("board-date-picker");
+  if (pop) return pop;
+  pop = document.createElement("div");
+  pop.id = "board-date-picker";
+  pop.className = "board-date-picker";
+  pop.hidden = true;
+  pop.setAttribute("role", "dialog");
+  pop.setAttribute("aria-label", "Choose date");
+  document.body.appendChild(pop);
+  return pop;
+}
+
+function positionBoardDatePicker(pop, anchor) {
+  if (!pop || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const width = pop.offsetWidth || 276;
+  const height = pop.offsetHeight || 336;
+  const margin = 12;
+  let left = rect.left;
+  if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+  if (left < margin) left = margin;
+  let top = rect.bottom + 8;
+  if (top + height > window.innerHeight - margin && rect.top - height - 8 > margin) {
+    top = rect.top - height - 8;
+  }
+  pop.style.left = `${Math.max(margin, left)}px`;
+  pop.style.top = `${Math.max(margin, top)}px`;
+}
+
+function toIsoDate(year, monthIndex, day) {
+  const m = String(monthIndex + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
+
+function paintBoardDatePicker() {
+  const pop = ensureBoardDatePicker();
+  const monthName = new Date(activeDateViewYear, activeDateViewMonth, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  const firstDow = new Date(activeDateViewYear, activeDateViewMonth, 1).getDay();
+  const daysInMonth = new Date(activeDateViewYear, activeDateViewMonth + 1, 0).getDate();
+  const prevDays = new Date(activeDateViewYear, activeDateViewMonth, 0).getDate();
+  const now = new Date();
+  const todayIso = toIsoDate(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const cells = [];
+  for (let i = firstDow - 1; i >= 0; i -= 1) {
+    const d = prevDays - i;
+    const prevDate = new Date(activeDateViewYear, activeDateViewMonth - 1, d);
+    const iso = toIsoDate(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate());
+    cells.push({ label: d, iso, outside: true });
+  }
+  for (let d = 1; d <= daysInMonth; d += 1) {
+    const iso = toIsoDate(activeDateViewYear, activeDateViewMonth, d);
+    cells.push({ label: d, iso, outside: false });
+  }
+  const trailing = (7 - (cells.length % 7)) % 7;
+  for (let d = 1; d <= trailing; d += 1) {
+    const nextDate = new Date(activeDateViewYear, activeDateViewMonth + 1, d);
+    const iso = toIsoDate(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate());
+    cells.push({ label: d, iso, outside: true });
+  }
+
+  const dowHtml = ["S", "M", "T", "W", "T", "F", "S"]
+    .map((d) => `<span class="board-cal_dow">${d}</span>`)
+    .join("");
+
+  const previewEnd =
+    activeDateStart && !activeDateEnd && activeDateHover && activeDateMode === "range"
+      ? activeDateHover
+      : activeDateEnd;
+  const hasRange = Boolean(activeDateStart && previewEnd && activeDateStart !== previewEnd);
+  const rangeLo = hasRange
+    ? activeDateStart <= previewEnd
+      ? activeDateStart
+      : previewEnd
+    : activeDateStart;
+  const rangeHi = hasRange
+    ? activeDateStart <= previewEnd
+      ? previewEnd
+      : activeDateStart
+    : "";
+
+  const daysHtml = cells
+    .map((cell) => {
+      const isSingleSelected = !hasRange && activeDateStart && cell.iso === activeDateStart;
+      const isStart = hasRange && cell.iso === rangeLo;
+      const isEnd = hasRange && cell.iso === rangeHi;
+      const isBetween = hasRange && cell.iso > rangeLo && cell.iso < rangeHi;
+      const classes = [
+        "board-cal_day",
+        cell.outside ? "is-outside" : "",
+        isSingleSelected ? "is-selected" : "",
+        isStart ? "is-range-start" : "",
+        isEnd ? "is-range-end" : "",
+        isBetween ? "is-in-range" : "",
+        cell.iso === todayIso ? "is-today" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+      return `<button type="button" class="${classes}" data-iso="${cell.iso}"><span>${cell.label}</span></button>`;
+    })
+    .join("");
+
+  const rangeHint = !activeDateStart
+    ? activeDateMode === "range"
+      ? "Select start date"
+      : "Select a date or range"
+    : !activeDateEnd
+    ? `${formatBoardDate(activeDateStart)} · Pick a 2nd date for duration`
+    : formatBoardDate(serializeBoardDateRange(activeDateStart, activeDateEnd));
+
+  pop.innerHTML = `
+    <div class="board-cal_modes" role="tablist" aria-label="Date mode">
+      <button type="button" role="tab" class="board-cal_mode${activeDateMode === "single" ? " is-on" : ""}" aria-selected="${activeDateMode === "single"}" data-cal-mode="single">Single date</button>
+      <button type="button" role="tab" class="board-cal_mode${activeDateMode === "range" ? " is-on" : ""}" aria-selected="${activeDateMode === "range"}" data-cal-mode="range">Duration</button>
+    </div>
+    <div class="board-cal_range_hint">${escapeHtml(rangeHint)}</div>
+    <div class="board-cal_head">
+      <strong class="board-cal_title">${escapeHtml(monthName)}</strong>
+      <div class="board-cal_nav">
+        <button type="button" class="board-cal_arrow" data-cal-dir="-1" aria-label="Previous month">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button type="button" class="board-cal_arrow" data-cal-dir="1" aria-label="Next month">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="board-cal_weekdays">${dowHtml}</div>
+    <div class="board-cal_grid">${daysHtml}</div>
+    <div class="board-cal_foot">
+      <button type="button" class="board-cal_action" data-cal-clear>Clear</button>
+      <div class="board-cal_foot_right">
+        <button type="button" class="board-cal_action" data-cal-today>Today</button>
+        <button type="button" class="board-cal_action board-cal_action-today" data-cal-done>Done</button>
+      </div>
+    </div>
+  `;
+
+  pop.querySelectorAll(".board-cal_mode").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const nextMode = btn.dataset.calMode === "range" ? "range" : "single";
+      activeDateMode = nextMode;
+      activeDateHover = "";
+      if (activeDateMode === "single" && activeDateEnd) {
+        activeDateEnd = "";
+        if (activeDateCallback) activeDateCallback(activeDateStart);
+      }
+      paintBoardDatePicker();
+    });
+  });
+
+  pop.querySelectorAll(".board-cal_arrow").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const delta = Number(btn.dataset.calDir || 0);
+      const next = new Date(activeDateViewYear, activeDateViewMonth + delta, 1);
+      activeDateViewYear = next.getFullYear();
+      activeDateViewMonth = next.getMonth();
+      paintBoardDatePicker();
+    });
+  });
+
+  pop.querySelectorAll(".board-cal_day").forEach((btn) => {
+    btn.addEventListener("mouseenter", () => {
+      if (!activeDateStart || activeDateEnd) return;
+      const iso = btn.dataset.iso || "";
+      if (iso === activeDateHover) return;
+      activeDateHover = iso;
+      if (iso === activeDateStart) {
+        pop.querySelectorAll(".board-cal_day").forEach((el) => {
+          const dIso = el.dataset.iso || "";
+          el.classList.toggle("is-selected", dIso === activeDateStart);
+          el.classList.remove("is-range-start", "is-range-end", "is-in-range");
+        });
+        return;
+      }
+      const lo = activeDateStart <= iso ? activeDateStart : iso;
+      const hi = activeDateStart <= iso ? iso : activeDateStart;
+      pop.querySelectorAll(".board-cal_day").forEach((el) => {
+        const dIso = el.dataset.iso || "";
+        el.classList.remove("is-selected");
+        el.classList.toggle("is-range-start", dIso === lo);
+        el.classList.toggle("is-range-end", dIso === hi);
+        el.classList.toggle("is-in-range", dIso > lo && dIso < hi);
+      });
+    });
+
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const iso = btn.dataset.iso || "";
+      if (!activeDateStart || activeDateEnd) {
+        activeDateStart = iso;
+        activeDateEnd = "";
+        activeDateHover = "";
+        if (activeDateCallback) activeDateCallback(iso);
+        if (activeDateMode === "single") {
+          activeDateMode = "range";
+        }
+        paintBoardDatePicker();
+      } else if (iso === activeDateStart) {
+        activeDateEnd = "";
+        activeDateHover = "";
+        if (activeDateCallback) activeDateCallback(activeDateStart);
+        closeBoardDatePicker();
+      } else {
+        if (iso < activeDateStart) {
+          activeDateEnd = activeDateStart;
+          activeDateStart = iso;
+        } else {
+          activeDateEnd = iso;
+        }
+        activeDateHover = "";
+        activeDateMode = "range";
+        const serialized = serializeBoardDateRange(activeDateStart, activeDateEnd);
+        if (activeDateCallback) activeDateCallback(serialized);
+        closeBoardDatePicker();
+      }
+    });
+  });
+
+  pop.querySelector(".board-cal_grid")?.addEventListener("mouseleave", () => {
+    if (!activeDateStart || activeDateEnd || !activeDateHover) return;
+    activeDateHover = "";
+    pop.querySelectorAll(".board-cal_day").forEach((el) => {
+      const dIso = el.dataset.iso || "";
+      el.classList.toggle("is-selected", dIso === activeDateStart);
+      el.classList.remove("is-range-start", "is-range-end", "is-in-range");
+    });
+  });
+
+  pop.querySelector("[data-cal-clear]")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    activeDateStart = "";
+    activeDateEnd = "";
+    activeDateHover = "";
+    if (activeDateCallback) activeDateCallback("");
+    closeBoardDatePicker();
+  });
+
+  pop.querySelector("[data-cal-today]")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    activeDateStart = todayIso;
+    activeDateEnd = "";
+    activeDateHover = "";
+    if (activeDateCallback) activeDateCallback(todayIso);
+    const nowDate = new Date();
+    activeDateViewYear = nowDate.getFullYear();
+    activeDateViewMonth = nowDate.getMonth();
+    paintBoardDatePicker();
+  });
+
+  pop.querySelector("[data-cal-done]")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    closeBoardDatePicker();
+  });
+
+  if (activeDateAnchor) positionBoardDatePicker(pop, activeDateAnchor);
+}
+
+function openBoardDatePicker(anchor, currentRaw, onSelect) {
+  const pop = ensureBoardDatePicker();
+  if (!pop.hidden && activeDateAnchor === anchor) {
+    closeBoardDatePicker();
+    return;
+  }
+  if (activeDateAnchor) activeDateAnchor.setAttribute("aria-expanded", "false");
+  activeDateAnchor = anchor;
+  activeDateCallback = onSelect;
+  const { start, end } = parseBoardDateRange(currentRaw);
+  activeDateStart = start;
+  activeDateEnd = end;
+  activeDateHover = "";
+  activeDateMode = end ? "range" : "single";
+  const sParts = parseIsoDateParts(start);
+  const base = sParts ? new Date(sParts.year, sParts.month, 1) : new Date();
+  activeDateViewYear = base.getFullYear();
+  activeDateViewMonth = base.getMonth();
+  anchor.setAttribute("aria-expanded", "true");
+  pop.hidden = false;
+  paintBoardDatePicker();
+  requestAnimationFrame(() => positionBoardDatePicker(pop, anchor));
+}
+
+function closeBoardDatePicker() {
+  const pop = document.getElementById("board-date-picker");
+  if (pop) pop.hidden = true;
+  if (activeDateAnchor) activeDateAnchor.setAttribute("aria-expanded", "false");
+  activeDateAnchor = null;
+  activeDateCallback = null;
+  activeDateHover = "";
+}
+
 function bindBoards() {
+  document.addEventListener("mouseover", (event) => {
+    const starBtn = event.target.closest(".star-btn[data-star-person]");
+    if (!starBtn) return;
+    showStarPreview(starBtn.dataset.starPerson, starBtn);
+  });
+
+  document.addEventListener("mouseout", (event) => {
+    const starBtn = event.target.closest(".star-btn[data-star-person]");
+    if (!starBtn) return;
+    if (event.relatedTarget && starBtn.contains(event.relatedTarget)) return;
+    scheduleHideStarPreview();
+  });
+
+  document.addEventListener("focusin", (event) => {
+    const starBtn = event.target.closest(".star-btn[data-star-person]");
+    if (!starBtn) return;
+    showStarPreview(starBtn.dataset.starPerson, starBtn);
+  });
+
+  document.addEventListener("focusout", (event) => {
+    const starBtn = event.target.closest(".star-btn[data-star-person]");
+    if (!starBtn) return;
+    scheduleHideStarPreview();
+  });
+
   document.addEventListener("click", (event) => {
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (starBtn) {
@@ -3200,6 +3787,20 @@ function bindBoards() {
     if (picker && !picker.hidden && !picker.contains(event.target)) {
       closeBoardPicker();
     }
+    const addWrap = document.getElementById("board-add-wrap");
+    const addPanel = document.getElementById("board-add-panel");
+    if (addPanel && !addPanel.hidden && addWrap && !addWrap.contains(event.target)) {
+      closeBoardAddPanel();
+    }
+    const datePop = document.getElementById("board-date-picker");
+    if (
+      datePop &&
+      !datePop.hidden &&
+      !datePop.contains(event.target) &&
+      (!activeDateAnchor || !activeDateAnchor.contains(event.target))
+    ) {
+      closeBoardDatePicker();
+    }
   });
 
   window.addEventListener(
@@ -3210,19 +3811,75 @@ function bindBoards() {
         if (!activePickerAnchor.isConnected) closeBoardPicker();
         else positionBoardPicker(picker, activePickerAnchor);
       }
+      const preview = document.getElementById("star-preview");
+      if (preview && !preview.hidden && activePreviewAnchor) {
+        if (!activePreviewAnchor.isConnected) hideStarPreview();
+        else positionStarPreview(preview, activePreviewAnchor);
+      }
+      const datePop = document.getElementById("board-date-picker");
+      if (datePop && !datePop.hidden && activeDateAnchor) {
+        if (!activeDateAnchor.isConnected) closeBoardDatePicker();
+        else positionBoardDatePicker(datePop, activeDateAnchor);
+      }
     },
     { passive: true }
   );
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeBoardPicker();
+    if (event.key === "Escape") {
+      closeBoardPicker();
+      closeBoardAddPanel();
+      closeBoardDatePicker();
+    }
+  });
+
+  const addCreativeBtn = document.getElementById("board-add-creative-btn");
+  const addPanel = document.getElementById("board-add-panel");
+  const addSearch = document.getElementById("board-add-search");
+
+  addCreativeBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!addPanel) return;
+    const next = addPanel.hidden;
+    addPanel.hidden = !next;
+    addCreativeBtn.setAttribute("aria-expanded", String(next));
+    if (next) {
+      if (addSearch) addSearch.value = "";
+      paintBoardAddPanel();
+      addSearch?.focus();
+    }
+  });
+
+  addSearch?.addEventListener("input", () => {
+    paintBoardAddPanel();
   });
 
   const createToggle = document.getElementById("boards-create-toggle");
   const emptyCreate = document.getElementById("boards-empty-create");
   const createForm = document.getElementById("boards-create-form");
   const createInput = document.getElementById("boards-create-input");
+  const createDate = document.getElementById("boards-create-date");
+  const createDateBtn = document.getElementById("boards-create-date-btn");
+  const createDateText = document.getElementById("boards-create-date-text");
+  const createDesc = document.getElementById("boards-create-desc");
   const createCancel = document.getElementById("boards-create-cancel");
+
+  const resetCreateDate = () => {
+    if (createDate) createDate.value = "";
+    if (createDateText) createDateText.textContent = "Add date";
+    if (createDateBtn) createDateBtn.classList.add("is-empty");
+  };
+
+  createDateBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openBoardDatePicker(createDateBtn, createDate?.value || "", (iso) => {
+      if (createDate) createDate.value = iso;
+      const label = formatBoardDate(iso);
+      if (createDateText) createDateText.textContent = label || "Add date";
+      createDateBtn.classList.toggle("is-empty", !label);
+    });
+  });
 
   const openCreateForm = () => {
     if (!createForm) return;
@@ -3245,20 +3902,64 @@ function bindBoards() {
   createCancel?.addEventListener("click", () => {
     if (!createForm) return;
     createForm.hidden = true;
+    closeBoardDatePicker();
     if (createInput) createInput.value = "";
+    resetCreateDate();
+    if (createDesc) createDesc.value = "";
   });
 
   createForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = createInput?.value.trim();
     if (!name) return;
-    createBoard(name);
+    closeBoardDatePicker();
+    createBoard(name, "", {
+      date: createDate?.value || "",
+      description: createDesc?.value || "",
+    });
     if (createInput) createInput.value = "";
+    resetCreateDate();
+    if (createDesc) createDesc.value = "";
     createForm.hidden = true;
+  });
+
+  const detailDesc = document.getElementById("board-detail-desc");
+  const detailDate = document.getElementById("board-detail-date");
+  const detailDateBtn = document.getElementById("board-detail-date-btn");
+  const detailDateText = document.getElementById("board-detail-date-text");
+  const detailDateWrap = document.getElementById("board-detail-date-wrap");
+
+  detailDesc?.addEventListener("input", () => {
+    sizeBoardDescInput(detailDesc);
+    if (!state.board) return;
+    updateBoardDetails(state.board, { description: detailDesc.value }, { rerender: false });
+  });
+
+  detailDesc?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      detailDesc.blur();
+    }
+  });
+
+  detailDateBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openBoardDatePicker(detailDateBtn, detailDate?.value || "", (iso) => {
+      if (detailDate) detailDate.value = iso;
+      if (state.board) {
+        updateBoardDetails(state.board, { date: iso }, { rerender: false });
+      }
+      const label = formatBoardDate(iso);
+      if (detailDateText) detailDateText.textContent = label || "Add date";
+      if (detailDateWrap) detailDateWrap.classList.toggle("is-empty", !label);
+    });
   });
 
   document.getElementById("board-back")?.addEventListener("click", (event) => {
     event.preventDefault();
+    closeBoardAddPanel();
+    closeBoardDatePicker();
     state.board = "";
     render({ url: "push" });
   });
@@ -3522,8 +4223,8 @@ function revealPage() {
 
 function initGlassCursor() {
   const hero = document.querySelector(".home-view .hero");
-  const projects = document.getElementById("projects");
-  if (!hero || !projects) return;
+  const belowHero = document.getElementById("projects") || document.getElementById("results");
+  if (!hero || !belowHero) return;
   const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   if (!fine.matches || reduce.matches) return;
@@ -3569,14 +4270,14 @@ function initGlassCursor() {
   let frame = 0;
 
   const lensFade = () => {
-    const projectsTop = projects.getBoundingClientRect().top + window.scrollY;
+    const projectsTop = belowHero.getBoundingClientRect().top + window.scrollY;
     const end = Math.max(projectsTop - window.innerHeight * 0.55, 140);
     return 1 - Math.min(1, Math.max(0, window.scrollY / end));
   };
 
   const inHero = (x, y) => {
     if (document.body.dataset.view === "profile") return false;
-    if (y >= projects.getBoundingClientRect().top - 12) return false;
+    if (y >= belowHero.getBoundingClientRect().top - 12) return false;
     const hit = document.elementFromPoint(x, y);
     return !!hit && !hit.closest(".navbar") && !!hit.closest(".hero");
   };

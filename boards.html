@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Boards · 10K Creatives</title>
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="description" content="Saved boards of creatives for upcoming 10K shoots and projects." />
     <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=223" />
+    <link rel="stylesheet" href="styles.css?v=231" />
   </head>
   <body data-page="boards" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -63,7 +65,6 @@
         </div>
       </form>
       <nav class="nav-links" aria-label="Sections">
-        <a class="nav_link" href="projects.html">Projects</a>
         <a class="nav_link" href="results.html">Creatives</a>
         <a class="nav_link is-current" href="boards.html">Boards</a>
       </nav>
@@ -78,16 +79,34 @@
           </div>
         </div>
         <form class="boards-create" id="boards-create-form" hidden>
-          <input
-            type="text"
-            id="boards-create-input"
-            placeholder="Board name (e.g., LA Video Shoot, Tour Stills)"
-            autocomplete="off"
-            maxlength="60"
-            required
-          />
-          <button class="boards-create_submit" type="submit">Create</button>
-          <button class="boards-create_cancel" id="boards-create-cancel" type="button">Cancel</button>
+          <div class="boards-create_row">
+            <input
+              type="text"
+              id="boards-create-input"
+              placeholder="Board name (e.g., LA Video Shoot, Tour Stills)"
+              autocomplete="off"
+              maxlength="60"
+              required
+            />
+            <button class="boards-create_date_btn is-empty" id="boards-create-date-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <path d="M8 3.5v3M16 3.5v3M3.5 9.5h17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              </svg>
+              <span id="boards-create-date-text">Add date</span>
+            </button>
+            <input type="hidden" id="boards-create-date" />
+          </div>
+          <textarea
+            id="boards-create-desc"
+            rows="2"
+            maxlength="240"
+            placeholder="Description or shoot notes (optional)"
+          ></textarea>
+          <div class="boards-create_actions">
+            <button class="boards-create_submit" type="submit">Create</button>
+            <button class="boards-create_cancel" id="boards-create-cancel" type="button">Cancel</button>
+          </div>
         </form>
         <section class="boards-recent" id="boards-recent" hidden>
           <div class="boards-section_head">
@@ -148,11 +167,44 @@
           <span>All boards</span>
         </a>
         <div class="boards-head">
-          <div>
+          <div class="board-detail_info">
             <h1 id="board-detail-title">Board</h1>
+            <textarea
+              class="board-inline-desc"
+              id="board-detail-desc"
+              rows="1"
+              maxlength="240"
+              placeholder="Add a description..."
+              aria-label="Board description"
+            ></textarea>
+            <div class="board-inline-date" id="board-detail-date-wrap">
+              <button class="board-inline-date_btn" id="board-detail-date-btn" type="button" aria-haspopup="dialog" aria-expanded="false">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+                  <path d="M8 3.5v3M16 3.5v3M3.5 9.5h17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                </svg>
+                <span class="board-inline-date_text" id="board-detail-date-text">Add date</span>
+              </button>
+              <input type="hidden" id="board-detail-date" />
+            </div>
             <p class="boards-sub" id="board-detail-count"></p>
           </div>
-          <button class="board-delete-btn" id="board-delete-btn" type="button">Delete board</button>
+          <div class="board-detail_actions">
+            <div class="board-add-wrap" id="board-add-wrap">
+              <button class="tool-pill tool-pill_add" id="board-add-creative-btn" type="button" aria-expanded="false" aria-controls="board-add-panel">+ Add creative</button>
+              <div class="board-add-panel" id="board-add-panel" hidden>
+                <input
+                  type="search"
+                  id="board-add-search"
+                  placeholder="Search by name, role, or city..."
+                  autocomplete="off"
+                  aria-label="Search creatives to add"
+                />
+                <div class="board-add-list" id="board-add-list"></div>
+              </div>
+            </div>
+            <button class="board-delete-btn" id="board-delete-btn" type="button">Delete board</button>
+          </div>
         </div>
         <div class="boards-empty" id="board-detail-empty" hidden>
           <div class="boards-empty_stage boards-empty_stage-compact" aria-hidden="true">
@@ -192,6 +244,6 @@
 
     <script src="people.js?v=17"></script>
     <script src="projects.js?v=45"></script>
-    <script src="app.js?v=166"></script>
+    <script src="app.js?v=177"></script>
   </body>
 </html>
