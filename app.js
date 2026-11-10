@@ -3117,121 +3117,24 @@ function boardPreviewSources(board) {
 
 let activePickerPerson = "";
 let activePickerAnchor = null;
-let activePreviewAnchor = null;
-let starPreviewHideTimer = 0;
+let boardPickerHideTimer = 0;
 
-function ensureStarPreview() {
-  let preview = document.getElementById("star-preview");
-  if (preview) return preview;
-  preview = document.createElement("div");
-  preview.id = "star-preview";
-  preview.className = "star-preview";
-  preview.hidden = true;
-  preview.setAttribute("role", "tooltip");
-  preview.addEventListener("mouseenter", () => {
-    if (starPreviewHideTimer) {
-      clearTimeout(starPreviewHideTimer);
-      starPreviewHideTimer = 0;
-    }
-  });
-  preview.addEventListener("mouseleave", () => {
-    scheduleHideStarPreview();
-  });
-  document.body.appendChild(preview);
-  return preview;
+function cancelHideBoardPicker() {
+  if (boardPickerHideTimer) {
+    clearTimeout(boardPickerHideTimer);
+    boardPickerHideTimer = 0;
+  }
 }
 
-function positionStarPreview(preview, anchor) {
-  if (!preview || !anchor) return;
-  const rect = anchor.getBoundingClientRect();
-  const width = preview.offsetWidth || 236;
-  const height = preview.offsetHeight || 96;
-  const margin = 12;
-  let left = rect.right - width;
-  if (left < margin) left = Math.min(rect.left, window.innerWidth - width - margin);
-  if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
-  let top = rect.bottom + 8;
-  if (top + height > window.innerHeight - margin && rect.top - height - 8 > margin) {
-    top = rect.top - height - 8;
-  }
-  preview.style.left = `${Math.max(margin, left)}px`;
-  preview.style.top = `${Math.max(margin, top)}px`;
-}
-
-function showStarPreview(personId, anchor) {
-  if (starPreviewHideTimer) {
-    clearTimeout(starPreviewHideTimer);
-    starPreviewHideTimer = 0;
-  }
-  const picker = document.getElementById("board-picker");
-  if (picker && !picker.hidden) return;
-  const memberBoards = readBoards().filter((board) => board.people.includes(personId));
-  const preview = ensureStarPreview();
-  activePreviewAnchor = anchor;
-  if (!memberBoards.length) {
-    preview.classList.add("is-empty");
-    preview.innerHTML = `<span class="star-preview_hint">Save to board</span>`;
-  } else {
-    preview.classList.remove("is-empty");
-    const heading = memberBoards.length === 1 ? "Saved on 1 board" : `Saved on ${memberBoards.length} boards`;
-    const itemsHtml = memberBoards
-      .map((board) => {
-        const thumb = boardPreviewSources(board)[0] || "";
-        const count = board.people.filter((id) => PEOPLE.some((p) => p.id === id)).length;
-        const countLabel = count === 1 ? "1 creative" : `${count} creatives`;
-        const dateLabel = formatBoardDate(board.date);
-        const sub = [countLabel, dateLabel].filter(Boolean).join(" · ");
-        return `
-          <a class="star-preview_row" href="boards.html?board=${encodeURIComponent(board.id)}" data-board-id="${escapeHtml(board.id)}">
-            <span class="star-preview_thumb">
-              ${thumb ? `<img src="${escapeHtml(thumb)}" alt="" />` : `<span class="star-preview_thumb_empty" aria-hidden="true"></span>`}
-            </span>
-            <span class="star-preview_meta">
-              <strong>${escapeHtml(board.name)}</strong>
-              <span>${escapeHtml(sub)}</span>
-            </span>
-          </a>
-        `;
-      })
-      .join("");
-    preview.innerHTML = `
-      <div class="star-preview_head">${escapeHtml(heading)}</div>
-      <div class="star-preview_list">${itemsHtml}</div>
-    `;
-    preview.querySelectorAll(".star-preview_row").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        if (isBoardsPage()) {
-          event.preventDefault();
-          hideStarPreview();
-          state.profile = "";
-          state.board = link.dataset.boardId || "";
-          render({ url: "push" });
-          window.scrollTo(0, 0);
-        }
-      });
-    });
-  }
-  preview.hidden = false;
-  positionStarPreview(preview, anchor);
-  requestAnimationFrame(() => positionStarPreview(preview, anchor));
-}
-
-function hideStarPreview() {
-  if (starPreviewHideTimer) {
-    clearTimeout(starPreviewHideTimer);
-    starPreviewHideTimer = 0;
-  }
-  const preview = document.getElementById("star-preview");
-  if (preview) preview.hidden = true;
-  activePreviewAnchor = null;
-}
-
-function scheduleHideStarPreview() {
-  if (starPreviewHideTimer) clearTimeout(starPreviewHideTimer);
-  starPreviewHideTimer = window.setTimeout(() => {
-    starPreviewHideTimer = 0;
-    hideStarPreview();
-  }, 140);
+function scheduleHideBoardPicker() {
+  cancelHideBoardPicker();
+  boardPickerHideTimer = window.setTimeout(() => {
+    boardPickerHideTimer = 0;
+    const picker = document.getElementById("board-picker");
+    const input = picker?.querySelector(".board-picker_input");
+    if (input && document.activeElement === input) return;
+    closeBoardPicker();
+  }, 160);
 }
 
 function ensureBoardPicker() {
@@ -3243,6 +3146,10 @@ function ensureBoardPicker() {
   picker.hidden = true;
   picker.setAttribute("role", "dialog");
   picker.setAttribute("aria-label", "Save to board");
+  picker.addEventListener("mouseenter", cancelHideBoardPicker);
+  picker.addEventListener("mouseleave", () => {
+    scheduleHideBoardPicker();
+  });
   document.body.appendChild(picker);
   return picker;
 }
@@ -3338,11 +3245,11 @@ function paintBoardPicker() {
   if (activePickerAnchor) positionBoardPicker(picker, activePickerAnchor);
 }
 
-function openBoardPicker(personId, anchor) {
-  hideStarPreview();
+function openBoardPicker(personId, anchor, { toggle = true } = {}) {
+  cancelHideBoardPicker();
   const picker = ensureBoardPicker();
   if (!picker.hidden && activePickerPerson === personId && activePickerAnchor === anchor) {
-    closeBoardPicker();
+    if (toggle) closeBoardPicker();
     return;
   }
   activePickerPerson = personId;
@@ -3353,6 +3260,7 @@ function openBoardPicker(personId, anchor) {
 }
 
 function closeBoardPicker() {
+  cancelHideBoardPicker();
   const picker = document.getElementById("board-picker");
   if (picker) picker.hidden = true;
   activePickerPerson = "";
@@ -3457,6 +3365,31 @@ function renderHomeBoards() {
   });
 }
 
+function setBoardCreateOpen(open) {
+  const dialog = document.getElementById("boards-create-dialog");
+  const createInput = document.getElementById("boards-create-input");
+  const createDate = document.getElementById("boards-create-date");
+  const createDateBtn = document.getElementById("boards-create-date-btn");
+  const createDateText = document.getElementById("boards-create-date-text");
+  const createDesc = document.getElementById("boards-create-desc");
+  const createError = document.getElementById("boards-create-error");
+  if (!dialog) return;
+  dialog.hidden = !open;
+  document.body.classList.toggle("add-open", open);
+  closeBoardDatePicker();
+  if (open) {
+    if (createError) createError.textContent = "";
+    requestAnimationFrame(() => createInput?.focus());
+  } else {
+    if (createInput) createInput.value = "";
+    if (createDate) createDate.value = "";
+    if (createDateText) createDateText.textContent = "Add date";
+    if (createDateBtn) createDateBtn.classList.add("is-empty");
+    if (createDesc) createDesc.value = "";
+    if (createError) createError.textContent = "";
+  }
+}
+
 function renderBoards() {
   const overview = document.getElementById("boards-overview");
   const detail = document.getElementById("board-detail");
@@ -3552,11 +3485,7 @@ function renderBoards() {
   if (boards.length) {
     grid.appendChild(
       buildAddBoardCardElement(() => {
-        const createForm = document.getElementById("boards-create-form");
-        const createInput = document.getElementById("boards-create-input");
-        if (!createForm) return;
-        createForm.hidden = false;
-        createInput?.focus();
+        setBoardCreateOpen(true);
       })
     );
   }
@@ -3613,7 +3542,6 @@ function closeBoardAddPanel() {
 
 let activeDateAnchor = null;
 let activeDateCallback = null;
-let activeDateMode = "single";
 let activeDateStart = "";
 let activeDateEnd = "";
 let activeDateHover = "";
@@ -3691,7 +3619,7 @@ function paintBoardDatePicker() {
     .join("");
 
   const previewEnd =
-    activeDateStart && !activeDateEnd && activeDateHover && activeDateMode === "range"
+    activeDateStart && !activeDateEnd && activeDateHover
       ? activeDateHover
       : activeDateEnd;
   const hasRange = Boolean(activeDateStart && previewEnd && activeDateStart !== previewEnd);
@@ -3728,18 +3656,12 @@ function paintBoardDatePicker() {
     .join("");
 
   const rangeHint = !activeDateStart
-    ? activeDateMode === "range"
-      ? "Select start date"
-      : "Select a date or range"
+    ? "Select a date or range"
     : !activeDateEnd
-    ? `${formatBoardDate(activeDateStart)} · Pick a 2nd date for duration`
+    ? `${formatBoardDate(activeDateStart)} – End date (optional)`
     : formatBoardDate(serializeBoardDateRange(activeDateStart, activeDateEnd));
 
   pop.innerHTML = `
-    <div class="board-cal_modes" role="tablist" aria-label="Date mode">
-      <button type="button" role="tab" class="board-cal_mode${activeDateMode === "single" ? " is-on" : ""}" aria-selected="${activeDateMode === "single"}" data-cal-mode="single">Single date</button>
-      <button type="button" role="tab" class="board-cal_mode${activeDateMode === "range" ? " is-on" : ""}" aria-selected="${activeDateMode === "range"}" data-cal-mode="range">Duration</button>
-    </div>
     <div class="board-cal_range_hint">${escapeHtml(rangeHint)}</div>
     <div class="board-cal_head">
       <strong class="board-cal_title">${escapeHtml(monthName)}</strong>
@@ -3762,20 +3684,6 @@ function paintBoardDatePicker() {
       </div>
     </div>
   `;
-
-  pop.querySelectorAll(".board-cal_mode").forEach((btn) => {
-    btn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const nextMode = btn.dataset.calMode === "range" ? "range" : "single";
-      activeDateMode = nextMode;
-      activeDateHover = "";
-      if (activeDateMode === "single" && activeDateEnd) {
-        activeDateEnd = "";
-        if (activeDateCallback) activeDateCallback(activeDateStart);
-      }
-      paintBoardDatePicker();
-    });
-  });
 
   pop.querySelectorAll(".board-cal_arrow").forEach((btn) => {
     btn.addEventListener("click", (event) => {
@@ -3821,9 +3729,6 @@ function paintBoardDatePicker() {
         activeDateEnd = "";
         activeDateHover = "";
         if (activeDateCallback) activeDateCallback(iso);
-        if (activeDateMode === "single") {
-          activeDateMode = "range";
-        }
         paintBoardDatePicker();
       } else if (iso === activeDateStart) {
         activeDateEnd = "";
@@ -3838,10 +3743,9 @@ function paintBoardDatePicker() {
           activeDateEnd = iso;
         }
         activeDateHover = "";
-        activeDateMode = "range";
         const serialized = serializeBoardDateRange(activeDateStart, activeDateEnd);
         if (activeDateCallback) activeDateCallback(serialized);
-        closeBoardDatePicker();
+        paintBoardDatePicker();
       }
     });
   });
@@ -3898,7 +3802,6 @@ function openBoardDatePicker(anchor, currentRaw, onSelect) {
   activeDateStart = start;
   activeDateEnd = end;
   activeDateHover = "";
-  activeDateMode = end ? "range" : "single";
   const sParts = parseIsoDateParts(start);
   const base = sParts ? new Date(sParts.year, sParts.month, 1) : new Date();
   activeDateViewYear = base.getFullYear();
@@ -3922,26 +3825,26 @@ function bindBoards() {
   document.addEventListener("mouseover", (event) => {
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
-    showStarPreview(starBtn.dataset.starPerson, starBtn);
+    openBoardPicker(starBtn.dataset.starPerson, starBtn, { toggle: false });
   });
 
   document.addEventListener("mouseout", (event) => {
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
     if (event.relatedTarget && starBtn.contains(event.relatedTarget)) return;
-    scheduleHideStarPreview();
+    scheduleHideBoardPicker();
   });
 
   document.addEventListener("focusin", (event) => {
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
-    showStarPreview(starBtn.dataset.starPerson, starBtn);
+    openBoardPicker(starBtn.dataset.starPerson, starBtn, { toggle: false });
   });
 
   document.addEventListener("focusout", (event) => {
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
-    scheduleHideStarPreview();
+    scheduleHideBoardPicker();
   });
 
   document.addEventListener("click", (event) => {
@@ -3949,7 +3852,7 @@ function bindBoards() {
     if (starBtn) {
       event.preventDefault();
       event.stopPropagation();
-      openBoardPicker(starBtn.dataset.starPerson, starBtn);
+      openBoardPicker(starBtn.dataset.starPerson, starBtn, { toggle: false });
       return;
     }
     const picker = document.getElementById("board-picker");
@@ -3980,11 +3883,6 @@ function bindBoards() {
         if (!activePickerAnchor.isConnected) closeBoardPicker();
         else positionBoardPicker(picker, activePickerAnchor);
       }
-      const preview = document.getElementById("star-preview");
-      if (preview && !preview.hidden && activePreviewAnchor) {
-        if (!activePreviewAnchor.isConnected) hideStarPreview();
-        else positionStarPreview(preview, activePreviewAnchor);
-      }
       const datePop = document.getElementById("board-date-picker");
       if (datePop && !datePop.hidden && activeDateAnchor) {
         if (!activeDateAnchor.isConnected) closeBoardDatePicker();
@@ -3996,9 +3894,18 @@ function bindBoards() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      const datePop = document.getElementById("board-date-picker");
+      if (datePop && !datePop.hidden) {
+        closeBoardDatePicker();
+        return;
+      }
+      const createDialog = document.getElementById("boards-create-dialog");
+      if (createDialog && !createDialog.hidden) {
+        setBoardCreateOpen(false);
+        return;
+      }
       closeBoardPicker();
       closeBoardAddPanel();
-      closeBoardDatePicker();
     }
   });
 
@@ -4025,19 +3932,16 @@ function bindBoards() {
 
   const createToggle = document.getElementById("boards-create-toggle");
   const emptyCreate = document.getElementById("boards-empty-create");
+  const createDialog = document.getElementById("boards-create-dialog");
   const createForm = document.getElementById("boards-create-form");
   const createInput = document.getElementById("boards-create-input");
   const createDate = document.getElementById("boards-create-date");
   const createDateBtn = document.getElementById("boards-create-date-btn");
   const createDateText = document.getElementById("boards-create-date-text");
   const createDesc = document.getElementById("boards-create-desc");
+  const createError = document.getElementById("boards-create-error");
   const createCancel = document.getElementById("boards-create-cancel");
-
-  const resetCreateDate = () => {
-    if (createDate) createDate.value = "";
-    if (createDateText) createDateText.textContent = "Add date";
-    if (createDateBtn) createDateBtn.classList.add("is-empty");
-  };
+  const createClose = document.getElementById("boards-create-close");
 
   createDateBtn?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -4051,16 +3955,12 @@ function bindBoards() {
   });
 
   const openCreateForm = () => {
-    if (!createForm) return;
-    createForm.hidden = false;
-    createInput?.focus();
+    setBoardCreateOpen(true);
   };
 
   createToggle?.addEventListener("click", () => {
-    if (!createForm) return;
-    const next = createForm.hidden;
-    createForm.hidden = !next;
-    if (next) createInput?.focus();
+    const isOpen = createDialog && !createDialog.hidden;
+    setBoardCreateOpen(!isOpen);
   });
 
   emptyCreate?.addEventListener("click", openCreateForm);
@@ -4068,28 +3968,25 @@ function bindBoards() {
     requestAnimationFrame(openCreateForm);
   }
 
-  createCancel?.addEventListener("click", () => {
-    if (!createForm) return;
-    createForm.hidden = true;
-    closeBoardDatePicker();
-    if (createInput) createInput.value = "";
-    resetCreateDate();
-    if (createDesc) createDesc.value = "";
+  createCancel?.addEventListener("click", () => setBoardCreateOpen(false));
+  createClose?.addEventListener("click", () => setBoardCreateOpen(false));
+  createDialog?.addEventListener("click", (event) => {
+    if (event.target === createDialog) setBoardCreateOpen(false);
   });
 
   createForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = createInput?.value.trim();
-    if (!name) return;
-    closeBoardDatePicker();
+    if (!name) {
+      if (createError) createError.textContent = "Enter a board name.";
+      createInput?.focus();
+      return;
+    }
     createBoard(name, "", {
       date: createDate?.value || "",
       description: createDesc?.value || "",
     });
-    if (createInput) createInput.value = "";
-    resetCreateDate();
-    if (createDesc) createDesc.value = "";
-    createForm.hidden = true;
+    setBoardCreateOpen(false);
   });
 
   const detailDesc = document.getElementById("board-detail-desc");
