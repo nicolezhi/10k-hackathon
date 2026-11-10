@@ -14,10 +14,8 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=231" />
+    <link rel="stylesheet" href="styles.css?v=232" />
   </head>
   <body data-page="results" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -68,7 +66,6 @@
       </form>
       <nav class="nav-links" aria-label="Sections">
         <a class="nav_link is-current" href="results.html">Creatives</a>
-        <a class="nav_link" href="projects.html">Projects</a>
         <a class="nav_link" href="boards.html">Boards</a>
       </nav>
     </header>
@@ -113,22 +110,6 @@
             <div class="filters-sub" id="filters-sub" hidden role="menu" aria-label="Genres"></div>
           </div>
         </div>
-        <div class="view-toggle" role="group" aria-label="Map or list">
-          <button class="view-toggle_btn" type="button" data-view="map" aria-pressed="false" aria-label="Map">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-              <path d="M9 18.5 3.5 20.5v-14L9 4.5l6 2 5.5-2v14L15 20.5l-6-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
-              <path d="M9 4.5v14M15 6.5v14" fill="none" stroke="currentColor" stroke-width="1.7" />
-            </svg>
-          </button>
-          <button class="view-toggle_btn is-on" type="button" data-view="list" aria-pressed="true" aria-label="List">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-              <path d="M9 7h11M9 12h11M9 17h11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-              <circle cx="5" cy="7" r="1.15" fill="currentColor" />
-              <circle cx="5" cy="12" r="1.15" fill="currentColor" />
-              <circle cx="5" cy="17" r="1.15" fill="currentColor" />
-            </svg>
-          </button>
-        </div>
         <button class="tool-pill tool-pill_add" id="add-roster" type="button">Add a creative</button>
       </div>
 
@@ -150,11 +131,6 @@
             <article class="result-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_avatar"></span><span class="skeleton_copy"><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></span></article>
           </div>
         </section>
-        <div class="map-pane">
-          <div class="map-skeleton" aria-hidden="true"></div>
-          <div id="map" role="region" aria-label="Map of matching creatives"></div>
-          <p class="map-note"><span>Map locations are approximate and indicate the city each freelancer is based in, rather than their exact location.</span></p>
-        </div>
       </div>
     </main>
 
@@ -288,6 +264,6 @@
     <script src="projects.js?v=45"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=177"></script>
+    <script src="app.js?v=180"></script>
   </body>
 </html>

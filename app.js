@@ -147,6 +147,7 @@ const SEARCH_ROLES = [
 const SEARCH_GENRES = {
   Photographer: ["Concert", "Events", "Portrait"],
   "Videographer / DP": ["Concert", "Events", "Music video", "Portrait"],
+  "Graphic designer": [],
 };
 
 const FILTER_COPY = {
@@ -241,7 +242,7 @@ function filteredPeople() {
     if (!state.genresScoped && state.genres.length && !state.genres.some((genre) => (record.genres || []).includes(genre))) return false;
     if (state.tenk && !record.tenk) return false;
     return matchesQuery(record, tokens);
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
 function hitLine(record) {
@@ -401,6 +402,75 @@ function cityRecord(name) {
   return CITIES.find((city) => city.name === canonicalCity(name));
 }
 
+const COUNTRY_INFO = {
+  US: { name: "United States", flag: "🇺🇸" },
+  UK: { name: "United Kingdom", flag: "🇬🇧" },
+  BE: { name: "Belgium", flag: "🇧🇪" },
+  FR: { name: "France", flag: "🇫🇷" },
+  DE: { name: "Germany", flag: "🇩🇪" },
+  IE: { name: "Ireland", flag: "🇮🇪" },
+  ES: { name: "Spain", flag: "🇪🇸" },
+  DK: { name: "Denmark", flag: "🇩🇰" },
+  NL: { name: "Netherlands", flag: "🇳🇱" },
+  CH: { name: "Switzerland", flag: "🇨🇭" },
+  CZ: { name: "Czech Republic", flag: "🇨🇿" },
+  NO: { name: "Norway", flag: "🇳🇴" },
+  PL: { name: "Poland", flag: "🇵🇱" },
+  FI: { name: "Finland", flag: "🇫🇮" },
+  SE: { name: "Sweden", flag: "🇸🇪" },
+  PT: { name: "Portugal", flag: "🇵🇹" },
+  AU: { name: "Australia", flag: "🇦🇺" },
+  MX: { name: "Mexico", flag: "🇲🇽" },
+  GH: { name: "Ghana", flag: "🇬🇭" },
+  Remote: { name: "Remote", flag: "🌐" },
+};
+
+const PLACE_COUNTRY = {
+  CA: "US",
+  NY: "US",
+  GA: "US",
+  TN: "US",
+  IL: "US",
+  MA: "US",
+  TX: "US",
+  MN: "US",
+  UK: "UK",
+  BE: "BE",
+  FR: "FR",
+  DE: "DE",
+  IE: "IE",
+  ES: "ES",
+  DK: "DK",
+  NO: "NO",
+  PL: "PL",
+  FI: "FI",
+  SE: "SE",
+  PT: "PT",
+  AU: "AU",
+  MX: "MX",
+  GH: "GH",
+};
+
+const NAME_COUNTRY = {
+  Ireland: "IE",
+  Germany: "DE",
+  Denmark: "DK",
+  Netherlands: "NL",
+  Switzerland: "CH",
+  "Czech Republic": "CZ",
+  Finland: "FI",
+  Sweden: "SE",
+  Portugal: "PT",
+  Remote: "Remote",
+};
+
+const SUGGESTED_CITIES = ["New York", "Los Angeles", "Atlanta"];
+
+function countryOf(city) {
+  const code = NAME_COUNTRY[city.name] || PLACE_COUNTRY[String(city.place || "").split(", ")[1]] || "Remote";
+  return { code, ...(COUNTRY_INFO[code] || { name: code, flag: "🏳️" }) };
+}
+
 function cityMatches(city, filter) {
   if (!filter) return true;
   const aliases = {
@@ -411,7 +481,45 @@ function cityMatches(city, filter) {
     Birmingham: "brum",
     "Mexico City": "cdmx",
   };
-  return `${city.name} ${city.place || ""} ${city.line} ${aliases[city.name] || ""}`.toLowerCase().includes(filter);
+  const country = countryOf(city);
+  const countryAliases = {
+    UK: "uk britain england scotland",
+    US: "us usa america",
+    NL: "holland",
+    CZ: "czechia",
+  };
+  return `${city.name} ${city.place || ""} ${city.line} ${aliases[city.name] || ""} ${country.name} ${countryAliases[country.code] || ""}`
+    .toLowerCase()
+    .includes(filter);
+}
+
+function whereGroups(filter) {
+  const groups = [];
+  const suggested = SUGGESTED_CITIES.map((name) => CITIES.find((city) => city.name === name))
+    .filter((city) => city && (!filter || cityMatches(city, filter)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (suggested.length) groups.push({ label: "Suggested", flag: "", cities: suggested });
+
+  const byCountry = new Map();
+  CITIES.forEach((city) => {
+    if (filter && !cityMatches(city, filter)) return;
+    const country = countryOf(city);
+    if (!byCountry.has(country.code)) byCountry.set(country.code, { ...country, cities: [] });
+    byCountry.get(country.code).cities.push(city);
+    byCountry.get(country.code).cities.sort((a, b) => a.name.localeCompare(b.name));
+  });
+  [...byCountry.values()]
+    .sort((a, b) => {
+      if (a.code === "Remote") return 1;
+      if (b.code === "Remote") return -1;
+      if (a.code === "US") return -1;
+      if (b.code === "US") return 1;
+      if (a.code === "UK") return -1;
+      if (b.code === "UK") return 1;
+      return a.name.localeCompare(b.name);
+    })
+    .forEach((group) => groups.push({ label: group.name, flag: group.flag, cities: group.cities }));
+  return groups;
 }
 
 function tinyIcon(path) {
@@ -623,10 +731,7 @@ function renderMapResults(list) {
   const empty = document.getElementById("empty");
   const title = document.getElementById("results-title");
   if (title) title.textContent = resultsHeading(list);
-  document.getElementById("summary").textContent =
-    resultsView === "map"
-      ? "Hover a card to find them on the map. Click the card to open their profile."
-      : summaryText(list);
+  document.getElementById("summary").textContent = summaryText(list);
   document.getElementById("count").textContent = "";
   empty.hidden = list.length !== 0;
   empty.textContent = PEOPLE.length ? "No one matches that yet." : "No creatives yet.";
@@ -649,13 +754,10 @@ function renderMapResults(list) {
     card.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
     });
-    card.addEventListener("mouseenter", () => highlightPin(record.id, true));
-    card.addEventListener("mouseleave", () => highlightPin(record.id, false));
     grid.appendChild(card);
   });
 
   renderNearby(list);
-  if (document.getElementById("map")) syncMap(list);
 }
 
 function renderNearby(list) {
@@ -1321,27 +1423,40 @@ function pickButton(item, pressed) {
 function renderWhereOptions() {
   const filter = document.getElementById("where-filter").value.trim().toLowerCase();
   const container = document.getElementById("where-options");
-  const cities = CITIES.filter((city) => {
-    if (!filter) return true;
-    return cityMatches(city, filter);
-  });
+  const groups = whereGroups(filter);
   container.innerHTML = "";
-  if (!cities.length) {
+  if (!groups.length) {
     const empty = document.createElement("p");
     empty.className = "pick-empty";
     empty.textContent = "No city matches that.";
     container.append(empty);
     return;
   }
-  cities.forEach((city) => {
-    const button = pickButton(city, activeCities().includes(city.name));
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const current = activeCities();
-      setCities(current.includes(city.name) ? current.filter((item) => item !== city.name) : [...current, city.name]);
-      render();
+  const picked = activeCities();
+  groups.forEach((group) => {
+    const section = document.createElement("section");
+    section.className = "where-group";
+    const head = document.createElement("div");
+    head.className = "where-group_head";
+    head.textContent = group.label;
+    const list = document.createElement("div");
+    list.className = "where-group_list";
+    group.cities.forEach((city) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "where-city";
+      button.setAttribute("aria-pressed", picked.includes(city.name) ? "true" : "false");
+      button.innerHTML = `<span class="where-flag" aria-hidden="true">${countryOf(city).flag}</span><span>${escapeHtml(city.name)}</span>`;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const current = activeCities();
+        setCities(current.includes(city.name) ? current.filter((item) => item !== city.name) : [...current, city.name]);
+        render();
+      });
+      list.append(button);
     });
-    container.append(button);
+    section.append(head, list);
+    container.append(section);
   });
 }
 
@@ -1398,32 +1513,51 @@ function paintWhoSub() {
 function renderWhoOptions() {
   const container = document.getElementById("who-options");
   if (!container) return;
+  const sub = document.getElementById("who-sub");
+  if (sub) {
+    sub.hidden = true;
+    sub.innerHTML = "";
+  }
   container.innerHTML = "";
   SEARCH_ROLES.forEach((name) => {
     const role = ROLES.find((item) => item.name === name);
     if (!role) return;
-    const genres = genresForRole(role.name);
-    const button = pickButton(role, state.roles.includes(role.name));
-    button.dataset.role = role.name;
-    if (genres.length) {
-      button.classList.toggle("is-open", openWhoRole === role.name);
-      button.insertAdjacentHTML(
-        "beforeend",
-        `<span class="pick-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`
-      );
-      button.addEventListener("mouseenter", () => showWhoSub(role.name));
-    } else {
-      button.addEventListener("mouseenter", () => showWhoSub(""));
-    }
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      if (genres.length) showWhoSub(role.name);
-      if (genres.length) toggleAllRole(role.name);
-      else toggleFlatRole(role.name);
+    const genres = genresForRole(role.name).slice().sort((a, b) => a.localeCompare(b));
+    const section = document.createElement("section");
+    section.className = "where-group";
+    const head = document.createElement("div");
+    head.className = "where-group_head";
+    head.innerHTML = `<span class="pick-glyph" aria-hidden="true">${roleIcon(role.name)}</span><span>${escapeHtml(role.name)}</span>`;
+    const list = document.createElement("div");
+    list.className = "where-group_list";
+    const rows = genres.length
+      ? [{ label: filterAllLabel(role.name), genre: "" }, ...genres.map((genre) => ({ label: genre, genre }))]
+      : [{ label: role.name, genre: null }];
+    rows.forEach((row) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "where-city";
+      const picked = state.roleGenres[role.name] || [];
+      const allOn = roleIsAll(role.name);
+      const pressed = row.genre === null
+        ? state.roles.includes(role.name)
+        : row.genre
+          ? allOn || (state.roles.includes(role.name) && picked.includes(row.genre))
+          : allOn;
+      button.setAttribute("aria-pressed", pressed ? "true" : "false");
+      button.setAttribute("aria-checked", pressed ? "true" : "false");
+      button.innerHTML = `${checkHtml()}<span>${escapeHtml(row.label)}</span>`;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (row.genre === null) toggleFlatRole(role.name);
+        else if (!row.genre) toggleAllRole(role.name);
+        else toggleWhoGenre(role.name, row.genre);
+      });
+      list.append(button);
     });
-    container.append(button);
+    section.append(head, list);
+    container.append(section);
   });
-  paintWhoSub();
 }
 
 function paintSearch() {
@@ -1578,6 +1712,22 @@ function toggleAllRole(role) {
   } else {
     if (!state.roles.includes(role)) state.roles = [...state.roles, role];
     state.roleGenres[role] = [];
+  }
+  syncScopedGenres();
+  render();
+}
+
+function toggleWhoGenre(role, genre) {
+  if (!roleIsAll(role)) {
+    toggleRoleGenre(role, genre);
+    return;
+  }
+  const rest = genresForRole(role).filter((item) => item !== genre);
+  if (!rest.length) {
+    state.roles = state.roles.filter((item) => item !== role);
+    delete state.roleGenres[role];
+  } else {
+    state.roleGenres[role] = rest;
   }
   syncScopedGenres();
   render();
@@ -1912,9 +2062,8 @@ function resultsQuery() {
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
-  params.set("view", "map");
   const query = params.toString();
-  return `results.html?${query}`;
+  return query ? `results.html?${query}` : "results.html";
 }
 
 function writeFilterParams(params) {
@@ -1953,7 +2102,6 @@ function writeUrl(mode) {
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
-  if (resultsView === "map") params.set("view", "map");
   if (state.board) params.set("board", state.board);
   if (state.profile) params.set("person", state.profile);
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
@@ -2054,12 +2202,6 @@ function bind() {
       }
     });
   }
-  document.querySelectorAll(".view-toggle_btn").forEach((button) => {
-    button.addEventListener("click", () => {
-      setResultsView(button.dataset.view);
-      if (isResultsPage()) writeUrl("replace");
-    });
-  });
   document.getElementById("where-segment").addEventListener("click", () => setPanel("where"));
   document.getElementById("who-segment").addEventListener("click", () => setPanel("who"));
   const whoPanel = document.getElementById("who-panel");
@@ -2116,7 +2258,6 @@ function bind() {
       location.href = resultsQuery();
       return;
     }
-    setResultsView("map");
     render({ url: "push" });
   });
   document.querySelectorAll(".nav-menu a, .nav-links a").forEach((link) => {
@@ -4006,10 +4147,6 @@ function prepareSkeletonFrame() {
       root.hidden = false;
     }
   }
-  if (isResultsPage() && params.get("view") === "map") {
-    const page = document.querySelector(".results-page");
-    if (page) page.dataset.resultsView = "map";
-  }
 }
 
 document.addEventListener("click", (event) => {
@@ -4044,17 +4181,15 @@ function initHeroMap() {
   if (!stage || !svg || !shots) return;
   const ns = "http://www.w3.org/2000/svg";
   const board = { w: 780, h: 300 };
-  const pin = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>`;
-  const place = (roles, city) => roles.map((role) => `${role} (${city})`).join(", ");
   const origin = [348, 150];
   const steps = [
-    { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
-    { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 48], bend: -36 },
-    { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
-    { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
-    { name: "Charlie Harris", caption: place(["Videographer"], "Finland"), src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
-    { name: "Randy", caption: place(["Designer"], "London"), src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
-    { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
+    { name: "Patricia Rosingana", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
+    { name: "petrosstudio", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 22], bend: -36 },
+    { name: "Patricia Rosingana", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
+    { name: "Vika", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
+    { name: "Charlie Harris", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
+    { name: "Randy", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
+    { name: "petrosstudio", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
   ];
 
   const NEON = [
@@ -4099,17 +4234,7 @@ function initHeroMap() {
     image.src = step.src;
     image.alt = "";
     if (step.focus) image.style.objectPosition = step.focus;
-    const caption = document.createElement("span");
-    caption.className = "hero_cap";
-    caption.insertAdjacentHTML("beforeend", pin);
-    const text = document.createElement("span");
-    step.caption.split("\n").forEach((line, index) => {
-      if (index) text.append(document.createElement("br"));
-      text.append(line);
-    });
-    if (step.caption.includes("\n")) caption.classList.add("is-lines");
-    caption.append(text);
-    link.append(image, caption);
+    link.append(image);
     shots.append(link);
     return { step, link };
   });
@@ -4232,7 +4357,6 @@ function initHeroMap() {
 }
 
 function revealPage() {
-  if (isResultsPage() && new URLSearchParams(location.search).get("view") === "map") setResultsView("map");
   render({ url: "replace" });
   if (isResultsPage()) requestAnimationFrame(() => render({ url: "replace" }));
   resultsViewSettled = true;

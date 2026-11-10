@@ -329,43 +329,6 @@ a:hover {
   box-shadow: 0 4px 10px rgba(17, 17, 17, 0.16);
 }
 
-.hero_cap {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 4px;
-  width: 100%;
-  margin-top: 5px;
-  color: #111;
-  font-family: var(--sans);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.2;
-  text-align: left;
-}
-
-.hero_cap > span {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-}
-
-.hero_cap.is-lines {
-  width: max-content;
-}
-
-.hero_cap.is-lines > span {
-  flex: none;
-  min-width: max-content;
-  white-space: nowrap;
-}
-
-.hero_cap svg {
-  width: 11px;
-  height: 11px;
-  flex: none;
-}
-
 .ink-defs {
   position: absolute;
   width: 0;
@@ -642,6 +605,81 @@ a:hover {
   flex-direction: column;
   max-height: 420px;
   overflow: auto;
+}
+
+.where-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 8px;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.where-group_head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: #fff;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.where-group_list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.where-flag {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.where-city {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.where-city:hover,
+.where-city[aria-pressed="true"] {
+  background: #f2f2f2;
+}
+
+.where-city:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 2px;
+}
+
+.where-city[aria-pressed="true"] .filter-check svg,
+.where-city[aria-checked="true"] .filter-check svg {
+  opacity: 1;
+}
+
+.where-group_head .pick-glyph,
+.where-city .pick-glyph {
+  width: 16px;
+  height: 16px;
 }
 
 .panel_label-soft {
