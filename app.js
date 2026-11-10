@@ -136,6 +136,19 @@ const FILTER_ORDER = [
   "Animator",
 ];
 
+const SEARCH_ROLES = [
+  "Photographer",
+  "Videographer / DP",
+  "Graphic designer",
+  "Stylist",
+  "Model",
+];
+
+const SEARCH_GENRES = {
+  Photographer: ["Concert", "Events", "Portrait"],
+  "Videographer / DP": ["Concert", "Events", "Music video", "Portrait"],
+};
+
 const FILTER_COPY = {
   Photographer: ["Photography", "All photography"],
   "Videographer / DP": ["Videography", "All videography"],
@@ -1278,6 +1291,7 @@ function renderWhereOptions() {
 }
 
 function genresForRole(role) {
+  if (SEARCH_GENRES[role]) return SEARCH_GENRES[role].slice();
   const item = filterMenu().find((entry) => entry.role === role);
   return item ? item.genres : [];
 }
@@ -1330,7 +1344,9 @@ function renderWhoOptions() {
   const container = document.getElementById("who-options");
   if (!container) return;
   container.innerHTML = "";
-  ROLES.forEach((role) => {
+  SEARCH_ROLES.forEach((name) => {
+    const role = ROLES.find((item) => item.name === name);
+    if (!role) return;
     const genres = genresForRole(role.name);
     const button = pickButton(role, state.roles.includes(role.name));
     button.dataset.role = role.name;
@@ -1439,6 +1455,18 @@ function filterLabel(role) {
 
 function filterAllLabel(role) {
   return (FILTER_COPY[role] && FILTER_COPY[role][1]) || `All ${filterLabel(role).toLowerCase()}`;
+}
+
+function searchFilterMenu() {
+  return SEARCH_ROLES.map((role) => {
+    const full = filterMenu().find((entry) => entry.role === role);
+    return {
+      role,
+      label: filterLabel(role),
+      all: filterAllLabel(role),
+      genres: SEARCH_GENRES[role] ? SEARCH_GENRES[role].slice() : full ? full.genres : [],
+    };
+  });
 }
 
 function filterMenu() {
@@ -1602,7 +1630,7 @@ function paintLocation() {
 function paintFilterSub() {
   const sub = document.getElementById("filters-sub");
   if (!sub) return;
-  const item = filterMenu().find((entry) => entry.role === openFilterRole && entry.genres.length);
+  const item = searchFilterMenu().find((entry) => entry.role === openFilterRole && entry.genres.length);
   if (!item) {
     sub.hidden = true;
     sub.innerHTML = "";
@@ -1704,7 +1732,7 @@ function buildFilters() {
     });
   }
   menu.innerHTML = "";
-  filterMenu().forEach((item) => {
+  searchFilterMenu().forEach((item) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "filter-row";
