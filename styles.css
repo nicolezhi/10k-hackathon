@@ -329,6 +329,43 @@ a:hover {
   box-shadow: 0 4px 10px rgba(17, 17, 17, 0.16);
 }
 
+.hero_cap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  width: 100%;
+  margin-top: 5px;
+  color: #111;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.hero_cap > span {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.hero_cap.is-lines {
+  width: max-content;
+}
+
+.hero_cap.is-lines > span {
+  flex: none;
+  min-width: max-content;
+  white-space: nowrap;
+}
+
+.hero_cap svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
+}
+
 .ink-defs {
   position: absolute;
   width: 0;
@@ -680,6 +717,18 @@ a:hover {
 .where-city .pick-glyph {
   width: 16px;
   height: 16px;
+}
+
+#who-panel .where-group_head .pick-glyph,
+#who-panel .where-group_head .pick-glyph svg {
+  width: 20px;
+  height: 20px;
+}
+
+#who-panel .where-group_head .pick-glyph.is-photo,
+#who-panel .where-group_head .pick-glyph.is-photo svg {
+  width: 23px;
+  height: 23px;
 }
 
 .panel_label-soft {
@@ -4487,8 +4536,17 @@ body[data-page="results"]:has([data-results-view="map"]) {
   min-height: 0;
 }
 
-.results-page .results h2 {
+.results-page .results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin: 0 0 4px;
+}
+
+.results-page .results-heading h2,
+.results-page .results h2 {
+  margin: 0;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 18px;
   font-weight: 700;

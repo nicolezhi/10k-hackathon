@@ -164,6 +164,7 @@ const ROLE_GENRES = {
 const state = {
   query: "",
   city: "",
+  country: "",
   extraCities: [],
   roles: [],
   genres: [],
@@ -225,11 +226,19 @@ function activeCities() {
   return [state.city, ...state.extraCities].filter(Boolean);
 }
 
+function placeInCountry(name, code) {
+  const city = cityRecord(name);
+  return Boolean(city) && countryOf(city).code === code;
+}
+
 function filteredPeople() {
   const tokens = tokensFrom(state.query);
   const cities = activeCities();
   return PEOPLE.filter((record) => {
-    if (cities.length && !cities.some((city) => sameCity(record.city, city) || (record.also || []).some((item) => sameCity(item, city)))) return false;
+    if (state.country) {
+      const places = [record.city, ...(record.also || [])];
+      if (!places.some((place) => placeInCountry(place, state.country))) return false;
+    } else if (cities.length && !cities.some((city) => sameCity(record.city, city) || (record.also || []).some((item) => sameCity(item, city)))) return false;
     if (state.roles.length) {
       const hit = state.roles.some((role) => {
         if (!roleNames(record).includes(role)) return false;
@@ -261,7 +270,8 @@ function summaryText(list) {
   const parts = [];
   if (state.roles.length) parts.push(state.roles.join(", "));
   const cities = activeCities();
-  if (cities.length) parts.push(cities.join(" and "));
+  if (state.country) parts.push(countryPhrase(state.country));
+  else if (cities.length) parts.push(cities.join(" and "));
   if (state.genres.length) parts.push(state.genres.join(", "));
   if (state.tenk) parts.push("10K projects");
   if (state.query.trim()) parts.push(`“${state.query.trim()}”`);
@@ -384,7 +394,7 @@ function resultsHeading(list) {
   ];
   const who = labels.length ? labels.join(", ") : count === 1 ? "creative" : "creatives";
   const cities = activeCities();
-  const place = cities.length ? joinPhrase(cities) : "";
+  const place = state.country ? countryPhrase(state.country) : cities.length ? joinPhrase(cities) : "";
   return place ? `${count} ${who} in ${place}` : `${count} ${who}`;
 }
 
@@ -464,7 +474,20 @@ const NAME_COUNTRY = {
   Remote: "Remote",
 };
 
-const SUGGESTED_CITIES = ["New York", "Los Angeles", "Atlanta"];
+const SUGGESTED_CITIES = ["New York", "London", "Los Angeles"];
+
+function isCountryRecord(city) {
+  return city.name !== "Remote" && Boolean(NAME_COUNTRY[city.name]);
+}
+
+function countryPhrase(code) {
+  const name = (COUNTRY_INFO[code] && COUNTRY_INFO[code].name) || code;
+  return name.startsWith("United ") ? `the ${name}` : name;
+}
+
+function allCitiesLabel() {
+  return "All";
+}
 
 function countryOf(city) {
   const code = NAME_COUNTRY[city.name] || PLACE_COUNTRY[String(city.place || "").split(", ")[1]] || "Remote";
@@ -496,17 +519,14 @@ function cityMatches(city, filter) {
 function whereGroups(filter) {
   const groups = [];
   const suggested = SUGGESTED_CITIES.map((name) => CITIES.find((city) => city.name === name))
-    .filter((city) => city && (!filter || cityMatches(city, filter)))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  if (suggested.length) groups.push({ label: "Suggested", flag: "", cities: suggested });
+    .filter((city) => city && (!filter || cityMatches(city, filter)));
+  if (suggested.length) groups.push({ label: "Suggested", flag: "", cities: suggested, country: "" });
 
   const byCountry = new Map();
   CITIES.forEach((city) => {
-    if (filter && !cityMatches(city, filter)) return;
     const country = countryOf(city);
     if (!byCountry.has(country.code)) byCountry.set(country.code, { ...country, cities: [] });
     byCountry.get(country.code).cities.push(city);
-    byCountry.get(country.code).cities.sort((a, b) => a.name.localeCompare(b.name));
   });
   [...byCountry.values()]
     .sort((a, b) => {
@@ -518,7 +538,20 @@ function whereGroups(filter) {
       if (b.code === "UK") return 1;
       return a.name.localeCompare(b.name);
     })
-    .forEach((group) => groups.push({ label: group.name, flag: group.flag, cities: group.cities }));
+    .forEach((group) => {
+      const matches = (city) => !filter || cityMatches(city, filter);
+      let cities = group.cities
+        .filter((city) => !isCountryRecord(city))
+        .filter(matches)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      if (!cities.length) {
+        cities = group.cities.filter(isCountryRecord).filter(matches).sort((a, b) => a.name.localeCompare(b.name));
+      }
+      const country = group.code === "Remote" ? "" : group.code;
+      const showAll = Boolean(country) && cities.filter((city) => !isCountryRecord(city)).length > 1;
+      if (!cities.length) return;
+      groups.push({ label: group.name, flag: group.flag, cities, country: showAll ? country : "" });
+    });
   return groups;
 }
 
@@ -717,7 +750,9 @@ function rosterCardHtml(record) {
       <p class="result-card_tags">${escapeHtml(tags)}</p>
       <div class="result-card_icons">
         ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
-        ${copyControl("Portfolio", record.portfolio || "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
+        ${record.portfolio
+          ? externalControl("roster-icon", "Portfolio", record.portfolio, tinyIcon(CONTACT_PATHS.portfolio))
+          : copyControl("Portfolio", "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
         ${copyControl("Phone", record.phone || "", "Copied phone number", tinyIcon(CONTACT_PATHS.phone))}
         ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
       </div>
@@ -1231,7 +1266,9 @@ function renderProfile() {
         ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
         ${copyControl("Phone", record.phone || "", "Copied phone number", tinyIcon(CONTACT_PATHS.phone))}
         ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
-        ${copyControl("Portfolio", record.portfolio || "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
+        ${record.portfolio
+          ? externalControl("roster-icon", "Portfolio", record.portfolio, tinyIcon(CONTACT_PATHS.portfolio))
+          : copyControl("Portfolio", "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
       </div>
     </header>
     ${also ? `<p class="profile_also">${escapeHtml(also)}</p>` : ""}
@@ -1278,14 +1315,12 @@ function renderProfile() {
           <strong>Preferred</strong>
         </div>
         ${preferredRows.map((row) => contactLine(row)).join("")}
-        ${introToggleHtml()}
-        ${introPanelHtml()}
       </div>`);
   }
   otherRows.forEach((row) => {
     contact.insertAdjacentHTML("beforeend", contactLine(row));
   });
-  if (!preferredRows.length && rows.length) {
+  if (rows.length) {
     contact.insertAdjacentHTML("beforeend", `${introToggleHtml()}${introPanelHtml()}`);
   }
 
@@ -1350,10 +1385,25 @@ function scheduleHideWhoSub() {
 }
 
 function whereLabel() {
+  if (state.country) return (COUNTRY_INFO[state.country] && COUNTRY_INFO[state.country].name) || state.country;
   const cities = activeCities().map((city) => (city === "Remote" ? "Remote / anywhere" : city));
   if (!cities.length) return "Search cities";
   if (cities.length === 1) return cities[0];
   return `${cities[0]} +${cities.length - 1}`;
+}
+
+function selectCity(name) {
+  state.country = "";
+  setCities([name]);
+  openPanel = "";
+  render();
+}
+
+function selectCountry(code) {
+  state.country = code;
+  setCities([]);
+  openPanel = "";
+  render();
 }
 
 function whoDetail(role) {
@@ -1382,7 +1432,8 @@ const ROLE_ICONS = {
   "Videographer / DP":
     '<rect x="3.5" y="7.5" width="12" height="9" rx="1.6"/><path d="M15.5 11.2 20.2 8.8v6.4l-4.7-2.4z"/>',
   Director: '<path d="M8 7.2 10.2 9H20v8.2H4V9h3.2L8 7.2z"/><path d="M4 9.2 8.2 6.4h4.2L9.8 9.2"/>',
-  Stylist: '<path d="M12 8.2a3.2 3.2 0 0 1 3.2 3.2l-1.1 7.2h-4.2L8.8 11.4A3.2 3.2 0 0 1 12 8.2z"/><path d="M12 8.2V5.6"/>',
+  Stylist:
+    '<path d="M12 11.6V9.4a2 2 0 0 1 2-2 1.6 1.6 0 0 1 .3 3.1"/><path d="M2.4 17.4h19.2L12 11.6 2.4 17.4"/>',
   Producer: '<rect x="7" y="6.2" width="10" height="12.6" rx="1.4"/><path d="M9.2 6.2V5.2a1.2 1.2 0 0 1 1.2-1.2h3.2a1.2 1.2 0 0 1 1.2 1.2v1M9.4 11h5.2M9.4 14.2h3.4"/>',
   "Set designer": '<path d="M6 10.5h12v2.2H6z"/><path d="M7.2 12.7v5.2M16.8 12.7v5.2M4.8 17.9h14.4"/>',
   MUA: '<path d="M15.8 5.6 8.2 18.4"/><path d="M14.2 5.2c1.3.2 2.2 1.2 2.2 1.2M7.2 16.6l-1.4 2.2h3.2"/>',
@@ -1394,7 +1445,8 @@ const ROLE_ICONS = {
   Assistant: '<rect x="7" y="4.8" width="10" height="14.4" rx="1.4"/><path d="M9.2 9h5.6M9.2 12.2h5.6M9.2 15.4h3.4"/>',
   "Casting director": '<circle cx="9" cy="8" r="2"/><circle cx="15.6" cy="8.6" r="1.7"/><path d="M5.4 18.2v-1.6a3.6 3.6 0 0 1 7.2 0v1.6M13.2 18.2v-1.2a3 3 0 0 1 5.2-2"/>',
   Choreographer: '<circle cx="14.2" cy="5.8" r="1.6"/><path d="M13.2 8.2 10.2 12.2l2.6 1.4-1.6 5.2M10.2 12.2 7.2 10.4M12.8 13.6l3.6-1.2 2 3.2"/>',
-  "Graphic designer": '<rect x="4.5" y="6" width="10.5" height="12" rx="1.2"/><path d="M13.2 15.6 19.2 9.6l-2.2-2.2-6 6"/>',
+  "Graphic designer":
+    '<path d="M12 3.2c-5 0-8.6 4-8.4 8.8.2 3.4 2.2 5 4.4 5 1.3 0 1.8.7 1.8 1.8 0 2 1.7 3.1 3.5 2.9 4.6-.5 7.9-4.6 7.9-9.4 0-5.2-4-9.1-9.2-9.1z"/><circle cx="16.1" cy="15.4" r="1.45" stroke-width="1.3"/><circle cx="7.9" cy="10.3" r="1.55" fill="#111" stroke="none"/><circle cx="11" cy="6.7" r="1.55" fill="#111" stroke="none"/><circle cx="14.4" cy="8.1" r="1.55" fill="#111" stroke="none"/>',
   Colorist: '<circle cx="12" cy="12" r="6.2"/><path d="M12 5.8v12.4"/>',
 };
 
@@ -1432,26 +1484,38 @@ function renderWhereOptions() {
     container.append(empty);
     return;
   }
-  const picked = activeCities();
+  const picked = state.city;
   groups.forEach((group) => {
     const section = document.createElement("section");
     section.className = "where-group";
     const head = document.createElement("div");
     head.className = "where-group_head";
-    head.textContent = group.label;
+    head.innerHTML = group.flag
+      ? `<span class="where-flag" aria-hidden="true">${group.flag}</span><span>${escapeHtml(group.label)}</span>`
+      : escapeHtml(group.label);
     const list = document.createElement("div");
     list.className = "where-group_list";
+    if (group.country) {
+      const all = document.createElement("button");
+      all.type = "button";
+      all.className = "where-city";
+      all.setAttribute("aria-pressed", state.country === group.country ? "true" : "false");
+      all.textContent = allCitiesLabel();
+      all.addEventListener("click", (event) => {
+        event.stopPropagation();
+        selectCountry(group.country);
+      });
+      list.append(all);
+    }
     group.cities.forEach((city) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "where-city";
-      button.setAttribute("aria-pressed", picked.includes(city.name) ? "true" : "false");
-      button.innerHTML = `<span class="where-flag" aria-hidden="true">${countryOf(city).flag}</span><span>${escapeHtml(city.name)}</span>`;
+      button.setAttribute("aria-pressed", !state.country && picked === city.name ? "true" : "false");
+      button.textContent = city.name;
       button.addEventListener("click", (event) => {
         event.stopPropagation();
-        const current = activeCities();
-        setCities(current.includes(city.name) ? current.filter((item) => item !== city.name) : [...current, city.name]);
-        render();
+        selectCity(city.name);
       });
       list.append(button);
     });
@@ -1527,7 +1591,7 @@ function renderWhoOptions() {
     section.className = "where-group";
     const head = document.createElement("div");
     head.className = "where-group_head";
-    head.innerHTML = `<span class="pick-glyph" aria-hidden="true">${roleIcon(role.name)}</span><span>${escapeHtml(role.name)}</span>`;
+    head.innerHTML = `<span class="pick-glyph${role.name === "Photographer" ? " is-photo" : ""}" aria-hidden="true">${roleIcon(role.name)}</span><span>${escapeHtml(role.name)}</span>`;
     const list = document.createElement("div");
     list.className = "where-group_list";
     const rows = genres.length
@@ -1565,7 +1629,7 @@ function paintSearch() {
   const whoValue = document.getElementById("who-value");
   whereValue.textContent = whereLabel();
   whoValue.textContent = whoLabel();
-  whereValue.classList.toggle("is-set", Boolean(activeCities().length));
+  whereValue.classList.toggle("is-set", Boolean(activeCities().length || state.country));
   whoValue.classList.toggle("is-set", state.roles.length > 0);
   document.getElementById("airbnb").dataset.open = openPanel;
   document.getElementById("where-panel").hidden = openPanel !== "where";
@@ -1573,7 +1637,7 @@ function paintSearch() {
   document.getElementById("where-segment").setAttribute("aria-expanded", String(openPanel === "where"));
   document.getElementById("who-segment").setAttribute("aria-expanded", String(openPanel === "who"));
   const clear = document.getElementById("where-clear");
-  if (clear) clear.hidden = !activeCities().length;
+  if (clear) clear.hidden = !activeCities().length && !state.country;
   const clearWho = document.getElementById("who-clear");
   if (clearWho) clearWho.hidden = !state.roles.length;
   renderWhereOptions();
@@ -2027,6 +2091,7 @@ function setResultsView(view) {
 
 function clearLocation() {
   state.city = "";
+  state.country = "";
   state.extraCities = [];
   const field = document.getElementById("location-filter");
   if (field) field.value = "";
@@ -2059,6 +2124,7 @@ function resultsQuery() {
   const params = new URLSearchParams();
   if (state.query) params.set("q", state.query);
   if (state.city) params.set("city", state.city);
+  if (state.country) params.set("country", state.country);
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
@@ -2099,6 +2165,7 @@ function writeUrl(mode) {
   const params = new URLSearchParams();
   if (state.query) params.set("q", state.query);
   if (state.city) params.set("city", state.city);
+  if (state.country) params.set("country", state.country);
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
@@ -2114,6 +2181,7 @@ function readUrl() {
   const params = new URLSearchParams(location.search);
   state.query = params.get("q") || "";
   state.city = canonicalCity(params.get("city") || "");
+  state.country = COUNTRY_INFO[params.get("country") || ""] ? params.get("country") : "";
   state.extraCities = (params.get("near") || "").split(",").map(canonicalCity).filter(Boolean);
   state.roles = (params.get("roles") || "").split(",").filter(Boolean);
   state.roleGenres = {};
@@ -2219,6 +2287,7 @@ function bind() {
     clearWhere.addEventListener("click", (event) => {
       event.stopPropagation();
       state.city = "";
+      state.country = "";
       state.extraCities = [];
       render();
     });
@@ -2247,8 +2316,21 @@ function bind() {
     event.preventDefault();
     const typed = document.getElementById("where-filter").value.trim().toLowerCase();
     if (typed) {
-      const match = CITIES.find((city) => cityMatches(city, typed));
-      if (match && !activeCities().includes(match.name)) setCities([...activeCities(), match.name]);
+      const countryCode = Object.keys(COUNTRY_INFO).find((code) => {
+        if (code === "Remote") return false;
+        const name = COUNTRY_INFO[code].name.toLowerCase();
+        return typed === name || typed === `all ${name}` || typed === `all cities in ${countryPhrase(code).toLowerCase()}`;
+      });
+      if (countryCode) {
+        state.country = countryCode;
+        setCities([]);
+      } else {
+        const match = CITIES.find((city) => !isCountryRecord(city) && cityMatches(city, typed));
+        if (match) {
+          state.country = "";
+          setCities([match.name]);
+        }
+      }
     }
     state.profile = "";
     openPanel = "";
@@ -2958,6 +3040,7 @@ function addPersonFromForm() {
     state.roleGenres = {};
     state.genresScoped = false;
     state.city = "";
+    state.country = "";
     state.extraCities = [];
   }
   buildFilters();
@@ -4078,15 +4161,16 @@ function initHeroMap() {
   if (!stage || !svg || !shots) return;
   const ns = "http://www.w3.org/2000/svg";
   const board = { w: 780, h: 300 };
+  const pin = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>`;
   const origin = [348, 150];
   const steps = [
-    { name: "Patricia Rosingana", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
-    { name: "petrosstudio", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 22], bend: -36 },
-    { name: "Patricia Rosingana", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
-    { name: "Vika", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
-    { name: "Charlie Harris", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
-    { name: "Randy", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
-    { name: "petrosstudio", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
+    { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
+    { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 22], bend: -36 },
+    { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
+    { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
+    { name: "Charlie Harris", caption: "Videographer (Finland)", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
+    { name: "Randy", caption: "Designer (London)", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
+    { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
   ];
 
   const NEON = [
@@ -4131,7 +4215,17 @@ function initHeroMap() {
     image.src = step.src;
     image.alt = "";
     if (step.focus) image.style.objectPosition = step.focus;
-    link.append(image);
+    const caption = document.createElement("span");
+    caption.className = "hero_cap";
+    caption.insertAdjacentHTML("beforeend", pin);
+    const text = document.createElement("span");
+    step.caption.split("\n").forEach((line, index) => {
+      if (index) text.append(document.createElement("br"));
+      text.append(line);
+    });
+    if (step.caption.includes("\n")) caption.classList.add("is-lines");
+    caption.append(text);
+    link.append(image, caption);
     shots.append(link);
     return { step, link };
   });
@@ -4191,16 +4285,32 @@ function initHeroMap() {
     return path;
   };
 
-  const showFrame = (frame) => {
-    addDot(frame.step.inn);
+  // The yellow line aims at the photo but ends just under its caption.
+  const lineEnd = (frame, index) => {
+    if (index !== 1) return frame.step.inn;
+    const cap = frame.link.querySelector(".hero_cap");
+    const stageRect = stage.getBoundingClientRect();
+    const capRect = cap ? cap.getBoundingClientRect() : null;
+    if (!capRect || !stageRect.height || !capRect.height) return frame.step.inn;
+    const y = ((capRect.bottom - stageRect.top + 14) / stageRect.height) * board.h;
+    const [x1, y1] = origin;
+    const [x2, y2] = frame.step.inn;
+    if (y >= y1 || y <= y2) return frame.step.inn;
+    const t = (y - y1) / (y2 - y1);
+    return [x1 + (x2 - x1) * t, y];
+  };
+
+  const showFrame = (frame, end) => {
+    addDot(end);
     frame.link.classList.add("is-in");
   };
 
   if (reduced) {
     addDot(origin, 3.4);
     frames.forEach((frame, index) => {
-      addPath(origin, frame.step.inn, frame.step.bend, index);
-      showFrame(frame);
+      const end = lineEnd(frame, index);
+      addPath(origin, end, frame.step.bend, index);
+      showFrame(frame, end);
     });
     return;
   }
@@ -4229,11 +4339,12 @@ function initHeroMap() {
       for (let index = 0; index < frames.length; index += 1) {
         if (!svg.isConnected) return;
         const frame = frames[index];
-        const path = addPath(origin, frame.step.inn, frame.step.bend, index);
+        const end = lineEnd(frame, index);
+        const path = addPath(origin, end, frame.step.bend, index);
         drawn.push(path);
         await drawLine(path);
         if (!svg.isConnected) return;
-        showFrame(frame);
+        showFrame(frame, end);
         await sleep(320);
       }
       await sleep(2200);
@@ -4272,8 +4383,13 @@ function revealPage() {
 
 function initGlassCursor() {
   const hero = document.querySelector(".home-view .hero");
-  const belowHero = document.getElementById("projects") || document.getElementById("results");
-  if (!hero || !belowHero) return;
+  if (!hero) return;
+  const next = [document.getElementById("projects"), document.getElementById("home-boards"), document.getElementById("results")]
+    .find((node) => node && !node.hidden);
+  const boundaryTop = () => {
+    if (next && !next.hidden && next.getClientRects().length) return next.getBoundingClientRect().top;
+    return hero.getBoundingClientRect().bottom;
+  };
   const fine = window.matchMedia("(hover: hover) and (pointer: fine)");
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
   if (!fine.matches || reduce.matches) return;
@@ -4319,14 +4435,14 @@ function initGlassCursor() {
   let frame = 0;
 
   const lensFade = () => {
-    const projectsTop = belowHero.getBoundingClientRect().top + window.scrollY;
+    const projectsTop = boundaryTop() + window.scrollY;
     const end = Math.max(projectsTop - window.innerHeight * 0.55, 140);
     return 1 - Math.min(1, Math.max(0, window.scrollY / end));
   };
 
   const inHero = (x, y) => {
     if (document.body.dataset.view === "profile") return false;
-    if (y >= belowHero.getBoundingClientRect().top - 12) return false;
+    if (y >= boundaryTop() - 12) return false;
     const hit = document.elementFromPoint(x, y);
     return !!hit && !hit.closest(".navbar") && !!hit.closest(".hero");
   };
