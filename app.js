@@ -3550,21 +3550,46 @@ function renderBoards() {
     if (emptyEl) emptyEl.hidden = members.length !== 0;
     if (gridEl) {
       gridEl.innerHTML = "";
+      const roleGroups = new Map();
       members.forEach((record) => {
-        const card = document.createElement("article");
-        card.className = "result-card";
-        card.tabIndex = 0;
-        card.dataset.id = record.id;
-        card.innerHTML = rosterCardHtml(record);
-        const open = () => openProfile(record.id);
-        card.addEventListener("click", (event) => {
-          if (event.target.closest("a, .copy-icon, .star-btn")) return;
-          open();
+        const primaryRole = (record.roles || [])[0] || (record.secondary || [])[0] || "Creative";
+        if (!roleGroups.has(primaryRole)) roleGroups.set(primaryRole, []);
+        roleGroups.get(primaryRole).push(record);
+      });
+      const showRoleHeaders = roleGroups.size > 1;
+      roleGroups.forEach((groupRecords, roleName) => {
+        const section = document.createElement("section");
+        section.className = "board-role-group";
+        if (showRoleHeaders) {
+          const heading = document.createElement("h3");
+          heading.className = "board-role-group_title";
+          const label =
+            roleName === "Videographer / DP" && groupRecords.length > 1
+              ? "Videographers / DPs"
+              : pluralRole(roleName, groupRecords.length);
+          heading.innerHTML = `${escapeHtml(label)} <span>${groupRecords.length}</span>`;
+          section.appendChild(heading);
+        }
+        const rowGrid = document.createElement("div");
+        rowGrid.className = "grid";
+        groupRecords.forEach((record) => {
+          const card = document.createElement("article");
+          card.className = "result-card";
+          card.tabIndex = 0;
+          card.dataset.id = record.id;
+          card.innerHTML = rosterCardHtml(record);
+          const open = () => openProfile(record.id);
+          card.addEventListener("click", (event) => {
+            if (event.target.closest("a, .copy-icon, .star-btn")) return;
+            open();
+          });
+          card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
+          });
+          rowGrid.appendChild(card);
         });
-        card.addEventListener("keydown", (event) => {
-          if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
-        });
-        gridEl.appendChild(card);
+        section.appendChild(rowGrid);
+        gridEl.appendChild(section);
       });
     }
     return;

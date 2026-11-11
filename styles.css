@@ -6074,6 +6074,43 @@ body[data-page="boards"] .profile-view {
   gap: 8px;
 }
 
+.board-role-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.board-role-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.board-role-group_title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.board-role-group_title span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.08);
+  color: #444;
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
 .board-add-wrap {
   position: relative;
 }
