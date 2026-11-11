@@ -3448,6 +3448,41 @@ function renderHomeBoards() {
   });
 }
 
+let pendingDeleteBoardId = "";
+
+function requestDeleteBoard(boardId) {
+  const board = readBoards().find((item) => item.id === boardId);
+  if (!board) return;
+  const dialog = document.getElementById("board-delete-dialog");
+  const titleEl = document.getElementById("board-delete-title");
+  const ledeEl = document.getElementById("board-delete-lede");
+  if (!dialog) {
+    deleteBoard(boardId);
+    return;
+  }
+  pendingDeleteBoardId = boardId;
+  if (titleEl) titleEl.textContent = `Delete "${board.name}"?`;
+  if (ledeEl) {
+    const count = board.people.filter((id) => PEOPLE.some((p) => p.id === id)).length;
+    const countPart = count === 1 ? "1 saved creative" : `${count} saved creatives`;
+    ledeEl.textContent = count
+      ? `This will remove "${board.name}" and unpin its ${countPart}. This action cannot be undone.`
+      : `Are you sure you want to delete "${board.name}"? This action cannot be undone.`;
+  }
+  dialog.hidden = false;
+  document.body.classList.add("add-open");
+}
+
+function closeDeleteBoardDialog() {
+  const dialog = document.getElementById("board-delete-dialog");
+  if (dialog) dialog.hidden = true;
+  pendingDeleteBoardId = "";
+  const createDialog = document.getElementById("boards-create-dialog");
+  if (!createDialog || createDialog.hidden) {
+    document.body.classList.remove("add-open");
+  }
+}
+
 function setBoardCreateOpen(open) {
   const dialog = document.getElementById("boards-create-dialog");
   const createInput = document.getElementById("boards-create-input");
@@ -3560,7 +3595,7 @@ function renderBoards() {
           render({ url: "push" });
           window.scrollTo(0, 0);
         },
-        onDelete: () => deleteBoard(board.id),
+        onDelete: () => requestDeleteBoard(board.id),
       })
     );
   });
@@ -3904,6 +3939,55 @@ function closeBoardDatePicker() {
   activeDateHover = "";
 }
 
+function closeBoardSharePanel() {
+  const panel = document.getElementById("board-share-panel");
+  const btn = document.getElementById("board-share-btn");
+  if (panel) panel.hidden = true;
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+function boardShareUrl(board) {
+  const url = new URL("boards.html", location.href);
+  if (board?.id) url.searchParams.set("board", board.id);
+  return url.toString();
+}
+
+function syncBoardShareLinks() {
+  if (!state.board) return;
+  const board = readBoards().find((item) => item.id === state.board);
+  if (!board) return;
+  const shareUrl = boardShareUrl(board);
+  const dateLabel = formatBoardDate(board.date);
+  const members = board.people
+    .map((id) => PEOPLE.find((person) => person.id === id))
+    .filter(Boolean);
+  const names = members.map((person) => person.name).join(", ");
+  const headerLine = dateLabel ? `${board.name} (${dateLabel})` : board.name;
+  const smsBody = [
+    `Check out the "${headerLine}" board on Draft:`,
+    names ? `Creatives: ${names}` : "",
+    shareUrl,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const emailSubject = `Draft board: ${headerLine}`;
+  const emailBody = [
+    `Here's the "${headerLine}" board on Draft:`,
+    board.description ? `\n${board.description}` : "",
+    names ? `\nCreatives (${members.length}): ${names}` : "",
+    `\n${shareUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const textLink = document.getElementById("board-share-text");
+  const emailLink = document.getElementById("board-share-email");
+  if (textLink) textLink.href = `sms:?&body=${encodeURIComponent(smsBody)}`;
+  if (emailLink) {
+    emailLink.href = `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+  }
+}
+
 function bindBoards() {
   document.addEventListener("mouseover", (event) => {
     const starBtn = event.target.closest(".star-btn[data-star-person]");
@@ -3947,6 +4031,11 @@ function bindBoards() {
     if (addPanel && !addPanel.hidden && addWrap && !addWrap.contains(event.target)) {
       closeBoardAddPanel();
     }
+    const shareWrap = document.getElementById("board-share-wrap");
+    const sharePanel = document.getElementById("board-share-panel");
+    if (sharePanel && !sharePanel.hidden && shareWrap && !shareWrap.contains(event.target)) {
+      closeBoardSharePanel();
+    }
     const datePop = document.getElementById("board-date-picker");
     if (
       datePop &&
@@ -3982,35 +4071,19 @@ function bindBoards() {
         closeBoardDatePicker();
         return;
       }
+      const deleteDialog = document.getElementById("board-delete-dialog");
+      if (deleteDialog && !deleteDialog.hidden) {
+        closeDeleteBoardDialog();
+        return;
+      }
       const createDialog = document.getElementById("boards-create-dialog");
       if (createDialog && !createDialog.hidden) {
         setBoardCreateOpen(false);
         return;
       }
+      closeBoardSharePanel();
       closeBoardPicker();
-      closeBoardAddPanel();
     }
-  });
-
-  const addCreativeBtn = document.getElementById("board-add-creative-btn");
-  const addPanel = document.getElementById("board-add-panel");
-  const addSearch = document.getElementById("board-add-search");
-
-  addCreativeBtn?.addEventListener("click", (event) => {
-    event.stopPropagation();
-    if (!addPanel) return;
-    const next = addPanel.hidden;
-    addPanel.hidden = !next;
-    addCreativeBtn.setAttribute("aria-expanded", String(next));
-    if (next) {
-      if (addSearch) addSearch.value = "";
-      paintBoardAddPanel();
-      addSearch?.focus();
-    }
-  });
-
-  addSearch?.addEventListener("input", () => {
-    paintBoardAddPanel();
   });
 
   const createToggle = document.getElementById("boards-create-toggle");
@@ -4108,13 +4181,73 @@ function bindBoards() {
   document.getElementById("board-back")?.addEventListener("click", (event) => {
     event.preventDefault();
     closeBoardAddPanel();
+    closeBoardSharePanel();
     closeBoardDatePicker();
     state.board = "";
     render({ url: "push" });
   });
 
+  const shareBtn = document.getElementById("board-share-btn");
+  const sharePanel = document.getElementById("board-share-panel");
+  const shareCopyBtn = document.getElementById("board-share-copy");
+  const shareCopyLabel = document.getElementById("board-share-copy-label");
+  const shareTextLink = document.getElementById("board-share-text");
+  const shareEmailLink = document.getElementById("board-share-email");
+
+  shareBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!sharePanel) return;
+    const next = sharePanel.hidden;
+    sharePanel.hidden = !next;
+    shareBtn.setAttribute("aria-expanded", String(next));
+    if (next) {
+      if (shareCopyLabel) shareCopyLabel.textContent = "Copy link";
+      syncBoardShareLinks();
+    }
+  });
+
+  shareCopyBtn?.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    const board = readBoards().find((item) => item.id === state.board);
+    const url = boardShareUrl(board);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {}
+    if (shareCopyLabel) shareCopyLabel.textContent = "Copied link!";
+    window.setTimeout(() => {
+      closeBoardSharePanel();
+      if (shareCopyLabel) shareCopyLabel.textContent = "Copy link";
+    }, 900);
+  });
+
+  shareTextLink?.addEventListener("click", () => {
+    syncBoardShareLinks();
+    closeBoardSharePanel();
+  });
+
+  shareEmailLink?.addEventListener("click", () => {
+    syncBoardShareLinks();
+    closeBoardSharePanel();
+  });
+
   document.getElementById("board-delete-btn")?.addEventListener("click", () => {
-    if (state.board) deleteBoard(state.board);
+    if (state.board) requestDeleteBoard(state.board);
+  });
+
+  const deleteDialog = document.getElementById("board-delete-dialog");
+  const deleteClose = document.getElementById("board-delete-close");
+  const deleteCancel = document.getElementById("board-delete-cancel");
+  const deleteConfirm = document.getElementById("board-delete-confirm");
+
+  deleteClose?.addEventListener("click", closeDeleteBoardDialog);
+  deleteCancel?.addEventListener("click", closeDeleteBoardDialog);
+  deleteDialog?.addEventListener("click", (event) => {
+    if (event.target === deleteDialog) closeDeleteBoardDialog();
+  });
+  deleteConfirm?.addEventListener("click", () => {
+    const id = pendingDeleteBoardId;
+    closeDeleteBoardDialog();
+    if (id) deleteBoard(id);
   });
 }
 
@@ -4135,7 +4268,7 @@ document.addEventListener("click", (event) => {
   const anchor = event.target.closest("a");
   if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
   const href = anchor.getAttribute("href") || "";
-  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+  if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("sms:")) return;
   let url;
   try { url = new URL(anchor.href, location.href); } catch (error) { return; }
   if (url.origin !== location.origin) return;

@@ -191,7 +191,14 @@ a:hover {
 
 .nav_brand {
   width: 228px;
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  color: #111;
+  text-decoration: none;
+}
+
+.nav_brand:hover {
+  color: #111;
 }
 
 .nav_brand img {
@@ -205,6 +212,55 @@ a:hover {
 
 .nav_brand:hover img {
   transform: scale(1.12);
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transform-origin: left center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.nav_brand:hover .brand-logo {
+  transform: scale(1.06);
+}
+
+.brand-logo_mark {
+  display: block;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  overflow: visible;
+}
+
+.brand-logo_flash {
+  transform-origin: 26.2px 6.7px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav_brand:hover .brand-logo_flash {
+  transform: scale(1.22) rotate(18deg);
+}
+
+.brand-logo_word {
+  color: #111;
+  font-family: "Bootzy TM", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.brand-logo_tag {
+  margin-left: -2px;
+  color: #111;
+  font-family: "Gt America Extended", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  opacity: 0.72;
 }
 
 .nav-menu {
@@ -5355,6 +5411,7 @@ body[data-page="boards"] .profile-view {
 .board-picker[hidden],
 .star-preview[hidden],
 .board-add-panel[hidden],
+.board-share-panel[hidden],
 .board-date-picker[hidden],
 .boards-create[hidden],
 .boards-empty[hidden],
@@ -5682,6 +5739,18 @@ body[data-page="boards"] .profile-view {
   width: min(500px, 100%);
 }
 
+.board-delete_panel {
+  width: min(440px, 100%);
+}
+
+.board-delete_confirm {
+  background: #d92d20;
+}
+
+.board-delete_confirm:hover {
+  background: #b42318;
+}
+
 .boards-create_date_btn {
   display: inline-flex;
   align-items: center;
@@ -5716,10 +5785,22 @@ body[data-page="boards"] .profile-view {
   max-width: 680px;
 }
 
+.board-detail_title_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.board-detail_title_row h1 {
+  margin: 0;
+}
+
 .board-inline-desc {
   display: block;
   width: 100%;
-  margin: 4px 0 6px -8px;
+  margin: 2px 0 4px -8px;
   padding: 4px 8px;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -5749,23 +5830,22 @@ body[data-page="boards"] .profile-view {
 }
 
 .board-inline-date {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  margin: 0 0 6px;
+  margin: 0;
 }
 
 .board-inline-date_btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-left: -8px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
+  padding: 4px 10px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
   color: #3a3a3a;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
@@ -6052,8 +6132,7 @@ body[data-page="boards"] .profile-view {
 
 .boards-create_submit,
 .boards-create_cancel,
-.board-edit-btn,
-.board-delete-btn {
+.board-edit-btn {
   height: 36px;
   padding: 0 14px;
   border-radius: 999px;
@@ -6070,17 +6149,89 @@ body[data-page="boards"] .profile-view {
 }
 
 .boards-create_cancel,
-.board-edit-btn,
-.board-delete-btn {
+.board-edit-btn {
   border: 1px solid rgba(17, 17, 17, 0.16);
   background: rgba(255, 255, 255, 0.75);
   color: #111;
 }
 
+.board-share-btn,
+.board-delete-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  color: #111;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
 .board-edit-btn:hover,
+.board-share-btn:hover,
+.board-share-btn[aria-expanded="true"],
 .board-delete-btn:hover {
   border-color: #111;
   background: #fff;
+}
+
+.board-share-wrap {
+  position: relative;
+}
+
+.board-share-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 176px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 16px;
+  background-color: rgba(255, 250, 247, 0.94);
+  background-image: linear-gradient(125deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 246, 240, 0.86) 100%);
+  box-shadow:
+    0 16px 38px rgba(17, 17, 17, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.board-share-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #111;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.board-share-item:hover {
+  background: rgba(17, 17, 17, 0.07);
+  color: #111;
+}
+
+.board-share-item svg {
+  flex: none;
+  color: #444;
 }
 
 .boards-empty {
