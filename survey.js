@@ -296,7 +296,7 @@ function JoinForm() {
       <${PhoneScroll} className="phone-survey">
         <div class="add-dialog_panel">
           <h2>You're in.</h2>
-          <p class="join-done">Producers can find you with the creatives now. <a href="results.html">See the roster</a></p>
+          <p class="join-done">Producers can find you with the creatives now. <a href="results.html?browse=1">See the roster</a></p>
         </div>
       </${PhoneScroll}>
     </${PhoneShell}>`;

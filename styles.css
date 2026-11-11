@@ -3505,6 +3505,14 @@ a.text-button:hover,
   background: transparent;
 }
 
+.results-tools[hidden] {
+  display: none;
+}
+
+.results .results-tools {
+  padding: 10px 0 14px;
+}
+
 .tool-pill {
   display: inline-flex;
   align-items: center;
@@ -4408,7 +4416,8 @@ body.add-open {
 
 .filter-row:hover,
 .filter-row.is-open,
-.filter-sub_row:hover {
+.filter-sub_row:hover,
+#location-menu .filter-row[aria-checked="true"] {
   background: #f2f2f2;
 }
 

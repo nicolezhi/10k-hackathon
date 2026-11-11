@@ -172,6 +172,7 @@ const state = {
   genresScoped: false,
   tenk: false,
   profile: "",
+  browse: false,
 };
 
 let resultsView = "list";
@@ -1574,14 +1575,7 @@ function paintWhoSub() {
   alignSubmenu(sub, row, 8);
 }
 
-function renderWhoOptions() {
-  const container = document.getElementById("who-options");
-  if (!container) return;
-  const sub = document.getElementById("who-sub");
-  if (sub) {
-    sub.hidden = true;
-    sub.innerHTML = "";
-  }
+function renderRoleGroups(container, bag, after) {
   container.innerHTML = "";
   SEARCH_ROLES.forEach((name) => {
     const role = ROLES.find((item) => item.name === name);
@@ -1601,26 +1595,41 @@ function renderWhoOptions() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "where-city";
-      const picked = state.roleGenres[role.name] || [];
-      const allOn = roleIsAll(role.name);
+      const picked = bag.roleGenres[role.name] || [];
+      const allOn = bagIsAll(bag, role.name);
       const pressed = row.genre === null
-        ? state.roles.includes(role.name)
+        ? bag.roles.includes(role.name)
         : row.genre
-          ? allOn || (state.roles.includes(role.name) && picked.includes(row.genre))
+          ? allOn || (bag.roles.includes(role.name) && picked.includes(row.genre))
           : allOn;
       button.setAttribute("aria-pressed", pressed ? "true" : "false");
       button.setAttribute("aria-checked", pressed ? "true" : "false");
       button.innerHTML = `${checkHtml()}<span>${escapeHtml(row.label)}</span>`;
       button.addEventListener("click", (event) => {
         event.stopPropagation();
-        if (row.genre === null) toggleFlatRole(role.name);
-        else if (!row.genre) toggleAllRole(role.name);
-        else toggleWhoGenre(role.name, row.genre);
+        if (row.genre === null) bagToggleFlat(bag, role.name);
+        else if (!row.genre) bagToggleAll(bag, role.name);
+        else bagToggleWhoGenre(bag, role.name, row.genre);
+        after();
       });
       list.append(button);
     });
     section.append(head, list);
     container.append(section);
+  });
+}
+
+function renderWhoOptions() {
+  const container = document.getElementById("who-options");
+  if (!container) return;
+  const sub = document.getElementById("who-sub");
+  if (sub) {
+    sub.hidden = true;
+    sub.innerHTML = "";
+  }
+  renderRoleGroups(container, state, () => {
+    syncScopedGenres();
+    render();
   });
 }
 
@@ -1750,8 +1759,58 @@ function checkHtml() {
   return `<span class="filter-check" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
 }
 
+function bagIsAll(bag, role) {
+  return bag.roles.includes(role) && !(bag.roleGenres[role] || []).length;
+}
+
 function roleIsAll(role) {
-  return state.roles.includes(role) && !(state.roleGenres[role] || []).length;
+  return bagIsAll(state, role);
+}
+
+function bagToggleAll(bag, role) {
+  if (bagIsAll(bag, role)) {
+    bag.roles = bag.roles.filter((item) => item !== role);
+    delete bag.roleGenres[role];
+  } else {
+    if (!bag.roles.includes(role)) bag.roles = [...bag.roles, role];
+    bag.roleGenres[role] = [];
+  }
+}
+
+function bagToggleFlat(bag, role) {
+  if (bag.roles.includes(role)) {
+    bag.roles = bag.roles.filter((item) => item !== role);
+    delete bag.roleGenres[role];
+  } else {
+    bag.roles = [...bag.roles, role];
+    bag.roleGenres[role] = [];
+  }
+}
+
+function bagToggleRoleGenre(bag, role, genre) {
+  const current = bagIsAll(bag, role) ? [] : bag.roleGenres[role] || [];
+  const next = current.includes(genre) ? current.filter((item) => item !== genre) : [...current, genre];
+  if (!next.length) {
+    bag.roles = bag.roles.filter((item) => item !== role);
+    delete bag.roleGenres[role];
+  } else {
+    if (!bag.roles.includes(role)) bag.roles = [...bag.roles, role];
+    bag.roleGenres[role] = next;
+  }
+}
+
+function bagToggleWhoGenre(bag, role, genre) {
+  if (!bagIsAll(bag, role)) {
+    bagToggleRoleGenre(bag, role, genre);
+    return;
+  }
+  const rest = genresForRole(role).filter((item) => item !== genre);
+  if (!rest.length) {
+    bag.roles = bag.roles.filter((item) => item !== role);
+    delete bag.roleGenres[role];
+  } else {
+    bag.roleGenres[role] = rest;
+  }
 }
 
 function syncScopedGenres() {
@@ -1770,55 +1829,25 @@ function activeFilterCount() {
 }
 
 function toggleAllRole(role) {
-  if (roleIsAll(role)) {
-    state.roles = state.roles.filter((item) => item !== role);
-    delete state.roleGenres[role];
-  } else {
-    if (!state.roles.includes(role)) state.roles = [...state.roles, role];
-    state.roleGenres[role] = [];
-  }
+  bagToggleAll(state, role);
   syncScopedGenres();
   render();
 }
 
 function toggleWhoGenre(role, genre) {
-  if (!roleIsAll(role)) {
-    toggleRoleGenre(role, genre);
-    return;
-  }
-  const rest = genresForRole(role).filter((item) => item !== genre);
-  if (!rest.length) {
-    state.roles = state.roles.filter((item) => item !== role);
-    delete state.roleGenres[role];
-  } else {
-    state.roleGenres[role] = rest;
-  }
+  bagToggleWhoGenre(state, role, genre);
   syncScopedGenres();
   render();
 }
 
 function toggleRoleGenre(role, genre) {
-  const current = roleIsAll(role) ? [] : state.roleGenres[role] || [];
-  const next = current.includes(genre) ? current.filter((item) => item !== genre) : [...current, genre];
-  if (!next.length) {
-    state.roles = state.roles.filter((item) => item !== role);
-    delete state.roleGenres[role];
-  } else {
-    if (!state.roles.includes(role)) state.roles = [...state.roles, role];
-    state.roleGenres[role] = next;
-  }
+  bagToggleRoleGenre(state, role, genre);
   syncScopedGenres();
   render();
 }
 
 function toggleFlatRole(role) {
-  if (state.roles.includes(role)) {
-    state.roles = state.roles.filter((item) => item !== role);
-    delete state.roleGenres[role];
-  } else {
-    state.roles = [...state.roles, role];
-    state.roleGenres[role] = [];
-  }
+  bagToggleFlat(state, role);
   syncScopedGenres();
   render();
 }
@@ -1850,11 +1879,9 @@ function setCities(cities) {
 }
 
 function toggleLocation(city) {
-  if (!city) setCities([]);
-  else {
-    const current = activeCities();
-    setCities(current.includes(city) ? current.filter((item) => item !== city) : [...current, city]);
-  }
+  state.country = "";
+  setCities(city ? [city] : []);
+  setLocationOpen(false);
   render();
 }
 
@@ -1867,13 +1894,12 @@ function paintLocation() {
   const cities = CITIES.filter((city) => cityMatches(city, query));
   const rows = [
     ...(query ? [] : [{ label: "All locations", city: "", checked: !picked.length }]),
-    ...cities.map((city) => ({ label: city.place, city: city.name, checked: picked.includes(city.name) })),
+    ...cities.map((city) => ({ label: city.place, city: city.name, checked: picked.length === 1 && picked[0] === city.name })),
   ];
   menu.innerHTML = rows.length
     ? rows
         .map(
-          (row) => `<button class="filter-row" type="button" role="menuitemcheckbox" aria-checked="${row.checked}" data-city="${escapeHtml(row.city)}">
-        ${checkHtml()}
+          (row) => `<button class="filter-row" type="button" role="menuitemradio" aria-checked="${row.checked}" data-city="${escapeHtml(row.city)}">
         <span class="filter-row_label">${escapeHtml(row.label)}</span>
       </button>`
         )
@@ -2106,10 +2132,22 @@ function clearRoles() {
   render();
 }
 
+function syncBrowseTools() {
+  const tools = document.getElementById("results-tools");
+  if (!tools) return;
+  const show = isResultsPage() && state.browse && !state.profile;
+  tools.hidden = !show;
+  if (!show) {
+    setFiltersOpen(false);
+    setLocationOpen(false);
+  }
+}
+
 function syncControls() {
   paintSearch();
   paintFilters();
   paintLocation();
+  syncBrowseTools();
 }
 
 function isResultsPage() {
@@ -2169,6 +2207,7 @@ function writeUrl(mode) {
   if (state.extraCities.length) params.set("near", state.extraCities.join(","));
   writeFilterParams(params);
   if (state.tenk) params.set("tenk", "1");
+  if (state.browse) params.set("browse", "1");
   if (state.board) params.set("board", state.board);
   if (state.profile) params.set("person", state.profile);
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
@@ -2203,6 +2242,7 @@ function readUrl() {
     state.genres = rawGenres;
   }
   state.tenk = params.get("tenk") === "1";
+  state.browse = params.get("browse") === "1";
   state.board = params.get("board") || "";
   state.profile = params.get("person") || "";
 }
@@ -2333,6 +2373,7 @@ function bind() {
       }
     }
     state.profile = "";
+    state.browse = false;
     openPanel = "";
     document.getElementById("where-filter").value = "";
     if (!isResultsPage()) {
@@ -2369,7 +2410,8 @@ function bind() {
         closeCityMenus();
         return;
       }
-      if (mainPicker.isOpen() || secondaryPickers.some((picker) => picker.isOpen())) {
+      if (addRoleOpen() || mainPicker.isOpen() || secondaryPickers.some((picker) => picker.isOpen())) {
+        setAddRoleOpen(false);
         mainPicker.close();
         secondaryPickers.forEach((picker) => picker.close());
         return;
@@ -2415,7 +2457,15 @@ function loadAddedPeople() {
   const saved = readAddedPeople();
   const kept = saved.filter((record) => {
     const name = String(record?.name || "").trim();
-    return !/^nicole(\s|$)/i.test(name) && !/^hamna(\s|$)/i.test(name) && !/^betty(\s|$)/i.test(name);
+    const handle = String(record?.instagram || "").trim().toLowerCase().replace(/^@/, "");
+    if (!name) return false;
+    if (/^(nicole|hamna|betty)(\s|$)/i.test(name)) return false;
+    const duplicate = PEOPLE.some((item) => {
+      if (String(item.name || "").trim().toLowerCase() === name.toLowerCase()) return true;
+      const existing = String(item.instagram || "").trim().toLowerCase().replace(/^@/, "");
+      return handle && existing === handle;
+    });
+    return !duplicate;
   });
   if (kept.length !== saved.length) localStorage.setItem(ADDED_KEY, JSON.stringify(kept));
   kept
@@ -2830,6 +2880,7 @@ function bindCityPicker(wrap) {
     event.stopPropagation();
     const open = wrap.classList.contains("is-open");
     closeCityMenus();
+    setAddRoleOpen(false);
     mainPicker.close();
     secondaryPickers.forEach((picker) => picker.close());
     if (!open) {
@@ -2925,15 +2976,83 @@ function checkedValues(name) {
   return [...document.querySelectorAll(`#add-form input[name="${name}"]:checked`)].map((input) => input.value);
 }
 
+const addPick = { roles: [], roleGenres: {} };
+
+function addRoleOpen() {
+  const panel = document.getElementById("add-role-panel");
+  return Boolean(panel && !panel.hidden);
+}
+
+function addRoleLabel() {
+  if (!addPick.roles.length) return "Add a role";
+  const detail = (role) => {
+    const picked = addPick.roleGenres[role] || [];
+    if (picked.length === 1) return `${picked[0]} ${role.toLowerCase()}`;
+    if (picked.length > 1) return `${picked[0]} +${picked.length - 1}`;
+    return role;
+  };
+  const label = detail(addPick.roles[0]);
+  return addPick.roles.length === 1 ? label : `${label} +${addPick.roles.length - 1}`;
+}
+
+function paintAddRoleLabel() {
+  const label = document.getElementById("add-role-label");
+  const toggle = document.getElementById("add-role-toggle");
+  if (label) label.textContent = addRoleLabel();
+  toggle?.classList.toggle("is-set", addPick.roles.length > 0);
+}
+
+function renderAddRoleMenu() {
+  const container = document.getElementById("add-role-options");
+  if (!container) return;
+  renderRoleGroups(container, addPick, () => {
+    paintAddRoleLabel();
+    renderAddRoleMenu();
+  });
+}
+
+function setAddRoleOpen(open) {
+  const panel = document.getElementById("add-role-panel");
+  const toggle = document.getElementById("add-role-toggle");
+  if (!panel || !toggle) return;
+  if (open) {
+    closeCityMenus();
+    renderAddRoleMenu();
+  }
+  panel.hidden = !open;
+  toggle.setAttribute("aria-expanded", String(open));
+  if (open) {
+    panel.style.maxHeight = "320px";
+    placeDialogMenu(panel);
+  } else clearDialogMenu(panel);
+}
+
+function resetAddPick() {
+  addPick.roles = [];
+  addPick.roleGenres = {};
+  setAddRoleOpen(false);
+  paintAddRoleLabel();
+}
+
+function addPickGenres() {
+  const genres = [];
+  addPick.roles.forEach((role) => {
+    const picked = addPick.roleGenres[role] || [];
+    const list = picked.length ? picked : genresForRole(role);
+    list.forEach((genre) => {
+      if (genre && !genres.includes(genre)) genres.push(genre);
+    });
+  });
+  return genres;
+}
+
 function fillAddForm() {
   const city = document.getElementById("add-city");
   const wrap = document.getElementById("add-city-wrap");
   city.value = "";
   wrap.dataset.blocked = "";
   paintCityMenu(wrap);
-  mainPicker.reset();
-  clearSecondaryFields();
-  mainPicker.build();
+  resetAddPick();
 }
 
 function addDialogOpen() {
@@ -2956,25 +3075,25 @@ function setAddOpen(open) {
   paintSearch();
   fillAddForm();
   document.getElementById("add-form").reset();
-  clearTravel();
+  resetAddPick();
   document.getElementById("add-error").textContent = "";
   document.getElementById("add-name").focus();
 }
 
-function addPersonFromForm() {
+async function savePersonRecord(record) {
+  const response = await fetch("/api/people", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(record),
+  });
+  if (!response.ok) throw new Error("save failed");
+}
+
+async function addPersonFromForm() {
   const name = document.getElementById("add-name").value.trim();
   const city = document.getElementById("add-city").value;
-  const mainRoles = mainPicker.roles();
-  const extraRoles = [];
-  const extraGenres = [];
-  secondaryPickers.forEach((picker) => {
-    picker.roles().forEach((role) => {
-      if (!mainRoles.includes(role) && !extraRoles.includes(role)) extraRoles.push(role);
-    });
-    extraGenres.push(...picker.genres());
-  });
-  const roles = mainRoles;
-  const genres = [...new Set([...mainPicker.genres(), ...extraGenres])];
+  const roles = addPick.roles.slice();
+  const genres = addPickGenres();
   const instagram = cleanHandle(document.getElementById("add-instagram").value);
   const email = document.getElementById("add-email").value.trim();
   const phone = document.getElementById("add-phone").value.trim();
@@ -2992,9 +3111,9 @@ function addPersonFromForm() {
     document.getElementById("add-city-toggle").focus();
     return;
   }
-  if (!mainPicker.roles().length) {
-    error.textContent = "Choose a main role.";
-    document.getElementById("add-main-toggle")?.focus();
+  if (!roles.length) {
+    error.textContent = "Choose a role.";
+    document.getElementById("add-role-toggle")?.focus();
     return;
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -3017,12 +3136,12 @@ function addPersonFromForm() {
     error.textContent = "Preferred contact needs a value.";
     return;
   }
-  const record = person(rosterId(name), name, city, travelCities(), roles, genres, false, {
+  const record = person(rosterId(name), name, city, [], roles, genres, false, {
     instagram,
     email,
     phone,
     preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
-    secondary: extraRoles,
+    secondary: [],
     referredBy: "",
     compensation: "",
     portfolio,
@@ -3032,7 +3151,16 @@ function addPersonFromForm() {
     avatar: "",
     images: [],
   });
-  PEOPLE.unshift(record);
+  const submit = document.querySelector("#add-form .add-submit");
+  if (submit) submit.disabled = true;
+  try {
+    await savePersonRecord(record);
+  } catch (saveError) {
+    error.textContent = "Couldn't add them to the roster. Try again.";
+    if (submit) submit.disabled = false;
+    return;
+  }
+  if (!PEOPLE.some((item) => item.id === record.id)) PEOPLE.unshift(record);
   rememberPerson(record);
   if (!filteredPeople().some((item) => item.id === record.id)) {
     state.roles = [];
@@ -3042,11 +3170,13 @@ function addPersonFromForm() {
     state.city = "";
     state.country = "";
     state.extraCities = [];
+    state.browse = true;
   }
   buildFilters();
   setAddOpen(false);
+  if (submit) submit.disabled = false;
   render({ url: "push" });
-  window.scrollTo(0, 0);
+  document.querySelector(`.result-card[data-id="${CSS.escape(record.id)}"]`)?.scrollIntoView({ block: "center" });
 }
 
 function bindAddRoster() {
@@ -3059,28 +3189,17 @@ function bindAddRoster() {
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) setAddOpen(false);
   });
-  mainPicker.bind();
+  document.getElementById("add-role-toggle")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setAddRoleOpen(!addRoleOpen());
+  });
   const dialogPanel = document.querySelector(".add-dialog_panel");
   dialogPanel?.addEventListener("scroll", () => {
     dialogPanel.querySelectorAll(".add-role_panel:not([hidden]), .add-city_panel:not([hidden])").forEach((panel) => placeDialogMenu(panel));
   }, { passive: true });
-  document.getElementById("add-secondary-add")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    addSecondaryField();
-  });
-  document.getElementById("add-travel")?.addEventListener("change", syncTravel);
-  document.getElementById("add-travel-add")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    addTravelCity();
-  });
   bindCityPicker(document.getElementById("add-city-wrap"));
-  document.getElementById("add-city")?.addEventListener("change", refreshTravelSelects);
   document.getElementById("add-form").addEventListener("click", (event) => {
-    [mainPicker, ...secondaryPickers].forEach((picker) => {
-      const wrap = picker.wrap();
-      if (wrap && picker.isOpen() && !wrap.contains(event.target)) picker.close();
-    });
+    if (!event.target.closest("#add-role-wrap")) setAddRoleOpen(false);
     if (!event.target.closest(".add-city")) closeCityMenus();
   });
   document.getElementById("add-form").addEventListener("submit", (event) => {
