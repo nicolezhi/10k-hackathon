@@ -2410,8 +2410,7 @@ function bind() {
         closeCityMenus();
         return;
       }
-      if (addRoleOpen() || mainPicker.isOpen() || secondaryPickers.some((picker) => picker.isOpen())) {
-        setAddRoleOpen(false);
+      if (mainPicker.isOpen() || secondaryPickers.some((picker) => picker.isOpen())) {
         mainPicker.close();
         secondaryPickers.forEach((picker) => picker.close());
         return;
@@ -2459,7 +2458,8 @@ function loadAddedPeople() {
     const name = String(record?.name || "").trim();
     const handle = String(record?.instagram || "").trim().toLowerCase().replace(/^@/, "");
     if (!name) return false;
-    if (/^(nicole|hamna|betty)(\s|$)/i.test(name)) return false;
+    if (/^(nicole|ncole|hamna|betty)(\s|$)/i.test(name)) return false;
+    if (handle === "nicolezhi" || record?.id === "ncole") return false;
     const duplicate = PEOPLE.some((item) => {
       if (String(item.name || "").trim().toLowerCase() === name.toLowerCase()) return true;
       const existing = String(item.instagram || "").trim().toLowerCase().replace(/^@/, "");
@@ -2552,7 +2552,7 @@ function createRolePicker(config) {
 
   function labelText() {
     if (!pick.roles.length) return config.emptyLabel;
-    const names = pick.roles.map((role) => filterLabel(role));
+    const names = pick.roles.map((role) => formRoleLabel(role));
     if (names.length === 1) return names[0];
     return `${names[0]} +${names.length - 1}`;
   }
@@ -2597,7 +2597,7 @@ function createRolePicker(config) {
     const box = document.getElementById(config.genres);
     if (!box) return;
     const role = single ? pick.roles[0] || "" : "";
-    const item = role ? filterMenu().find((entry) => entry.role === role) : null;
+    const item = role ? formRoleMenu().find((entry) => entry.role === role) : null;
     const genres = item && !blocked().includes(role) ? item.genres : [];
     if (!genres.length) {
       box.hidden = true;
@@ -2670,7 +2670,7 @@ function createRolePicker(config) {
     if (!menu || !panel) return;
     const skip = new Set(blocked());
     menu.innerHTML = "";
-    filterMenu().forEach((item) => {
+    formRoleMenu().forEach((item) => {
       if (skip.has(item.role)) return;
       const button = document.createElement("button");
       button.type = "button";
@@ -2880,7 +2880,6 @@ function bindCityPicker(wrap) {
     event.stopPropagation();
     const open = wrap.classList.contains("is-open");
     closeCityMenus();
-    setAddRoleOpen(false);
     mainPicker.close();
     secondaryPickers.forEach((picker) => picker.close());
     if (!open) {
@@ -2976,74 +2975,18 @@ function checkedValues(name) {
   return [...document.querySelectorAll(`#add-form input[name="${name}"]:checked`)].map((input) => input.value);
 }
 
-const addPick = { roles: [], roleGenres: {} };
-
-function addRoleOpen() {
-  const panel = document.getElementById("add-role-panel");
-  return Boolean(panel && !panel.hidden);
+function formRoleMenu() {
+  return [
+    { role: "Photographer", label: "Photography", genres: ["Concert", "Events", "Portrait"] },
+    { role: "Videographer / DP", label: "Videography", genres: ["Concert", "Events", "Music video", "Portrait"] },
+    { role: "Stylist", label: "Stylist", genres: ["Hair", "Wardrobe"] },
+    { role: "Model", label: "Model", genres: [] },
+    { role: "Graphic designer", label: "Graphic designer", genres: [] },
+  ];
 }
 
-function addRoleLabel() {
-  if (!addPick.roles.length) return "Add a role";
-  const detail = (role) => {
-    const picked = addPick.roleGenres[role] || [];
-    if (picked.length === 1) return `${picked[0]} ${role.toLowerCase()}`;
-    if (picked.length > 1) return `${picked[0]} +${picked.length - 1}`;
-    return role;
-  };
-  const label = detail(addPick.roles[0]);
-  return addPick.roles.length === 1 ? label : `${label} +${addPick.roles.length - 1}`;
-}
-
-function paintAddRoleLabel() {
-  const label = document.getElementById("add-role-label");
-  const toggle = document.getElementById("add-role-toggle");
-  if (label) label.textContent = addRoleLabel();
-  toggle?.classList.toggle("is-set", addPick.roles.length > 0);
-}
-
-function renderAddRoleMenu() {
-  const container = document.getElementById("add-role-options");
-  if (!container) return;
-  renderRoleGroups(container, addPick, () => {
-    paintAddRoleLabel();
-    renderAddRoleMenu();
-  });
-}
-
-function setAddRoleOpen(open) {
-  const panel = document.getElementById("add-role-panel");
-  const toggle = document.getElementById("add-role-toggle");
-  if (!panel || !toggle) return;
-  if (open) {
-    closeCityMenus();
-    renderAddRoleMenu();
-  }
-  panel.hidden = !open;
-  toggle.setAttribute("aria-expanded", String(open));
-  if (open) {
-    panel.style.maxHeight = "320px";
-    placeDialogMenu(panel);
-  } else clearDialogMenu(panel);
-}
-
-function resetAddPick() {
-  addPick.roles = [];
-  addPick.roleGenres = {};
-  setAddRoleOpen(false);
-  paintAddRoleLabel();
-}
-
-function addPickGenres() {
-  const genres = [];
-  addPick.roles.forEach((role) => {
-    const picked = addPick.roleGenres[role] || [];
-    const list = picked.length ? picked : genresForRole(role);
-    list.forEach((genre) => {
-      if (genre && !genres.includes(genre)) genres.push(genre);
-    });
-  });
-  return genres;
+function formRoleLabel(role) {
+  return formRoleMenu().find((item) => item.role === role)?.label || role;
 }
 
 function fillAddForm() {
@@ -3052,7 +2995,9 @@ function fillAddForm() {
   city.value = "";
   wrap.dataset.blocked = "";
   paintCityMenu(wrap);
-  resetAddPick();
+  mainPicker.reset();
+  clearSecondaryFields();
+  mainPicker.build();
 }
 
 function addDialogOpen() {
@@ -3075,7 +3020,6 @@ function setAddOpen(open) {
   paintSearch();
   fillAddForm();
   document.getElementById("add-form").reset();
-  resetAddPick();
   document.getElementById("add-error").textContent = "";
   document.getElementById("add-name").focus();
 }
@@ -3092,8 +3036,16 @@ async function savePersonRecord(record) {
 async function addPersonFromForm() {
   const name = document.getElementById("add-name").value.trim();
   const city = document.getElementById("add-city").value;
-  const roles = addPick.roles.slice();
-  const genres = addPickGenres();
+  const roles = mainPicker.roles();
+  const extraRoles = [];
+  const extraGenres = [];
+  secondaryPickers.forEach((picker) => {
+    picker.roles().forEach((role) => {
+      if (!roles.includes(role) && !extraRoles.includes(role)) extraRoles.push(role);
+    });
+    extraGenres.push(...picker.genres());
+  });
+  const genres = [...new Set([...mainPicker.genres(), ...extraGenres])];
   const instagram = cleanHandle(document.getElementById("add-instagram").value);
   const email = document.getElementById("add-email").value.trim();
   const phone = document.getElementById("add-phone").value.trim();
@@ -3112,8 +3064,8 @@ async function addPersonFromForm() {
     return;
   }
   if (!roles.length) {
-    error.textContent = "Choose a role.";
-    document.getElementById("add-role-toggle")?.focus();
+    error.textContent = "Choose a main role.";
+    document.getElementById("add-main-toggle")?.focus();
     return;
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -3141,7 +3093,7 @@ async function addPersonFromForm() {
     email,
     phone,
     preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
-    secondary: [],
+    secondary: extraRoles,
     referredBy: "",
     compensation: "",
     portfolio,
@@ -3189,17 +3141,22 @@ function bindAddRoster() {
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) setAddOpen(false);
   });
-  document.getElementById("add-role-toggle")?.addEventListener("click", (event) => {
-    event.stopPropagation();
-    setAddRoleOpen(!addRoleOpen());
-  });
+  mainPicker.bind();
   const dialogPanel = document.querySelector(".add-dialog_panel");
   dialogPanel?.addEventListener("scroll", () => {
     dialogPanel.querySelectorAll(".add-role_panel:not([hidden]), .add-city_panel:not([hidden])").forEach((panel) => placeDialogMenu(panel));
   }, { passive: true });
+  document.getElementById("add-secondary-add")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    addSecondaryField();
+  });
   bindCityPicker(document.getElementById("add-city-wrap"));
   document.getElementById("add-form").addEventListener("click", (event) => {
-    if (!event.target.closest("#add-role-wrap")) setAddRoleOpen(false);
+    [mainPicker, ...secondaryPickers].forEach((picker) => {
+      const wrap = picker.wrap();
+      if (wrap && picker.isOpen() && !wrap.contains(event.target)) picker.close();
+    });
     if (!event.target.closest(".add-city")) closeCityMenus();
   });
   document.getElementById("add-form").addEventListener("submit", (event) => {
