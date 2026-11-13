@@ -5486,6 +5486,41 @@ button.roster-icon {
 }
 
 @media (max-width: 800px) {
+  .brand-logo {
+    gap: 5px;
+  }
+
+  .brand-logo_mark {
+    width: 20px;
+    height: 20px;
+  }
+
+  .brand-logo_word {
+    font-size: 18px;
+  }
+
+  .brand-logo_tag {
+    font-size: 8px;
+  }
+
+  .nav_brand,
+  .results-top .nav_brand {
+    width: auto;
+  }
+
+  body:not([data-page]) .results-top {
+    padding: 8px 14px 6px;
+    gap: 6px;
+  }
+
+  body:not([data-page]) .results-top .nav_brand {
+    margin-top: 0;
+  }
+
+  body:not([data-page]) .results-top .search {
+    margin-top: 2px;
+  }
+
   .results-top .search {
     padding: 0;
     border: 0;
@@ -5499,14 +5534,14 @@ button.roster-icon {
     display: flex;
     align-items: center;
     width: 100%;
-    min-height: 52px;
-    padding: 0 18px;
+    min-height: 40px;
+    padding: 0 14px;
     border: 1px solid rgba(255, 255, 255, 0.72);
-    border-radius: 18px;
+    border-radius: 14px;
     background: rgba(255, 255, 255, 0.92);
     color: #6a6a6a;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1.2;
     text-align: center;
@@ -5674,13 +5709,13 @@ button.roster-icon {
     grid-column: 1;
     justify-self: start;
     align-self: center;
-    margin-top: 16px;
+    margin-top: 8px;
     padding: 0;
     border: 0;
     background: transparent;
     color: #111;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1;
     text-decoration: none;
@@ -5711,10 +5746,17 @@ button.roster-icon {
     justify-content: center;
     gap: 8px;
     width: auto;
-    height: 44px;
-    margin: 16px 0 0;
-    padding: 0 18px;
+    height: 34px;
+    margin: 8px 0 0;
+    padding: 0 12px;
     border-radius: 999px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .airbnb.is-started.is-searching .airbnb_go svg {
+    width: 14px;
+    height: 14px;
   }
 
   .airbnb.is-started .airbnb_go_label,
@@ -5928,9 +5970,9 @@ body:not([data-page]) .hero_stage {
   body:not([data-page]) .hero_stage {
     width: calc(100% - 8px);
     max-width: 420px;
-    aspect-ratio: 360 / 500;
+    aspect-ratio: 360 / 418;
     margin-top: 4px;
-    margin-bottom: 18px;
+    margin-bottom: 8px;
   }
 
   body:not([data-page]) .hero_stage > svg {
@@ -7727,5 +7769,79 @@ body.share-preview-open {
 
 .board-card_add:hover .board-card_copy h3 {
   color: #111;
+}
+
+.device-toggle {
+  position: fixed;
+  z-index: 400;
+  left: 50%;
+  bottom: 22px;
+  display: none;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 999px;
+  background: rgba(255, 250, 247, 0.94);
+  box-shadow: 0 12px 32px rgba(17, 17, 17, 0.14);
+  transform: translateX(-50%);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+}
+
+@media (min-width: 801px) {
+  html:not(.is-frame) .device-toggle {
+    display: flex;
+  }
+}
+
+.device-toggle button {
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.device-toggle button[aria-pressed="true"] {
+  background: #111;
+  color: #fff;
+}
+
+html.is-device-preview,
+html.is-device-preview body {
+  height: 100%;
+  overflow: hidden;
+  background: #e7e1db;
+}
+
+html.is-device-preview body > :not(.device-stage):not(.device-toggle) {
+  display: none !important;
+}
+
+.device-stage {
+  display: none;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 28px 24px 84px;
+}
+
+html.is-device-preview .device-stage {
+  display: flex;
+}
+
+.device-stage iframe {
+  width: 390px;
+  height: 100%;
+  border: 0;
+  border-radius: 32px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(17, 17, 17, 0.18);
 }
 
