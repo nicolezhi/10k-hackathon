@@ -24,13 +24,16 @@ def clean_record(data):
     city = str(data.get("city") or "").strip()
     roles = strings(data.get("roles"))
     record_id = str(data.get("id") or "").strip()
-    if not name or not city or not roles or not ID_RE.fullmatch(record_id):
+    instagram = str(data.get("instagram") or "").strip().lstrip("@")
+    if not name or not ID_RE.fullmatch(record_id):
+        raise ValueError("Name and id are required.")
+    if not instagram and (not city or not roles):
         raise ValueError("Name, city, role, and id are required.")
     preferred = data.get("preferred") or ""
     if not isinstance(preferred, str):
         preferred = ""
     images = data.get("images") if isinstance(data.get("images"), list) else []
-    return {
+    record = {
         "id": record_id,
         "name": name,
         "city": city,
@@ -39,7 +42,7 @@ def clean_record(data):
         "secondary": strings(data.get("secondary")),
         "genres": strings(data.get("genres")),
         "tenk": False,
-        "instagram": str(data.get("instagram") or ""),
+        "instagram": instagram,
         "email": str(data.get("email") or ""),
         "phone": str(data.get("phone") or ""),
         "preferred": preferred,
@@ -52,6 +55,9 @@ def clean_record(data):
         "avatar": str(data.get("avatar") or ""),
         "images": images,
     }
+    if "workedWith" in data:
+        record["workedWith"] = data.get("workedWith") is True
+    return record
 
 
 def insert_person(record):

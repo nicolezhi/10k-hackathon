@@ -10,12 +10,17 @@
     <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
+    <link
+      rel="stylesheet"
+      href="https://api.fontshare.com/v2/css?f[]=neue-montreal@400&display=swap"
+    />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=243" />
+    <link rel="stylesheet" href="styles.css?v=282" />
   </head>
   <body data-page="boards" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -76,7 +81,11 @@
           </div>
         </div>
       </form>
-      <nav class="nav-links" aria-label="Sections">
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Menu">
+        <svg class="nav-toggle_open" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+        <svg class="nav-toggle_close" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+      </button>
+      <nav class="nav-links" id="nav-links" aria-label="Sections">
         <a class="nav_link" href="results.html?browse=1">Creatives</a>
         <a class="nav_link is-current" href="boards.html">Boards</a>
       </nav>
@@ -192,7 +201,7 @@
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                     <path d="M20 14.5a3.5 3.5 0 0 1-3.5 3.5H8l-4 3V7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
-                  <span>Text</span>
+                  <span id="board-share-text-label">Text</span>
                 </a>
                 <a class="board-share-item" id="board-share-email" href="mailto:" role="menuitem">
                   <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -302,8 +311,68 @@
       </div>
     </div>
 
-    <script src="people.js?v=24"></script>
+    </div>
+
+    <div class="share-preview" id="share-preview" hidden>
+      <button class="share-preview_scrim" id="share-preview-scrim" type="button" aria-label="Close message preview"></button>
+      <div class="phone" role="dialog" aria-modal="true" aria-labelledby="share-preview-title">
+        <div class="phone-screen">
+          <div class="phone-island" aria-hidden="true"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <span class="phone-status_icons" aria-hidden="true">
+              <svg width="17" height="12" viewBox="0 0 17 12"><rect x="0" y="7" width="3" height="5" rx="0.6" fill="currentColor"/><rect x="4.5" y="5" width="3" height="7" rx="0.6" fill="currentColor"/><rect x="9" y="2.5" width="3" height="9.5" rx="0.6" fill="currentColor"/><rect x="13.5" y="0" width="3" height="12" rx="0.6" fill="currentColor"/></svg>
+              <svg width="16" height="12" viewBox="0 0 16 12"><path d="M8 2.2c2.2 0 4.2.8 5.8 2.2l1.2-1.4A9.6 9.6 0 0 0 8 .2 9.6 9.6 0 0 0 1 3l1.2 1.4A8.2 8.2 0 0 1 8 2.2zm0 3.2c1.3 0 2.5.5 3.4 1.3l1.2-1.4A6.6 6.6 0 0 0 8 3.8a6.6 6.6 0 0 0-4.6 1.5l1.2 1.4A4.8 4.8 0 0 1 8 5.4zM8 9.2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="currentColor"/></svg>
+              <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.6" y="0.6" width="21" height="10.8" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="2" width="16" height="8" rx="1.2" fill="currentColor"/><path d="M23 4.2v3.6c.8-.3 1.2-.9 1.2-1.8s-.4-1.5-1.2-1.8z" fill="currentColor"/></svg>
+            </span>
+          </div>
+          <header class="imessage-head">
+            <span class="imessage-back" aria-hidden="true">
+              <svg width="12" height="20" viewBox="0 0 12 20"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <div class="imessage-who">
+              <span class="imessage-avatar" aria-hidden="true">A</span>
+              <strong>Anna</strong>
+              <span>iMessage</span>
+            </div>
+            <span class="imessage-video" aria-hidden="true">
+              <svg width="22" height="16" viewBox="0 0 24 18"><rect x="1.2" y="3.2" width="13.2" height="11.6" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.6 7.4 22 4.4v9.2l-6.4-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            </span>
+          </header>
+          <div class="imessage-thread">
+            <p class="imessage-time">Today 9:41 AM</p>
+            <p class="imessage-bubble">Can you send me the board?</p>
+            <div class="imessage-sent" id="share-sent">
+              <article class="share-card">
+                <div class="share-collage" id="share-preview-collage" data-count="0"></div>
+                <div class="share-card_copy">
+                  <strong id="share-preview-title">Let's draft a board</strong>
+                  <span id="share-preview-board"></span>
+                </div>
+              </article>
+              <p class="imessage-delivered">Delivered</p>
+            </div>
+          </div>
+          <div class="imessage-compose">
+            <span class="imessage-plus" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v8M8 12h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            </span>
+            <div class="imessage-field" id="share-field">
+              <span class="share-caret" aria-hidden="true"></span>
+              <span class="share-field_placeholder">iMessage</span>
+              <span class="share-field_text" id="share-field-text"></span>
+              <span class="imessage-send" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 12.2V3.8M4.6 7.1 8 3.8l3.4 3.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </div>
+          </div>
+        </div>
+        <button class="share-preview_x" id="share-preview-close" type="button" aria-label="Close">×</button>
+      </div>
+    </div>
+
+    <script src="people.js?v=26"></script>
     <script src="projects.js?v=45"></script>
-    <script src="app.js?v=202"></script>
+    <script src="app.js?v=231"></script>
   </body>
 </html>

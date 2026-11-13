@@ -737,6 +737,11 @@ function syncStarButtons() {
   });
 }
 
+function tenkStampHtml(record) {
+  if (!record.tenk) return "";
+  return `<span class="tenk-stamp" title="Worked with 10K">10K</span>`;
+}
+
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
   const tags = (record.genres || []).join(" · ");
@@ -745,7 +750,7 @@ function rosterCardHtml(record) {
     ${starButtonHtml(record.id, "result-card_star")}
     ${avatarHtml(record, "result-card_avatar")}
     <div class="result-card_body">
-      <h3>${escapeHtml(record.name)}</h3>
+      <h3><span class="result-card_name">${escapeHtml(record.name)}</span>${tenkStampHtml(record)}</h3>
       <p class="result-card_role">${escapeHtml(roleNames(record).join(" · "))}</p>
       ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : "<p></p>"}
       <p class="result-card_tags">${escapeHtml(tags)}</p>
@@ -1257,7 +1262,7 @@ function renderProfile() {
       ${avatarHtml(record, "profile_avatar")}
       <div class="profile_id">
       <div class="profile_title_row">
-        <h1>${escapeHtml(record.name)}</h1>
+        <h1><span>${escapeHtml(record.name)}</span>${tenkStampHtml(record)}</h1>
         ${starButtonHtml(record.id, "profile_star")}
       </div>
       ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
@@ -1370,6 +1375,223 @@ function escapeHtml(value) {
 let openPanel = "";
 let openWhoRole = "";
 let whoSubTimer = 0;
+let searchExpanded = false;
+
+function mobileLayout() {
+  return window.matchMedia("(max-width: 800px)").matches;
+}
+
+function searchIsStarted() {
+  return searchExpanded || Boolean(activeCities().length || state.country || state.roles.length || openPanel);
+}
+
+function composerOpen() {
+  if (mobileLayout()) {
+    const typing = document.body.classList.contains("is-city-search");
+    if (!document.body.dataset.page) return Boolean(searchExpanded || openPanel || typing);
+    return Boolean(openPanel || typing);
+  }
+  return searchIsStarted();
+}
+
+function searchPromptLabel() {
+  return "Search for creatives";
+}
+
+function clearSearchFilters() {
+  state.city = "";
+  state.country = "";
+  state.extraCities = [];
+  state.roles = [];
+  state.roleGenres = {};
+  state.genres = [];
+  state.genresScoped = false;
+  const field = document.getElementById("where-filter");
+  if (field) field.value = "";
+  const locationField = document.getElementById("location-filter");
+  if (locationField) locationField.value = "";
+  searchExpanded = true;
+  openPanel = "where";
+  openWhoRole = "";
+  closeCitySearch();
+  render();
+}
+
+function placeSearchPanels() {
+  const airbnb = document.getElementById("airbnb");
+  const whereSlot = document.getElementById("where-segment")?.parentElement;
+  const whoSlot = document.getElementById("who-segment")?.parentElement;
+  const wherePanel = document.getElementById("where-panel");
+  const whoPanel = document.getElementById("who-panel");
+  if (!airbnb || !whereSlot || !whoSlot || !wherePanel || !whoPanel) return;
+  const clear = airbnb.querySelector(".search-clear");
+  if (mobileLayout()) {
+    if (wherePanel.parentElement !== whereSlot) whereSlot.append(wherePanel);
+    if (whoPanel.parentElement !== whoSlot) whoSlot.append(whoPanel);
+  } else if (wherePanel.parentElement !== airbnb || whoPanel.parentElement !== airbnb) {
+    airbnb.insertBefore(wherePanel, clear);
+    airbnb.insertBefore(whoPanel, clear);
+  }
+  const input = document.getElementById("where-filter");
+  if (input) input.placeholder = mobileLayout() ? "Search cities" : "Los Angeles, Memphis, Remote";
+  if (!input || input.dataset.citySearchBound) return;
+  input.dataset.citySearchBound = "1";
+  const openFromTap = () => {
+    if (mobileLayout()) openCitySearch();
+  };
+  input.addEventListener("pointerdown", openFromTap);
+  input.addEventListener("focus", openFromTap);
+  input.addEventListener("input", syncSearchActions);
+  const search = input.closest(".where-search");
+  if (!search || search.querySelector(".where-back")) return;
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "where-back";
+  back.setAttribute("aria-label", "Back");
+  back.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M19 12H6M11 6 5 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  back.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  back.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeCitySearch();
+  });
+  search.insertBefore(back, search.firstChild);
+}
+
+function ensureSearchChrome() {
+  if (!document.querySelector(".search-overlay")) {
+    const overlay = document.createElement("button");
+    overlay.type = "button";
+    overlay.className = "search-overlay";
+    overlay.setAttribute("aria-label", "Close search");
+    overlay.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      exitSearchView();
+    });
+    document.body.appendChild(overlay);
+  }
+  if (document.querySelector(".search-close")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "search-close";
+  button.setAttribute("aria-label", "Close");
+  button.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    exitSearchView();
+  });
+  document.body.appendChild(button);
+}
+
+function searchPopupOpen() {
+  if (!mobileLayout()) return false;
+  const typing = document.body.classList.contains("is-city-search");
+  if (!document.body.dataset.page) return Boolean(searchExpanded || openPanel || typing);
+  return Boolean(openPanel || typing);
+}
+
+function syncSearchPopup() {
+  const open = searchPopupOpen();
+  document.body.classList.toggle("is-search-open", open);
+  if (!open) return;
+  ensureSearchChrome();
+  document.querySelector(".navbar")?.classList.remove("is-nav-open");
+  document.getElementById("nav-toggle")?.setAttribute("aria-expanded", "false");
+  placeSearchClose();
+  requestAnimationFrame(() => placeSearchClose());
+}
+
+function placeSearchClose() {
+  const button = document.querySelector(".search-close");
+  const card = document.querySelector("#airbnb .segment-slot");
+  if (!button || !card) return;
+  const right = Math.max(0, window.innerWidth - card.getBoundingClientRect().right);
+  button.style.right = `${right}px`;
+}
+
+function exitSearchView() {
+  if (!document.body.dataset.page) searchExpanded = false;
+  openPanel = "";
+  openWhoRole = "";
+  closeCitySearch();
+  paintSearch();
+}
+
+function searchHasCriteria() {
+  const typed = document.getElementById("where-filter")?.value.trim();
+  return Boolean(typed || activeCities().length || state.country || state.roles.length);
+}
+
+function syncSearchActions() {
+  const airbnb = document.getElementById("airbnb");
+  if (!airbnb) return;
+  const searching = document.body.classList.contains("is-city-search") || searchHasCriteria();
+  airbnb.classList.toggle("is-searching", searching);
+}
+
+function openCitySearch() {
+  if (!mobileLayout()) return;
+  document.body.classList.add("is-city-search");
+  document.getElementById("airbnb")?.classList.add("is-city-search");
+  syncSearchActions();
+  syncSearchPopup();
+  const input = document.getElementById("where-filter");
+  if (input && document.activeElement !== input) input.focus({ preventScroll: true });
+}
+
+function closeCitySearch() {
+  document.body.classList.remove("is-city-search");
+  document.getElementById("airbnb")?.classList.remove("is-city-search");
+  document.getElementById("where-filter")?.blur();
+  syncSearchActions();
+}
+
+function ensureSearchPrompt() {
+  const airbnb = document.getElementById("airbnb");
+  if (!airbnb || airbnb.querySelector(".search-prompt")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "search-prompt";
+  button.textContent = "Search for creatives";
+  airbnb.insertBefore(button, airbnb.firstChild);
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    searchExpanded = true;
+    openPanel = "where";
+    openWhoRole = "";
+    setFiltersOpen(false);
+    setLocationOpen(false);
+    paintSearch();
+  });
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "search-clear";
+  clear.textContent = "Clear all";
+  airbnb.appendChild(clear);
+  clear.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearSearchFilters();
+  });
+  window.matchMedia("(max-width: 800px)").addEventListener("change", () => {
+    if (!mobileLayout()) closeCitySearch();
+    paintSearch();
+    syncNearbyBar();
+    syncBrowseTools();
+  });
+  window.addEventListener("resize", () => {
+    if (document.body.classList.contains("is-search-open")) placeSearchClose();
+    const sub = document.getElementById("filters-sub");
+    if (sub && !sub.hidden) placeFilterSub(sub);
+    else clampFilterPanel();
+  });
+}
 
 function cancelHideWhoSub() {
   window.clearTimeout(whoSubTimer);
@@ -1396,14 +1618,18 @@ function whereLabel() {
 function selectCity(name) {
   state.country = "";
   setCities([name]);
-  openPanel = "";
+  searchExpanded = true;
+  openPanel = mobileLayout() ? "who" : "";
+  closeCitySearch();
   render();
 }
 
 function selectCountry(code) {
   state.country = code;
   setCities([]);
-  openPanel = "";
+  searchExpanded = true;
+  openPanel = mobileLayout() ? "who" : "";
+  closeCitySearch();
   render();
 }
 
@@ -1634,6 +1860,16 @@ function renderWhoOptions() {
 }
 
 function paintSearch() {
+  ensureSearchPrompt();
+  placeSearchPanels();
+  const prompt = document.querySelector("#airbnb .search-prompt");
+  if (prompt) {
+    prompt.textContent = searchPromptLabel();
+    prompt.classList.toggle("is-centered", mobileLayout() && isResultsPage() && !state.browse);
+  }
+  document.getElementById("airbnb")?.classList.toggle("is-started", composerOpen());
+  syncSearchActions();
+  syncSearchPopup();
   const whereValue = document.getElementById("where-value");
   const whoValue = document.getElementById("who-value");
   whereValue.textContent = whereLabel();
@@ -1646,9 +1882,15 @@ function paintSearch() {
   document.getElementById("where-segment").setAttribute("aria-expanded", String(openPanel === "where"));
   document.getElementById("who-segment").setAttribute("aria-expanded", String(openPanel === "who"));
   const clear = document.getElementById("where-clear");
-  if (clear) clear.hidden = !activeCities().length && !state.country;
+  if (clear) {
+    clear.hidden = false;
+    clear.classList.toggle("is-empty", !activeCities().length && !state.country);
+  }
   const clearWho = document.getElementById("who-clear");
-  if (clearWho) clearWho.hidden = !state.roles.length;
+  if (clearWho) {
+    clearWho.hidden = false;
+    clearWho.classList.toggle("is-empty", !state.roles.length);
+  }
   renderWhereOptions();
   renderWhoOptions();
 }
@@ -1661,7 +1903,7 @@ function setPanel(name) {
     setLocationOpen(false);
   }
   paintSearch();
-  if (openPanel === "where") document.getElementById("where-filter").focus();
+  if (openPanel === "where" && !mobileLayout()) document.getElementById("where-filter").focus();
 }
 
 function filtersOpen() {
@@ -1694,6 +1936,7 @@ function setFiltersOpen(open) {
   panel.hidden = !open;
   toggle.setAttribute("aria-expanded", String(open));
   if (!open) showFilterSub("");
+  else requestAnimationFrame(() => clampFilterPanel());
 }
 
 function locationOpen() {
@@ -1893,7 +2136,7 @@ function paintLocation() {
   const picked = activeCities();
   const cities = CITIES.filter((city) => cityMatches(city, query));
   const rows = [
-    ...(query ? [] : [{ label: "All locations", city: "", checked: !picked.length }]),
+    ...(query ? [] : [{ label: "All locations", city: "", checked: !picked.length && !state.country }]),
     ...cities.map((city) => ({ label: city.place, city: city.name, checked: picked.length === 1 && picked[0] === city.name })),
   ];
   menu.innerHTML = rows.length
@@ -1913,7 +2156,7 @@ function paintLocation() {
     });
   });
   const badge = document.getElementById("location-count");
-  const count = activeCities().length;
+  const count = activeCities().length || (state.country ? 1 : 0);
   if (badge) {
     badge.hidden = !count;
     const num = badge.querySelector(".tool-pill_num");
@@ -1959,14 +2202,45 @@ function paintFilterSub() {
 
 function placeFilterSub(sub) {
   const row = [...document.querySelectorAll("#filters-menu .filter-row")].find((button) => button.dataset.role === openFilterRole);
+  if (mobileLayout() && sub.id === "filters-sub") {
+    if (row) row.after(sub);
+    sub.style.left = "";
+    sub.style.right = "";
+    sub.style.top = "";
+    sub.style.position = "";
+    sub.style.width = "";
+    clampFilterPanel();
+    return;
+  }
+  const panel = document.getElementById("filters-panel");
+  if (panel && sub.parentElement !== panel) panel.append(sub);
   alignSubmenu(sub, row, 8);
+}
+
+function clampFilterPanel() {
+  const panel = document.getElementById("filters-panel");
+  if (!panel) return;
+  if (!mobileLayout() || panel.hidden) {
+    panel.style.left = "";
+    return;
+  }
+  panel.style.left = "0px";
+  const rect = panel.getBoundingClientRect();
+  const overflowRight = rect.right - (window.innerWidth - 12);
+  if (overflowRight > 0) panel.style.left = `${-overflowRight}px`;
 }
 
 function alignSubmenu(sub, row, gap) {
   sub.style.left = "";
   sub.style.right = "";
+  sub.style.top = "";
+  sub.style.position = "";
+  sub.style.width = "";
+  if (mobileLayout() && sub.id === "filters-sub") {
+    clampFilterPanel();
+    return;
+  }
   if (!row || !sub.offsetParent || (sub.id === "who-sub" && window.matchMedia("(max-width: 800px)").matches)) {
-    sub.style.top = "";
     return;
   }
   const top = row.getBoundingClientRect().top - sub.offsetParent.getBoundingClientRect().top;
@@ -2022,6 +2296,7 @@ function buildFilters() {
     menu.dataset.ready = "1";
     const panel = document.getElementById("filters-panel");
     panel.addEventListener("mouseleave", (event) => {
+      if (mobileLayout()) return;
       if (panel.contains(event.relatedTarget)) return;
       showFilterSub("");
     });
@@ -2042,11 +2317,18 @@ function buildFilters() {
       button.setAttribute("aria-checked", "false");
       button.innerHTML = `${checkHtml()}<span class="filter-row_label">${escapeHtml(item.label)}</span>`;
     }
-    button.addEventListener("mouseenter", () => showFilterSub(item.genres.length ? item.role : ""));
+    button.addEventListener("mouseenter", () => {
+      if (mobileLayout()) return;
+      showFilterSub(item.genres.length ? item.role : "");
+    });
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      if (item.genres.length) showFilterSub(item.role);
-      else toggleFlatRole(item.role);
+      if (!item.genres.length) {
+        toggleFlatRole(item.role);
+        return;
+      }
+      if (mobileLayout() && openFilterRole === item.role) showFilterSub("");
+      else showFilterSub(item.role);
     });
     menu.append(button);
   });
@@ -2132,10 +2414,15 @@ function clearRoles() {
   render();
 }
 
+function syncNearbyBar() {
+  document.body.classList.remove("is-nearby");
+  document.getElementById("nearby-row")?.remove();
+}
+
 function syncBrowseTools() {
   const tools = document.getElementById("results-tools");
   if (!tools) return;
-  const show = isResultsPage() && state.browse && !state.profile;
+  const show = isResultsPage() && !state.profile && (state.browse || mobileLayout());
   tools.hidden = !show;
   if (!show) {
     setFiltersOpen(false);
@@ -2147,6 +2434,7 @@ function syncControls() {
   paintSearch();
   paintFilters();
   paintLocation();
+  syncNearbyBar();
   syncBrowseTools();
 }
 
@@ -2310,8 +2598,36 @@ function bind() {
       }
     });
   }
-  document.getElementById("where-segment").addEventListener("click", () => setPanel("where"));
-  document.getElementById("who-segment").addEventListener("click", () => setPanel("who"));
+  let clearPointer = false;
+  const armClear = (button, run) => {
+    if (!button) return;
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      clearPointer = true;
+      run();
+      window.setTimeout(() => {
+        clearPointer = false;
+      }, 350);
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (clearPointer) {
+        clearPointer = false;
+        return;
+      }
+      run();
+    });
+  };
+  document.getElementById("where-segment").addEventListener("click", (event) => {
+    if (clearPointer || event.target.closest("#where-clear")) return;
+    setPanel("where");
+  });
+  document.getElementById("who-segment").addEventListener("click", (event) => {
+    if (clearPointer || event.target.closest("#who-clear")) return;
+    setPanel("who");
+  });
   const whoPanel = document.getElementById("who-panel");
   const whoSub = document.getElementById("who-sub");
   if (whoPanel) {
@@ -2322,25 +2638,37 @@ function bind() {
     });
   }
   if (whoSub) whoSub.addEventListener("mouseenter", cancelHideWhoSub);
-  const clearWhere = document.getElementById("where-clear");
-  if (clearWhere) {
-    clearWhere.addEventListener("click", (event) => {
-      event.stopPropagation();
-      state.city = "";
-      state.country = "";
-      state.extraCities = [];
-      render();
-    });
-  }
-  const clearWho = document.getElementById("who-clear");
-  if (clearWho) {
-    clearWho.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openWhoRole = "";
-      clearRoles();
-    });
-  }
+  armClear(document.getElementById("where-clear"), () => {
+    state.city = "";
+    state.country = "";
+    state.extraCities = [];
+    const field = document.getElementById("where-filter");
+    if (field) field.value = "";
+    render();
+  });
+  armClear(document.getElementById("who-clear"), () => {
+    openWhoRole = "";
+    clearRoles();
+  });
   document.getElementById("where-filter").addEventListener("input", () => renderWhereOptions());
+  const navToggle = document.getElementById("nav-toggle");
+  const navLinks = document.getElementById("nav-links");
+  const setNavOpen = (open) => {
+    const bar = navToggle?.closest(".navbar");
+    if (!bar || !navToggle) return;
+    bar.classList.toggle("is-nav-open", open);
+    navToggle.setAttribute("aria-expanded", String(open));
+    navToggle.setAttribute("aria-label", open ? "Close menu" : "Menu");
+  };
+  navToggle?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setNavOpen(navToggle.getAttribute("aria-expanded") !== "true");
+  });
+  document.addEventListener("click", (event) => {
+    if (!navToggle || navToggle.getAttribute("aria-expanded") !== "true") return;
+    if (navToggle.contains(event.target) || navLinks?.contains(event.target)) return;
+    setNavOpen(false);
+  });
   document.addEventListener("click", (event) => {
     if (openPanel && !document.getElementById("airbnb").contains(event.target)) {
       openPanel = "";
@@ -2404,6 +2732,13 @@ function bind() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    const navToggle = document.getElementById("nav-toggle");
+    if (navToggle?.getAttribute("aria-expanded") === "true") {
+      navToggle.closest(".navbar")?.classList.remove("is-nav-open");
+      navToggle.setAttribute("aria-expanded", "false");
+      navToggle.setAttribute("aria-label", "Menu");
+      return;
+    }
     if (document.getElementById("project-modal") && !document.getElementById("project-modal").hidden) return;
     if (addDialogOpen()) {
       if (document.querySelector(".add-city.is-open")) {
@@ -3021,7 +3356,27 @@ function setAddOpen(open) {
   fillAddForm();
   document.getElementById("add-form").reset();
   document.getElementById("add-error").textContent = "";
-  document.getElementById("add-name").focus();
+  syncInstagramLinkCheck();
+  document.getElementById("add-instagram-link")?.focus();
+}
+
+function syncInstagramLinkCheck() {
+  const input = document.getElementById("add-instagram-link");
+  const box = input?.closest(".add-input");
+  const status = document.getElementById("add-instagram-status");
+  if (!input || !box) return;
+  const valid = Boolean(instagramLinkHandle(input.value));
+  box.classList.toggle("is-valid", valid);
+  if (status) status.textContent = valid ? "Valid Instagram link" : "";
+}
+
+function instagramLinkHandle(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const url = raw.match(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})\/?(?:[?#].*)?$/i);
+  if (url) return url[1];
+  const handle = raw.match(/^@?([A-Za-z0-9._]{1,30})$/);
+  return handle ? handle[1] : "";
 }
 
 async function savePersonRecord(record) {
@@ -3103,6 +3458,54 @@ async function addPersonFromForm() {
     avatar: "",
     images: [],
   });
+  commitAddedPerson(record);
+}
+
+async function addPersonFromShortForm() {
+  const error = document.getElementById("add-error");
+  const input = document.getElementById("add-instagram-link");
+  const handle = instagramLinkHandle(input?.value);
+  const worked = document.querySelector('#add-form input[name="worked"]:checked')?.value || "";
+  if (!input?.value.trim()) {
+    error.textContent = "Add an Instagram link.";
+    input?.focus();
+    return;
+  }
+  if (!handle) {
+    error.textContent = "Enter an Instagram profile link.";
+    input.focus();
+    return;
+  }
+  if (worked !== "yes" && worked !== "no") {
+    error.textContent = "Choose yes or no.";
+    return;
+  }
+  if (PEOPLE.some((item) => String(item.instagram || "").replace(/^@/, "").toLowerCase() === handle.toLowerCase())) {
+    error.textContent = "That Instagram is already on the roster.";
+    input.focus();
+    return;
+  }
+  const record = person(rosterId(handle), handle, "", [], [], [], false, {
+    instagram: handle,
+    email: "",
+    phone: "",
+    preferred: "instagram",
+    secondary: [],
+    referredBy: "",
+    compensation: "",
+    portfolio: "",
+    bio: "",
+    rate: "",
+    past: [],
+    avatar: "",
+    images: [],
+    workedWith: worked === "yes",
+  });
+  commitAddedPerson(record);
+}
+
+async function commitAddedPerson(record) {
+  const error = document.getElementById("add-error");
   const submit = document.querySelector("#add-form .add-submit");
   if (submit) submit.disabled = true;
   try {
@@ -3161,8 +3564,9 @@ function bindAddRoster() {
   });
   document.getElementById("add-form").addEventListener("submit", (event) => {
     event.preventDefault();
-    addPersonFromForm();
+    addPersonFromShortForm();
   });
+  document.getElementById("add-instagram-link")?.addEventListener("input", syncInstagramLinkCheck);
 }
 
 function markSkeletonNav() {
@@ -3307,6 +3711,7 @@ function ensureBoardPicker() {
   picker.setAttribute("aria-label", "Save to board");
   picker.addEventListener("mouseenter", cancelHideBoardPicker);
   picker.addEventListener("mouseleave", () => {
+    if (mobileLayout()) return;
     scheduleHideBoardPicker();
   });
   document.body.appendChild(picker);
@@ -4040,6 +4445,98 @@ function closeBoardDatePicker() {
   activeDateHover = "";
 }
 
+function boardPreviewShots(board) {
+  return (board?.people || [])
+    .map((id) => PEOPLE.find((person) => person.id === id))
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((person) => ({
+      name: person.name,
+      src: instagramShots(person)[0]?.src || person.avatar || "",
+    }));
+}
+
+function clearSharePreviewTimers() {
+  (openSharePreview.timers || []).forEach((id) => window.clearTimeout(id));
+  openSharePreview.timers = [];
+}
+
+function sharePreviewLater(fn, ms) {
+  const id = window.setTimeout(fn, ms);
+  openSharePreview.timers = openSharePreview.timers || [];
+  openSharePreview.timers.push(id);
+}
+
+function resetSharePreview() {
+  clearSharePreviewTimers();
+  const root = document.getElementById("share-preview");
+  const field = document.getElementById("share-field-text");
+  if (root) root.classList.remove("is-pasted", "is-sending", "is-sent");
+  if (field) field.textContent = "";
+}
+
+function shareFieldLink(board) {
+  const url = boardShareUrl(board);
+  try {
+    const parsed = new URL(url);
+    return `${parsed.host}${parsed.pathname}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+function openSharePreview(board) {
+  const root = document.getElementById("share-preview");
+  const collage = document.getElementById("share-preview-collage");
+  const subtitle = document.getElementById("share-preview-board");
+  const field = document.getElementById("share-field-text");
+  if (!root || !collage) return;
+  const shots = boardPreviewShots(board);
+  const cells = shots.length
+    ? shots.map((shot) => (
+      shot.src
+        ? `<img src="${escapeHtml(shot.src)}" alt="" />`
+        : `<span class="share-collage_empty">${escapeHtml(initials(shot.name))}</span>`
+    ))
+    : [`<span class="share-collage_empty"></span>`];
+  collage.dataset.count = String(shots.length || 1);
+  collage.innerHTML = cells.join("");
+  if (subtitle) subtitle.textContent = board?.name || "";
+  resetSharePreview();
+  root.hidden = false;
+  document.body.classList.add("share-preview-open");
+  const link = shareFieldLink(board);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced) {
+    root.classList.add("is-sent");
+    return;
+  }
+  sharePreviewLater(() => {
+    if (field) field.textContent = link;
+    root.classList.add("is-pasted");
+  }, 480);
+  sharePreviewLater(() => {
+    root.classList.add("is-sending");
+  }, 1880);
+  sharePreviewLater(() => {
+    if (field) field.textContent = "";
+    root.classList.remove("is-pasted", "is-sending");
+    root.classList.add("is-sent");
+  }, 2060);
+}
+
+function closeSharePreview() {
+  const root = document.getElementById("share-preview");
+  resetSharePreview();
+  if (root) root.hidden = true;
+  document.body.classList.remove("share-preview-open");
+  window.setTimeout(() => {
+    closeBoardSharePanel();
+    const label = document.getElementById("board-share-text-label");
+    if (label) label.textContent = "Text";
+  }, 900);
+}
+
 function closeBoardSharePanel() {
   const panel = document.getElementById("board-share-panel");
   const btn = document.getElementById("board-share-btn");
@@ -4091,12 +4588,14 @@ function syncBoardShareLinks() {
 
 function bindBoards() {
   document.addEventListener("mouseover", (event) => {
+    if (mobileLayout()) return;
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
     openBoardPicker(starBtn.dataset.starPerson, starBtn, { toggle: false });
   });
 
   document.addEventListener("mouseout", (event) => {
+    if (mobileLayout()) return;
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
     if (event.relatedTarget && starBtn.contains(event.relatedTarget)) return;
@@ -4104,12 +4603,14 @@ function bindBoards() {
   });
 
   document.addEventListener("focusin", (event) => {
+    if (mobileLayout()) return;
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
     openBoardPicker(starBtn.dataset.starPerson, starBtn, { toggle: false });
   });
 
   document.addEventListener("focusout", (event) => {
+    if (mobileLayout()) return;
     const starBtn = event.target.closest(".star-btn[data-star-person]");
     if (!starBtn) return;
     scheduleHideBoardPicker();
@@ -4321,14 +4822,30 @@ function bindBoards() {
     }, 900);
   });
 
-  shareTextLink?.addEventListener("click", () => {
-    syncBoardShareLinks();
-    closeBoardSharePanel();
+  shareTextLink?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const board = readBoards().find((item) => item.id === state.board);
+    const url = boardShareUrl(board);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {}
+    const label = document.getElementById("board-share-text-label");
+    if (label) label.textContent = "Copied link";
+    window.setTimeout(() => openSharePreview(board), 700);
   });
 
   shareEmailLink?.addEventListener("click", () => {
     syncBoardShareLinks();
     closeBoardSharePanel();
+  });
+
+  document.getElementById("share-preview-close")?.addEventListener("click", closeSharePreview);
+  document.getElementById("share-preview-scrim")?.addEventListener("click", closeSharePreview);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && document.getElementById("share-preview") && !document.getElementById("share-preview").hidden) {
+      closeSharePreview();
+    }
   });
 
   document.getElementById("board-delete-btn")?.addEventListener("click", () => {
@@ -4393,19 +4910,42 @@ function initHeroMap() {
   const svg = document.getElementById("hero-map");
   const shots = document.getElementById("hero-shots");
   if (!stage || !svg || !shots) return;
+  const mobile = window.matchMedia("(max-width: 800px)").matches;
+  svg.replaceChildren();
+  shots.replaceChildren();
+  stage.classList.remove("is-clear");
+  const token = String(Date.now());
+  stage.dataset.heroToken = token;
+  const alive = () => stage.isConnected && stage.dataset.heroToken === token;
+  if (!initHeroMap.bound) {
+    initHeroMap.bound = true;
+    window.matchMedia("(max-width: 800px)").addEventListener("change", () => initHeroMap());
+  }
   const ns = "http://www.w3.org/2000/svg";
-  const board = { w: 780, h: 300 };
+  const board = mobile ? { w: 360, h: 500 } : { w: 780, h: 300 };
+  stage.style.aspectRatio = mobile ? `${board.w} / ${board.h}` : "";
+  svg.setAttribute("viewBox", `0 0 ${board.w} ${board.h}`);
   const pin = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>`;
-  const origin = [348, 150];
-  const steps = [
-    { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
-    { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 22], bend: -36 },
-    { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
-    { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
-    { name: "Charlie Harris", caption: "Videographer (Finland)", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
-    { name: "Randy", caption: "Designer (London)", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
-    { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
-  ];
+  const origin = mobile ? [172, 124] : [348, 150];
+  const steps = mobile
+    ? [
+        { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 6, y: 4, w: 70, h: 88, inn: [74, 88], bend: 0 },
+        { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 196, y: 4, w: 68, h: 68, inn: [200, 68], bend: 0 },
+        { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 252, y: 148, w: 62, h: 78, inn: [256, 156], bend: 0 },
+        { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 214, y: 286, w: 66, h: 86, inn: [222, 294], bend: 0 },
+        { name: "Charlie Harris", caption: "Videographer\n(Finland)", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 108, y: 168, w: 56, h: 66, inn: [136, 172], bend: 0 },
+        { name: "Randy", caption: "Designer\n(London)", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 6, y: 318, w: 86, h: 54, inn: [88, 326], bend: 88, focus: "center top" },
+        { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 6, y: 158, w: 68, h: 88, inn: [70, 166], bend: 0 },
+      ]
+    : [
+        { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 12, y: -40, w: 86, h: 108, inn: [106, 18], bend: -40 },
+        { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 254, y: -72, w: 84, h: 84, inn: [300, 22], bend: -36 },
+        { name: "Patricia Rosingana", caption: "Stylist\n(Atlanta)", src: "images/hero/DQHn4eVjPN-.jpg", href: "https://www.instagram.com/p/DQHn4eVjPN-/?img_index=1", x: 456, y: 2, w: 80, h: 100, inn: [448, 52], bend: -36 },
+        { name: "Vika", caption: "Cinematographer\n(London)", src: "posts/vika-vikasfotos/4.jpg", href: "https://www.instagram.com/p/DeCUYocEVmn/?img_index=1", x: 684, y: 48, w: 84, h: 112, inn: [676, 104], bend: 46 },
+        { name: "Charlie Harris", caption: "Videographer (Finland)", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
+        { name: "Randy", caption: "Designer (London)", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
+        { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
+      ];
 
   const NEON = [
     ["#ff2bd6", "#ff8ae0"],
@@ -4521,7 +5061,7 @@ function initHeroMap() {
 
   // The yellow line aims at the photo but ends just under its caption.
   const lineEnd = (frame, index) => {
-    if (index !== 1) return frame.step.inn;
+    if (mobile || index !== 1) return frame.step.inn;
     const cap = frame.link.querySelector(".hero_cap");
     const stageRect = stage.getBoundingClientRect();
     const capRect = cap ? cap.getBoundingClientRect() : null;
@@ -4567,22 +5107,22 @@ function initHeroMap() {
 
   const play = async () => {
     const drawn = [];
-    while (svg.isConnected) {
+    while (alive()) {
       addDot(origin, 3.4);
       await sleep(280);
       for (let index = 0; index < frames.length; index += 1) {
-        if (!svg.isConnected) return;
+        if (!alive()) return;
         const frame = frames[index];
         const end = lineEnd(frame, index);
         const path = addPath(origin, end, frame.step.bend, index);
         drawn.push(path);
         await drawLine(path);
-        if (!svg.isConnected) return;
+        if (!alive()) return;
         showFrame(frame, end);
         await sleep(320);
       }
       await sleep(2200);
-      if (!svg.isConnected) return;
+      if (!alive()) return;
       stage.classList.add("is-clear");
       await sleep(460);
       drawn.splice(0).forEach((path) => path.remove());
