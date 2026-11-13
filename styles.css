@@ -453,6 +453,12 @@ a:hover {
   text-align: left;
 }
 
+.search-prompt,
+.search-clear,
+.where-back {
+  display: none;
+}
+
 .airbnb {
   position: relative;
   z-index: 1;
@@ -1374,6 +1380,10 @@ a:hover {
 }
 
 .profile_head h1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   margin: 0;
   color: #111;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -1382,6 +1392,13 @@ a:hover {
   letter-spacing: 0;
   line-height: 1.15;
   text-transform: none;
+}
+
+.profile_head h1 > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile_role {
@@ -3326,6 +3343,18 @@ body[data-page="results"] .results-top {
   background: transparent;
 }
 
+@media (min-width: 981px) {
+  body[data-page="results"] .navbar.results-top {
+    position: sticky;
+    top: 0;
+    height: auto;
+  }
+}
+
+.nav-toggle {
+  display: none;
+}
+
 .nav-links {
   display: flex;
   align-items: center;
@@ -3708,6 +3737,18 @@ body.add-open {
   flex: none;
   width: 16px;
   height: 16px;
+}
+
+.add-link-check {
+  display: none;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  color: #111;
+}
+
+.add-input.is-valid .add-link-check {
+  display: block;
 }
 
 .add-dialog .add-input input {
@@ -4185,6 +4226,22 @@ body.add-open {
   align-items: center;
   gap: 8px;
   margin-top: 16px;
+}
+
+.add-long {
+  display: none;
+}
+
+.add-short {
+  display: block;
+}
+
+.add-yesno {
+  margin-top: 4px;
+}
+
+.add-dialog_panel {
+  width: min(480px, 100%);
 }
 
 .add-check {
@@ -4691,6 +4748,9 @@ body[data-page="results"]:has([data-results-view="map"]) {
 }
 
 .result-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   min-width: 0;
   margin: 0;
   color: #111;
@@ -4700,6 +4760,29 @@ body[data-page="results"]:has([data-results-view="map"]) {
   letter-spacing: 0;
   line-height: 1.15;
   text-transform: none;
+}
+
+.result-card_name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tenk-stamp {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
 }
 
 .result-card_body {
@@ -4713,7 +4796,6 @@ body[data-page="results"]:has([data-results-view="map"]) {
   line-height: 1.25;
 }
 
-.result-card h3,
 .result-card p {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5206,6 +5288,62 @@ button.roster-icon {
     min-height: 0;
   }
 
+  .nav-toggle {
+    display: grid;
+    place-items: center;
+    order: 2;
+    width: 40px;
+    height: 40px;
+    margin: 0 0 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #111;
+    cursor: pointer;
+  }
+
+  .nav-toggle_close {
+    display: none;
+  }
+
+  .navbar.is-nav-open .nav-toggle_open {
+    display: none;
+  }
+
+  .navbar.is-nav-open .nav-toggle_close {
+    display: block;
+  }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 58px;
+    right: 16px;
+    z-index: 50;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    min-width: 180px;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 16px 40px rgba(17, 17, 17, 0.12);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  }
+
+  .navbar.is-nav-open .nav-links {
+    display: flex;
+  }
+
+  .nav-links .nav_link {
+    padding: 12px 14px;
+    border-radius: 10px;
+  }
+
   .hero,
   .explore {
     padding-top: 36px;
@@ -5249,43 +5387,507 @@ button.roster-icon {
 }
 
 @media (max-width: 800px) {
-  .results-top .airbnb_bar {
-    flex-direction: row;
+  .results-page .grid,
+  .results-page[data-results-view="list"] .grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .results-page .results-heading {
     align-items: center;
-    height: 48px;
-    border-radius: 12px;
-    padding: 7px 8px 7px 7px;
+    gap: 10px;
   }
 
-  .results-top .segment {
-    min-height: 0;
-    padding: 0 18px;
+  .results-page .results-heading h2 {
+    flex: 1;
+    min-width: 0;
   }
 
-  .results-top .segment + .segment::before,
-  .results-top .segment-slot + .segment-slot .segment::before {
-    top: 12px;
+  .results-page .tool-pill_add {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .results-page .result-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .results-page .result-card:not(.skeleton) {
+    padding: 14px 14px 12px;
+  }
+
+  .results-page .result-card_avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  .results-page .result-card_icons > :first-child {
+    position: absolute;
+    top: 18px;
+    right: 46px;
+    z-index: 3;
+  }
+
+  .results-page .result-card_shots {
+    display: grid;
+  }
+
+  .results-page .result-card_icons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .results-tools .filters-panel {
+    width: min(260px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+  }
+
+  .results-tools .filters-sub {
+    position: static;
+    top: auto;
     right: auto;
-    bottom: 12px;
-    left: 0;
-    width: 1px;
-    height: auto;
-  }
-
-  .results-top .airbnb_go,
-  .results-top .airbnb[data-open="where"] .airbnb_go,
-  .results-top .airbnb[data-open="who"] .airbnb_go {
-    width: 34px;
-    height: 34px;
-    margin: 0 0 0 6px;
+    left: auto;
+    width: auto;
+    margin: 0 0 4px;
     padding: 0;
-    border-radius: 50%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
-  .results-top .airbnb_go_label,
-  .results-top .airbnb[data-open="where"] .airbnb_go_label,
-  .results-top .airbnb[data-open="who"] .airbnb_go_label {
+  .results-tools .filter-row_chevron {
+    transition: transform 160ms ease;
+  }
+
+  .results-tools .filter-row.is-open .filter-row_chevron {
+    transform: rotate(90deg);
+  }
+
+  .results-tools .filters-sub::before {
     display: none;
+  }
+
+  .results-page .result-card h3,
+  .results-page .result-card p.result-card_role {
+    padding-right: 62px;
+  }
+
+  .results-page .result-card h3 {
+    font-size: 13px;
+  }
+
+  .results-page .result-card p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 800px) {
+  .results-top .search {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .search-prompt {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 18px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #6a6a6a;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(20, 20, 30, 0.08);
+  }
+
+  .search-prompt.is-centered {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .airbnb.is-started .search-prompt {
+    display: none;
+  }
+
+  .airbnb:not(.is-started) .airbnb_bar,
+  .airbnb:not(.is-started) .airbnb_panel,
+  .airbnb:not(.is-started) .search-clear {
+    display: none;
+  }
+
+  .airbnb.is-started {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    align-items: center;
+  }
+
+  .airbnb.is-started .airbnb_bar {
+    display: contents;
+  }
+
+  .airbnb.is-started .airbnb_bar > .segment-slot:first-child {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+
+  .airbnb.is-started .airbnb_bar > .segment-slot:nth-child(2) {
+    grid-column: 1 / -1;
+    order: 3;
+    margin-top: 16px;
+  }
+
+  .airbnb.is-started .segment-slot {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: hidden;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 22px rgba(17, 17, 17, 0.05);
+  }
+
+  .airbnb.is-started .segment {
+    min-height: 0;
+    padding-top: 14px;
+    padding-bottom: 10px;
+    border-radius: 18px 18px 0 0;
+    background: #fff;
+  }
+
+  .airbnb.is-started .segment::before {
+    display: none;
+  }
+
+  .airbnb.is-started[data-open="where"] .segment-slot:first-child .segment_value {
+    display: none;
+  }
+
+  .airbnb.is-started .where-search input,
+  #where-panel .where-search input {
+    caret-color: transparent;
+    font-size: 16px;
+  }
+
+  .where-back {
+    display: none;
+    flex: none;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #111;
+    cursor: pointer;
+  }
+
+  .airbnb.is-started .segment_clear {
+    top: 10px;
+    right: 10px;
+    z-index: 8;
+    width: auto;
+    height: auto;
+    min-width: 44px;
+    min-height: 32px;
+    padding: 8px 6px;
+    border-radius: 0;
+    background: transparent;
+    color: #111;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0;
+    font-weight: 600;
+    line-height: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .airbnb.is-started .segment_clear::after {
+    content: "Clear";
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  .airbnb.is-started .segment {
+    position: relative;
+    z-index: 1;
+  }
+
+  .airbnb.is-started .segment-slot .airbnb_panel {
+    z-index: 1;
+    animation: none;
+    transform: none;
+  }
+
+  .airbnb.is-started .segment-slot:has(.segment_clear:not([hidden])) .segment {
+    padding-right: 68px;
+  }
+
+  .airbnb.is-started .segment-slot .airbnb_panel:not([hidden]) {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    top: auto;
+    right: auto;
+    left: auto;
+    width: auto;
+    max-height: 280px;
+    margin: 0;
+    padding: 0 8px 10px;
+    overflow: hidden;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .airbnb.is-started .where-search {
+    margin: 0 4px 8px;
+  }
+
+  .airbnb.is-started .where-search input::placeholder {
+    color: #6a6a6a;
+  }
+
+  .airbnb.is-started .segment-slot .airbnb_options {
+    min-height: 0;
+    max-height: none;
+    overflow: auto;
+  }
+
+  .search-clear {
+    display: none;
+    grid-row: 6;
+    grid-column: 1;
+    justify-self: start;
+    align-self: center;
+    margin-top: 16px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #111;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .airbnb.is-started:not(.is-searching) .search-clear,
+  .airbnb.is-started:not(.is-searching) .airbnb_go,
+  .airbnb.is-started:not(.is-searching)[data-open="where"] .airbnb_go,
+  .airbnb.is-started:not(.is-searching)[data-open="who"] .airbnb_go {
+    display: none;
+  }
+
+  .airbnb.is-started.is-searching .search-clear {
+    display: inline;
+    text-decoration: none;
+  }
+
+  .airbnb.is-started.is-searching .airbnb_go,
+  .airbnb.is-started.is-searching[data-open="where"] .airbnb_go,
+  .airbnb.is-started.is-searching[data-open="who"] .airbnb_go {
+    display: flex;
+    grid-row: 6;
+    grid-column: 2;
+    justify-self: end;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: auto;
+    height: 44px;
+    margin: 16px 0 0;
+    padding: 0 18px;
+    border-radius: 999px;
+  }
+
+  .airbnb.is-started .airbnb_go_label,
+  .airbnb.is-started[data-open="where"] .airbnb_go_label,
+  .airbnb.is-started[data-open="who"] .airbnb_go_label {
+    display: block;
+  }
+
+  body[data-page="results"] .search-clear,
+  body[data-page="results"] .airbnb_go,
+  body[data-page="results"] .airbnb.is-started .airbnb_go,
+  body[data-page="results"] .airbnb.is-started.is-searching .search-clear,
+  body[data-page="results"] .airbnb.is-started.is-searching .airbnb_go,
+  body[data-page="results"] .airbnb.is-started.is-searching[data-open="where"] .airbnb_go,
+  body[data-page="results"] .airbnb.is-started.is-searching[data-open="who"] .airbnb_go,
+  body[data-page="results"] .airbnb[data-open="where"] .airbnb_go,
+  body[data-page="results"] .airbnb[data-open="who"] .airbnb_go {
+    display: none;
+  }
+}
+
+.search-overlay,
+.search-close {
+  display: none;
+}
+
+body.is-search-open {
+  overflow: hidden;
+}
+
+body.is-search-open .search-overlay {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  border: 0;
+  padding: 0;
+  background:
+    radial-gradient(70vw 70vw at -8% -12%, rgba(203, 191, 221, 0.9), transparent 68%),
+    radial-gradient(62vw 62vw at 110% -6%, rgba(197, 211, 224, 0.85), transparent 66%),
+    radial-gradient(68vw 68vw at 112% 108%, rgba(240, 199, 180, 0.8), transparent 68%),
+    radial-gradient(50vw 50vw at 30% 46%, rgba(228, 211, 234, 0.65), transparent 70%),
+    rgba(244, 241, 238, 0.78);
+  backdrop-filter: blur(22px) saturate(1.45);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  cursor: pointer;
+}
+
+body.is-search-open .navbar,
+body.is-search-open .navbar.results-top,
+body.is-search-open .results-top {
+  z-index: 50;
+  background: transparent;
+}
+
+body.is-search-open .results-top .nav_brand,
+body.is-search-open .nav-toggle,
+body.is-search-open .nav-links,
+body.is-search-open .glass-cursor {
+  display: none;
+}
+
+body.is-search-open .aura {
+  z-index: 44;
+}
+
+body.is-search-open .search-close {
+  display: grid;
+  place-items: center;
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 60;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  animation: search-close-in 420ms ease 40ms both;
+}
+
+body.is-search-open .search-overlay {
+  animation: search-overlay-in 560ms ease both;
+}
+
+body.is-search-open .search {
+  animation: search-sheet-in 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes search-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes search-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes search-close-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.is-search-open .search-overlay,
+  body.is-search-open .search,
+  body.is-search-open .search-close {
+    animation: none;
+  }
+}
+
+@media (max-width: 800px) {
+  body.is-search-open .navbar.results-top {
+    padding-top: 14px;
+  }
+
+  body.is-search-open .results-top .nav_brand,
+  body.is-search-open .nav-toggle {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  body.is-search-open .results-top .nav_brand {
+    display: inline-flex;
+  }
+
+  body.is-search-open .nav-toggle {
+    display: grid;
+  }
+
+  body.is-search-open .navbar.results-top::after {
+    content: "";
+    order: 3;
+    flex: 1 1 100%;
+    height: 52px;
+    margin-top: 8px;
+  }
+
+  body.is-search-open .search {
+    position: absolute;
+    top: 74px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    z-index: 2;
+  }
+}
+
+@media (max-width: 800px) {
+  body.is-city-search .where-back {
+    display: grid;
+    place-items: center;
+  }
+
+  body.is-city-search .where-search .material-symbols-outlined {
+    display: none;
+  }
+
+  body.is-city-search #where-panel .where-search input,
+  body.is-city-search .where-search input {
+    caret-color: auto;
   }
 }
 
@@ -5316,6 +5918,34 @@ body:not([data-page]) .hero_stage {
   width: min(780px, calc(100% - 32px), calc((100vh - 368px) * 780 / 300));
   margin-top: 28px;
   margin-bottom: 80px;
+}
+
+@media (max-width: 800px) {
+  body:not([data-page]) .hero {
+    padding: 12px 12px 24px;
+  }
+
+  body:not([data-page]) .hero_stage {
+    width: calc(100% - 8px);
+    max-width: 420px;
+    aspect-ratio: 360 / 500;
+    margin-top: 4px;
+    margin-bottom: 18px;
+  }
+
+  body:not([data-page]) .hero_stage > svg {
+    z-index: 1;
+  }
+
+  body:not([data-page]) .hero_shot {
+    z-index: 2;
+  }
+
+  body:not([data-page]) .hero_cap {
+    font-size: 10px;
+    line-height: 1.15;
+    gap: 3px;
+  }
 }
 
 .glass-cursor {
@@ -5401,7 +6031,8 @@ a.ig-btn:hover {
   gap: 6px;
 }
 
-.result-card h3 {
+.result-card h3,
+.result-card p.result-card_role {
   padding-right: 64px;
 }
 
@@ -6389,6 +7020,388 @@ a.ig-btn:hover {
 .board-share-item svg {
   flex: none;
   color: #444;
+}
+
+.share-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.share-preview[hidden] {
+  display: none;
+}
+
+body.share-preview-open {
+  overflow: hidden;
+}
+
+.share-preview_scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(17, 17, 17, 0.46);
+  cursor: pointer;
+}
+
+.share-preview .phone {
+  position: relative;
+  z-index: 1;
+  width: min(340px, 100%);
+  height: min(700px, calc(100vh - 40px));
+  max-height: none;
+}
+
+.share-preview .phone-screen {
+  background: #fff;
+}
+
+.share-preview .imessage-head {
+  padding-top: 4px;
+}
+
+.share-preview .imessage-who strong {
+  color: #111;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.share-preview .imessage-avatar {
+  background: #c7c7cc;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.imessage-video {
+  justify-self: end;
+  color: #007aff;
+}
+
+.imessage-video svg {
+  display: block;
+}
+
+.share-preview_x {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 4px 14px rgba(17, 17, 17, 0.18);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.share-preview .imessage-thread {
+  justify-content: flex-end;
+  gap: 6px;
+  background: #fff;
+}
+
+.share-preview .imessage-bubble {
+  border-radius: 18px 18px 18px 4px;
+}
+
+.imessage-sent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  align-self: flex-end;
+  width: min(232px, 84%);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+  transform-origin: right bottom;
+  pointer-events: none;
+}
+
+.share-preview.is-sent .imessage-sent {
+  max-height: 280px;
+  overflow: visible;
+  opacity: 1;
+  transform: none;
+  transition: max-height 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease, transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.imessage-delivered {
+  margin: 0;
+  color: #8e8e93;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 0;
+}
+
+.share-preview.is-sent .imessage-delivered {
+  opacity: 1;
+  transition: opacity 0.25s ease 0.28s;
+}
+
+.share-card {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 18px 18px 4px 18px;
+  background: transparent;
+  box-shadow: 0 1px 1px rgba(17, 17, 17, 0.04);
+  outline: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.share-preview .imessage-compose {
+  gap: 8px;
+  padding: 4px 10px 16px;
+  border-top: 0;
+  background: #fff;
+}
+
+.share-preview .imessage-plus {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #8e8e93;
+}
+
+.share-preview .imessage-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  min-width: 0;
+  padding: 0 4px 0 14px;
+  border: 1px solid #d1d1d6;
+  border-radius: 18px;
+  background: #fff;
+  color: #111;
+  line-height: 1.2;
+}
+
+.share-field_placeholder,
+.share-field_text {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.share-preview .imessage-field span.share-field_placeholder,
+.share-preview .imessage-field span.share-field_text,
+.share-preview .imessage-field span.share-caret {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  place-items: unset;
+}
+
+.share-field_placeholder {
+  order: 1;
+  color: #8e8e93;
+}
+
+.share-preview .imessage-field span.share-field_text {
+  display: none;
+  flex: 1;
+  order: 1;
+  color: #007aff;
+}
+
+.share-preview.is-pasted .imessage-field span.share-field_text {
+  display: block;
+}
+
+.share-caret {
+  order: 0;
+  width: 1.5px;
+  height: 18px;
+  flex: none;
+  background: #007aff;
+  animation: share-caret 1.05s steps(1) infinite;
+}
+
+.share-preview .imessage-field span.share-caret {
+  display: block;
+  width: 1.5px;
+  height: 18px;
+}
+
+.share-preview.is-pasted .share-caret {
+  order: 2;
+}
+
+.share-preview.is-pasted .imessage-field span.share-field_placeholder {
+  display: none;
+}
+
+.share-preview.is-pasted .imessage-field span.share-field_text {
+  display: block;
+}
+
+.share-preview.is-sent .imessage-field span.share-caret,
+.share-preview.is-sending .imessage-field span.share-caret {
+  display: none;
+}
+
+.imessage-send {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  order: 3;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #007aff;
+  color: #fff;
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+.share-preview .imessage-field span.imessage-send {
+  display: grid;
+  width: 0;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.share-preview.is-pasted .imessage-field span.imessage-send {
+  width: 28px;
+}
+
+.share-preview.is-pasted .imessage-send {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.16s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.share-preview.is-sending .imessage-send {
+  transform: scale(0.82);
+}
+
+@keyframes share-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imessage-sent,
+  .share-preview.is-sent .imessage-sent,
+  .imessage-delivered,
+  .share-preview.is-sent .imessage-delivered,
+  .imessage-send,
+  .share-preview.is-pasted .imessage-send {
+    transition: none;
+    animation: none;
+  }
+
+  .share-caret {
+    animation: none;
+  }
+}
+
+.share-collage {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  grid-template-rows: 78px 78px;
+  gap: 2px;
+  background: #e4e4e8;
+}
+
+.share-collage[data-count="1"] {
+  grid-template-columns: 1fr;
+  grid-template-rows: 158px;
+}
+
+.share-collage[data-count="2"] {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 158px;
+}
+
+.share-collage img,
+.share-collage_empty {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  background: #ececf1;
+}
+
+.share-collage[data-count="3"] > :first-child {
+  grid-row: 1 / span 2;
+}
+
+.share-preview .imessage-thread {
+  justify-content: flex-end;
+}
+
+.share-preview .imessage-avatar {
+  background: #c7c7cc;
+  color: #fff;
+}
+
+.share-collage_empty {
+  display: grid;
+  place-items: center;
+  color: #8e8e93;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.share-card_copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 12px 13px;
+  background-color: rgba(232, 224, 232, 0.5);
+  background-image:
+    linear-gradient(118deg, rgba(203, 191, 221, 0.78) 0%, rgba(255, 246, 240, 0.42) 46%, rgba(240, 199, 180, 0.8) 100%),
+    radial-gradient(120% 200% at 0% 0%, rgba(203, 191, 221, 0.9), transparent 72%),
+    radial-gradient(110% 190% at 100% 0%, rgba(197, 211, 224, 0.85), transparent 70%),
+    radial-gradient(120% 200% at 100% 100%, rgba(240, 199, 180, 0.9), transparent 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px) saturate(1.45);
+  -webkit-backdrop-filter: blur(18px) saturate(1.45);
+}
+
+.share-card_copy strong {
+  color: #111;
+  font-family: "Bootzy TM", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.share-card_copy span {
+  color: #3f3f3f;
+  font-family: "Neue Montreal", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1.3;
 }
 
 .boards-empty {
