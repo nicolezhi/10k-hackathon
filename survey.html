@@ -15,7 +15,21 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=283" />
+    <script>
+      (function () {
+        var frame = new URLSearchParams(location.search).get("frame") === "1";
+        if (frame) {
+          document.documentElement.classList.add("is-frame");
+          return;
+        }
+        try {
+          if (sessionStorage.getItem("10k-layout") === "mobile" && matchMedia("(min-width: 801px)").matches) {
+            document.documentElement.classList.add("is-device-preview");
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css?v=288" />
   </head>
   <body data-page="survey">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -86,7 +100,7 @@
     <main id="survey-app"></main>
 
     <script src="people.js?v=26"></script>
-    <script src="app.js?v=232"></script>
+    <script src="app.js?v=236"></script>
     <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>

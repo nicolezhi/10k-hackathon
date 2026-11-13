@@ -1573,16 +1573,12 @@ function exitSearchView() {
   paintSearch();
 }
 
-function searchHasCriteria() {
-  const typed = document.getElementById("where-filter")?.value.trim();
-  return Boolean(typed || activeCities().length || state.country || state.roles.length);
-}
-
 function syncSearchActions() {
   const airbnb = document.getElementById("airbnb");
   if (!airbnb) return;
-  const searching = document.body.classList.contains("is-city-search") || searchHasCriteria();
-  airbnb.classList.toggle("is-searching", searching);
+  const whereSet = Boolean(activeCities().length || state.country);
+  const whoSet = state.roles.length > 0;
+  airbnb.classList.toggle("is-searching", whereSet && whoSet);
 }
 
 function openCitySearch() {
@@ -5600,7 +5596,7 @@ function initHeroMap() {
     window.matchMedia("(max-width: 800px)").addEventListener("change", () => initHeroMap());
   }
   const ns = "http://www.w3.org/2000/svg";
-  const board = mobile ? { w: 360, h: 500 } : { w: 780, h: 300 };
+  const board = mobile ? { w: 360, h: 418 } : { w: 780, h: 300 };
   stage.style.aspectRatio = mobile ? `${board.w} / ${board.h}` : "";
   svg.setAttribute("viewBox", `0 0 ${board.w} ${board.h}`);
   const pin = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>`;
@@ -5963,4 +5959,85 @@ if (delay) {
 } else {
   revealPage();
 }
+
+const LAYOUT_KEY = "10k-layout";
+
+function layoutUrl(href, frame) {
+  const url = new URL(href, location.href);
+  if (frame) url.searchParams.set("frame", "1");
+  else url.searchParams.delete("frame");
+  return url.toString();
+}
+
+function initLayoutToggle() {
+  const root = document.documentElement;
+  if (root.classList.contains("is-frame")) return;
+  const desktopMq = window.matchMedia("(min-width: 801px)");
+  if (!desktopMq.matches && !root.classList.contains("is-device-preview")) return;
+
+  const toggle = document.createElement("div");
+  toggle.className = "device-toggle";
+  toggle.setAttribute("role", "group");
+  toggle.setAttribute("aria-label", "Layout");
+  toggle.innerHTML = `
+    <button type="button" data-layout="desktop" aria-pressed="true">Desktop</button>
+    <button type="button" data-layout="mobile" aria-pressed="false">Mobile</button>
+  `;
+  const stage = document.createElement("div");
+  stage.className = "device-stage";
+  const iframe = document.createElement("iframe");
+  iframe.title = "Mobile version";
+  stage.appendChild(iframe);
+  document.body.append(stage, toggle);
+
+  function paint(mode) {
+    const mobile = mode === "mobile";
+    toggle.querySelector('[data-layout="desktop"]').setAttribute("aria-pressed", String(!mobile));
+    toggle.querySelector('[data-layout="mobile"]').setAttribute("aria-pressed", String(mobile));
+    root.classList.toggle("is-device-preview", mobile);
+    if (mobile && iframe.dataset.loaded !== "1") {
+      iframe.src = layoutUrl(location.href, true);
+      iframe.dataset.loaded = "1";
+    }
+  }
+
+  toggle.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-layout]");
+    if (!button) return;
+    event.stopPropagation();
+    const mode = button.dataset.layout;
+    try { sessionStorage.setItem(LAYOUT_KEY, mode); } catch {}
+    if (mode === "desktop") {
+      let next = location.href;
+      try {
+        const framed = iframe.contentWindow.location.href;
+        if (framed && framed !== "about:blank") next = framed;
+      } catch {}
+      const dest = layoutUrl(next, false);
+      if (dest === location.href) {
+        paint("desktop");
+        return;
+      }
+      location.href = dest;
+      return;
+    }
+    paint("mobile");
+  });
+
+  desktopMq.addEventListener("change", () => {
+    if (!desktopMq.matches) {
+      root.classList.remove("is-device-preview");
+      return;
+    }
+    let saved = "";
+    try { saved = sessionStorage.getItem(LAYOUT_KEY) || ""; } catch {}
+    if (saved === "mobile") paint("mobile");
+  });
+
+  let saved = "";
+  try { saved = sessionStorage.getItem(LAYOUT_KEY) || ""; } catch {}
+  if (saved === "mobile" || root.classList.contains("is-device-preview")) paint("mobile");
+}
+
+initLayoutToggle();
 
