@@ -236,6 +236,7 @@ function filteredPeople() {
   const tokens = tokensFrom(state.query);
   const cities = activeCities();
   return PEOPLE.filter((record) => {
+    if (record.external) return false;
     if (state.country) {
       const places = [record.city, ...(record.also || [])];
       if (!places.some((place) => placeInCountry(place, state.country))) return false;
@@ -726,6 +727,33 @@ function starButtonHtml(personId, extraClass = "") {
   return `<button type="button" class="${cls}" data-star-person="${escapeHtml(personId)}" aria-label="${starred ? "Saved to board" : "Save to board"}" aria-pressed="${starred}">${starIconSvg(starred)}</button>`;
 }
 
+let igGradSeq = 0;
+
+function instagramPillHtml(instagramHref, extraClass = "") {
+  const cls = ["ig-btn", extraClass, instagramHref ? "" : "is-empty"].filter(Boolean).join(" ");
+  if (!instagramHref) {
+    const emptyIcon = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${CONTACT_PATHS.instagram}</svg>`;
+    return `<span class="${cls}" aria-label="Instagram">${emptyIcon}</span>`;
+  }
+  igGradSeq += 1;
+  const gradId = `ig-g-${igGradSeq}`;
+  const icon = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+    <defs>
+      <linearGradient id="${gradId}" x1="4" y1="20" x2="20" y2="4" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#feda75" />
+        <stop offset="28%" stop-color="#fa7e1e" />
+        <stop offset="55%" stop-color="#d62976" />
+        <stop offset="80%" stop-color="#962fbf" />
+        <stop offset="100%" stop-color="#4f5bd5" />
+      </linearGradient>
+    </defs>
+    <rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="url(#${gradId})" stroke-width="1.9"/>
+    <circle cx="12" cy="12" r="3.4" fill="none" stroke="url(#${gradId})" stroke-width="1.9"/>
+    <circle cx="16.6" cy="7.4" r="1" fill="url(#${gradId})"/>
+  </svg>`;
+  return `<a class="${cls}" href="${escapeHtml(instagramHref)}" target="_blank" rel="noreferrer" aria-label="Instagram">${icon}</a>`;
+}
+
 function syncStarButtons() {
   document.querySelectorAll(".star-btn[data-star-person]").forEach((btn) => {
     const id = btn.dataset.starPerson;
@@ -741,22 +769,42 @@ function rosterCardHtml(record) {
   const city = cityRecord(record.city);
   const tags = (record.genres || []).join(" · ");
   const instagramHref = record.instagram ? `https://instagram.com/${record.instagram}` : "";
+  const isExternal = Boolean(record.external);
+  const handleLine = record.instagram ? `@${record.instagram.replace(/^@/, "")}` : "";
+  const placeOrHandle = record.city
+    ? `<p>${escapeHtml(city?.place || record.city)}</p>`
+    : isExternal && handleLine
+    ? `<p class="result-card_handle">${escapeHtml(handleLine)}</p>`
+    : "<p></p>";
+  const tagsLine = tags
+    ? `<p class="result-card_tags">${escapeHtml(tags)}</p>`
+    : isExternal
+    ? `<p class="result-card_tags">Added via Instagram</p>`
+    : `<p class="result-card_tags"></p>`;
+  const showContactRow = !isExternal || Boolean(record.portfolio || record.phone || record.email);
   return `
-    ${starButtonHtml(record.id, "result-card_star")}
+    <div class="result-card_actions">
+      ${isExternal ? `<span class="external-stamp">External</span>` : ""}
+      ${instagramPillHtml(instagramHref)}
+      ${starButtonHtml(record.id)}
+    </div>
     ${avatarHtml(record, "result-card_avatar")}
     <div class="result-card_body">
       <h3>${escapeHtml(record.name)}</h3>
       <p class="result-card_role">${escapeHtml(roleNames(record).join(" · "))}</p>
-      ${record.city ? `<p>${escapeHtml(city?.place || record.city)}</p>` : "<p></p>"}
-      <p class="result-card_tags">${escapeHtml(tags)}</p>
-      <div class="result-card_icons">
-        ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
+      ${placeOrHandle}
+      ${tagsLine}
+      ${
+        showContactRow
+          ? `<div class="result-card_icons">
         ${record.portfolio
           ? externalControl("roster-icon", "Portfolio", record.portfolio, tinyIcon(CONTACT_PATHS.portfolio))
           : copyControl("Portfolio", "", "Copied portfolio link", tinyIcon(CONTACT_PATHS.portfolio))}
         ${copyControl("Phone", record.phone || "", "Copied phone number", tinyIcon(CONTACT_PATHS.phone))}
         ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
-      </div>
+      </div>`
+          : ""
+      }
     </div>
     ${instagramStrip(record, "result-card_shots", false)}
   `;
@@ -882,7 +930,10 @@ function mapPopup(record) {
   const shots = instagramStrip(record, "roster-pop_shots", false);
   return `
     <div class="roster-pop">
-      ${starButtonHtml(record.id, "roster-pop_star")}
+      <div class="roster-pop_actions">
+        ${instagramPillHtml(instagramHref)}
+        ${starButtonHtml(record.id)}
+      </div>
       <button class="roster-pop_close" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -896,7 +947,6 @@ function mapPopup(record) {
       ${shots ? shots : ""}
       <p class="roster-pop_bio">${escapeHtml(cardBio(record))}</p>
       <div class="roster-pop_icons">
-        ${externalControl("roster-pop_icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
         ${externalControl("roster-pop_icon", "Portfolio", record.portfolio || "", tinyIcon(CONTACT_PATHS.portfolio))}
         ${externalControl("roster-pop_icon", "Phone", phoneHref, tinyIcon(CONTACT_PATHS.phone))}
         ${externalControl("roster-pop_icon", "Email", mailHref, tinyIcon(CONTACT_PATHS.email))}
@@ -1258,13 +1308,14 @@ function renderProfile() {
       <div class="profile_id">
       <div class="profile_title_row">
         <h1>${escapeHtml(record.name)}</h1>
+        ${record.external ? `<span class="external-stamp">External</span>` : ""}
+        ${instagramPillHtml(instagramHref, "profile_ig")}
         ${starButtonHtml(record.id, "profile_star")}
       </div>
       ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
       ${place ? `<p class="profile_place">${escapeHtml(place)}</p>` : ""}
       </div>
       <div class="profile_icons">
-        ${externalControl("roster-icon", "Instagram", instagramHref, tinyIcon(CONTACT_PATHS.instagram))}
         ${copyControl("Phone", record.phone || "", "Copied phone number", tinyIcon(CONTACT_PATHS.phone))}
         ${copyControl("Email", record.email || "", "Copied email", tinyIcon(CONTACT_PATHS.email))}
         ${record.portfolio
@@ -2489,6 +2540,129 @@ function rememberPerson(record) {
   localStorage.setItem(ADDED_KEY, JSON.stringify(added));
 }
 
+const EXTERNAL_KEY = "10k-external-people";
+
+function readExternalPeople() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(EXTERNAL_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveExternalPeople(list) {
+  try {
+    localStorage.setItem(EXTERNAL_KEY, JSON.stringify(list));
+  } catch {}
+}
+
+function loadExternalPeople() {
+  const saved = readExternalPeople();
+  saved.forEach((record) => {
+    if (!record || !record.id || !record.name) return;
+    record.external = true;
+    record.roles = record.roles?.length ? record.roles : ["External creative"];
+    record.secondary = record.secondary || [];
+    record.genres = record.genres || [];
+    record.also = record.also || [];
+    record.images = record.images || [];
+    record.past = record.past || [];
+    if (!PEOPLE.some((item) => item.id === record.id)) {
+      PEOPLE.push(record);
+    }
+  });
+}
+
+function formatHandleDisplayName(handle) {
+  const clean = String(handle || "").replace(/^@/, "").trim();
+  if (!clean) return "External Creative";
+  const parts = clean.split(/[._-]+/).filter(Boolean);
+  if (parts.length > 1) {
+    return parts
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function extractInstagramHandles(rawValues) {
+  const out = [];
+  rawValues.forEach((raw) => {
+    String(raw || "")
+      .split(/[\s,;]+/)
+      .map((part) => cleanHandle(part))
+      .filter(Boolean)
+      .forEach((handle) => {
+        const cleaned = handle.replace(/[^a-zA-Z0-9._]/g, "");
+        if (!cleaned || /^(p|reel|reels|stories|explore|tv)$/i.test(cleaned)) return;
+        if (!out.some((item) => item.toLowerCase() === cleaned.toLowerCase())) {
+          out.push(cleaned);
+        }
+      });
+  });
+  return out;
+}
+
+function ensureExternalPerson(rawHandle) {
+  const handle = cleanHandle(rawHandle).replace(/[^a-zA-Z0-9._]/g, "");
+  if (!handle) return null;
+  const lower = handle.toLowerCase();
+  const slug = lower.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "creator";
+  const extId = `ext-${slug}`;
+
+  const existingExt = PEOPLE.find(
+    (item) => item.external && (item.id === extId || String(item.instagram || "").toLowerCase() === lower)
+  );
+  if (existingExt) return existingExt;
+
+  const template = PEOPLE.find(
+    (item) => !item.external && String(item.instagram || "").toLowerCase() === lower
+  );
+
+  const record = template
+    ? {
+        ...template,
+        id: extId,
+        external: true,
+        roles: [...(template.roles || ["External creative"])],
+        secondary: [...(template.secondary || [])],
+        genres: [...(template.genres || [])],
+        also: [...(template.also || [])],
+        images: [...(template.images || [])],
+        past: [],
+      }
+    : {
+        id: extId,
+        name: formatHandleDisplayName(handle),
+        city: "",
+        also: [],
+        roles: ["External creative"],
+        secondary: [],
+        genres: [],
+        tenk: false,
+        instagram: handle,
+        email: "",
+        phone: "",
+        preferred: "instagram",
+        referredBy: "",
+        rate: "",
+        compensation: "",
+        portfolio: "",
+        bio: "",
+        past: [],
+        avatar: "",
+        images: [],
+        external: true,
+      };
+
+  PEOPLE.push(record);
+  const saved = readExternalPeople().filter((item) => item.id !== record.id);
+  saved.unshift(record);
+  saveExternalPeople(saved);
+  return record;
+}
+
 function rosterId(name) {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "creative";
   let id = base;
@@ -3584,6 +3758,252 @@ function setBoardCreateOpen(open) {
   }
 }
 
+let moodboardMode = "";
+let moodboardBoardId = "";
+let moodboardPicks = {};
+let moodboardSeed = 1;
+
+function boardRoleGroupsMap(members) {
+  const roleGroups = new Map();
+  members.forEach((record) => {
+    const primaryRole = (record.roles || [])[0] || (record.secondary || [])[0] || "Creative";
+    if (!roleGroups.has(primaryRole)) roleGroups.set(primaryRole, []);
+    roleGroups.get(primaryRole).push(record);
+  });
+  return roleGroups;
+}
+
+function resetMoodboardState() {
+  moodboardMode = "";
+  moodboardBoardId = "";
+  moodboardPicks = {};
+  const dlg = document.getElementById("board-moodboard-dialog");
+  if (dlg) dlg.hidden = true;
+  document.body.classList.remove("add-open");
+}
+
+function syncMoodboardUI(activeBoard, members, roleGroups) {
+  const detail = document.getElementById("board-detail");
+  const ctaBtn = document.getElementById("board-moodboard-btn");
+  const bar = document.getElementById("board-moodboard-bar");
+  const picksEl = document.getElementById("board-moodboard-picks");
+  const hintEl = document.getElementById("board-moodboard-hint");
+  const dialog = document.getElementById("board-moodboard-dialog");
+  const resultsWrap = document.getElementById("board-detail-results");
+  if (!detail) return;
+
+  if (!activeBoard || members.length === 0) {
+    resetMoodboardState();
+    if (ctaBtn) ctaBtn.hidden = true;
+    if (bar) bar.hidden = true;
+    if (dialog) dialog.hidden = true;
+    if (resultsWrap) resultsWrap.hidden = false;
+    detail.removeAttribute("data-moodboard-mode");
+    return;
+  }
+
+  if (moodboardBoardId && moodboardBoardId !== activeBoard.id) {
+    resetMoodboardState();
+  }
+  moodboardBoardId = activeBoard.id;
+
+  if (ctaBtn) {
+    ctaBtn.hidden = members.length < 1 || moodboardMode === "select";
+  }
+
+  detail.dataset.moodboardMode = moodboardMode || "";
+
+  if (moodboardMode === "select") {
+    if (bar) bar.hidden = false;
+    if (dialog) dialog.hidden = true;
+    document.body.classList.remove("add-open");
+    if (resultsWrap) resultsWrap.hidden = false;
+
+    const roles = [...roleGroups.keys()];
+    const pickedCount = roles.filter((r) =>
+      roleGroups.get(r).some((person) => person.id === moodboardPicks[r])
+    ).length;
+
+    if (hintEl) {
+      hintEl.textContent =
+        pickedCount === roles.length
+          ? `All ${roles.length} ${roles.length === 1 ? "role" : "roles"} checked — click Generate to preview!`
+          : `Check 1 creative from each role row below (${pickedCount} of ${roles.length} roles selected).`;
+    }
+
+    const genBtn = document.getElementById("board-moodboard-generate");
+    if (genBtn) {
+      genBtn.disabled = pickedCount === 0;
+    }
+
+    if (picksEl) {
+      picksEl.innerHTML = roles
+        .map((roleName) => {
+          const chosen = roleGroups.get(roleName).find((p) => p.id === moodboardPicks[roleName]);
+          return `<span class="moodboard-pick-chip${chosen ? " is-picked" : ""}">
+            <strong>${escapeHtml(roleName)}:</strong>
+            <span>${escapeHtml(chosen ? chosen.name : "Check 1 below")}</span>
+          </span>`;
+        })
+        .join("");
+    }
+
+    document.querySelectorAll("#board-detail-grid .board-role-group").forEach((groupEl) => {
+      const roleName = groupEl.dataset.role || "";
+      const selectedId = moodboardPicks[roleName] || "";
+      groupEl.querySelectorAll(".result-card").forEach((card) => {
+        const isPicked = card.dataset.id === selectedId;
+        card.classList.toggle("is-moodboard-picked", isPicked);
+        const checkbox = card.querySelector(".moodboard-card-checkbox");
+        if (checkbox) checkbox.checked = isPicked;
+        const labelEl = card.querySelector(".moodboard-card-check_label");
+        if (labelEl) labelEl.textContent = isPicked ? "Selected" : `Select ${roleName}`;
+      });
+    });
+    return;
+  }
+
+  if (moodboardMode === "preview") {
+    if (bar) bar.hidden = true;
+    if (dialog) dialog.hidden = false;
+    document.body.classList.add("add-open");
+    if (resultsWrap) resultsWrap.hidden = false;
+    paintMoodboardStage(roleGroups);
+    return;
+  }
+
+  if (bar) bar.hidden = true;
+  if (dialog) dialog.hidden = true;
+  document.body.classList.remove("add-open");
+  if (resultsWrap) resultsWrap.hidden = false;
+}
+
+function paintMoodboardStage(roleGroups) {
+  const crewEl = document.getElementById("board-moodboard-crew");
+  const canvasEl = document.getElementById("board-moodboard-canvas");
+  const subEl = document.getElementById("board-moodboard-sub");
+  if (!crewEl || !canvasEl) return;
+
+  const selectedCrew = [];
+  roleGroups.forEach((groupRecords, roleName) => {
+    const picked = groupRecords.find((person) => person.id === moodboardPicks[roleName]);
+    if (picked) selectedCrew.push({ role: roleName, record: picked });
+  });
+  if (!selectedCrew.length) {
+    roleGroups.forEach((groupRecords, roleName) => {
+      if (groupRecords[0]) selectedCrew.push({ role: roleName, record: groupRecords[0] });
+    });
+  }
+
+  if (subEl) {
+    const summary = selectedCrew.map((item) => `${item.record.name} (${item.role})`).join(" + ");
+    subEl.textContent = summary
+      ? `Featuring work from ${summary}.`
+      : "Visualizing how your selected crew's work looks together.";
+  }
+
+  crewEl.innerHTML = selectedCrew
+    .map(
+      ({ role, record }) => `
+      <button type="button" class="moodboard-crew_pill" data-person="${escapeHtml(record.id)}">
+        ${avatarHtml(record, "moodboard-crew_avatar")}
+        <span class="moodboard-crew_meta">
+          <strong>${escapeHtml(record.name)}</strong>
+          <span>${escapeHtml(role)}</span>
+        </span>
+      </button>
+    `
+    )
+    .join("");
+
+  crewEl.querySelectorAll(".moodboard-crew_pill").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.person) {
+        resetMoodboardState();
+        openProfile(btn.dataset.person);
+      }
+    });
+  });
+
+  const buckets = selectedCrew.map(({ role, record }) => {
+    const rawImages = (record.images || [])
+      .map((item) => (typeof item === "string" ? { src: item, href: "" } : item))
+      .filter((item) => item && item.src)
+      .slice(0, 5);
+    if (!rawImages.length && record.avatar) {
+      rawImages.push({ src: record.avatar, href: record.instagram ? `https://instagram.com/${record.instagram}` : "" });
+    }
+    return rawImages.map((img) => ({
+      src: img.src,
+      href: img.href || (record.instagram ? `https://instagram.com/${record.instagram}` : ""),
+      record,
+      role,
+    }));
+  });
+
+  const interleaved = [];
+  const maxLen = Math.max(0, ...buckets.map((b) => b.length));
+  for (let i = 0; i < maxLen; i += 1) {
+    buckets.forEach((bucket) => {
+      if (bucket[i]) interleaved.push(bucket[i]);
+    });
+  }
+
+  const angles = [-4.2, 3.1, -2.4, 4.4, -3.5, 2.2, -4.6, 3.6, -1.8, 2.9, -3.8, 4.1];
+  const lifts = [4, 18, 0, 22, 10, 2, 20, 8, 14, 0, 16, 6];
+  const aspects = ["4 / 5", "1 / 1", "4 / 4.6", "3 / 4", "4 / 5", "1 / 1.15"];
+
+  if (!interleaved.length) {
+    canvasEl.innerHTML = `<p class="boards-sub">No portfolio images available for this selection yet.</p>`;
+    return;
+  }
+
+  const ordered = interleaved.slice();
+  if (moodboardSeed > 1) {
+    for (let i = ordered.length - 1; i > 0; i -= 1) {
+      const j = (i * moodboardSeed * 7 + moodboardSeed * 3) % (i + 1);
+      const temp = ordered[i];
+      ordered[i] = ordered[j];
+      ordered[j] = temp;
+    }
+  }
+
+  canvasEl.innerHTML = ordered
+    .map((item, idx) => {
+      const rot = angles[(idx + moodboardSeed) % angles.length];
+      const lift = lifts[(idx + moodboardSeed * 2) % lifts.length];
+      const ratio = aspects[(idx + moodboardSeed) % aspects.length];
+      return `
+        <figure
+          class="moodboard-item"
+          style="--mb-rot:${rot}deg;--mb-lift:${lift}px;--mb-ratio:${ratio}"
+          data-person="${escapeHtml(item.record.id)}"
+        >
+          <div class="moodboard-item_photo">
+            <img src="${escapeHtml(item.src)}" alt="" />
+          </div>
+          <figcaption class="moodboard-item_cap">
+            ${avatarHtml(item.record, "moodboard-item_avatar")}
+            <span class="moodboard-item_credit">
+              <strong>${escapeHtml(item.record.name)}</strong>
+              <span>${escapeHtml(item.role)}</span>
+            </span>
+          </figcaption>
+        </figure>
+      `;
+    })
+    .join("");
+
+  canvasEl.querySelectorAll(".moodboard-item").forEach((card) => {
+    card.addEventListener("click", () => {
+      if (card.dataset.person) {
+        resetMoodboardState();
+        openProfile(card.dataset.person);
+      }
+    });
+  });
+}
+
 function renderBoards() {
   const overview = document.getElementById("boards-overview");
   const detail = document.getElementById("board-detail");
@@ -3623,19 +4043,15 @@ function renderBoards() {
     }
     if (dateTextEl) dateTextEl.textContent = dateLabel || "Add date";
     if (dateWrapEl) dateWrapEl.classList.toggle("is-empty", !dateLabel);
+    const roleGroups = boardRoleGroupsMap(members);
     if (emptyEl) emptyEl.hidden = members.length !== 0;
     if (gridEl) {
       gridEl.innerHTML = "";
-      const roleGroups = new Map();
-      members.forEach((record) => {
-        const primaryRole = (record.roles || [])[0] || (record.secondary || [])[0] || "Creative";
-        if (!roleGroups.has(primaryRole)) roleGroups.set(primaryRole, []);
-        roleGroups.get(primaryRole).push(record);
-      });
-      const showRoleHeaders = roleGroups.size > 1;
+      const showRoleHeaders = roleGroups.size > 1 || moodboardMode === "select";
       roleGroups.forEach((groupRecords, roleName) => {
         const section = document.createElement("section");
         section.className = "board-role-group";
+        section.dataset.role = roleName;
         if (showRoleHeaders) {
           const heading = document.createElement("h3");
           heading.className = "board-role-group_title";
@@ -3650,17 +4066,68 @@ function renderBoards() {
         rowGrid.className = "grid";
         groupRecords.forEach((record) => {
           const card = document.createElement("article");
-          card.className = "result-card";
+          const isPicked = moodboardPicks[roleName] === record.id;
+          card.className = [
+            "result-card",
+            record.external ? "is-external" : "",
+            isPicked ? "is-moodboard-picked" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
           card.tabIndex = 0;
           card.dataset.id = record.id;
-          card.innerHTML = rosterCardHtml(record);
-          const open = () => openProfile(record.id);
+          card.dataset.role = roleName;
+          card.innerHTML = `
+            <label class="moodboard-card-check" aria-label="Select ${escapeHtml(record.name)} for ${escapeHtml(roleName)}">
+              <input
+                type="checkbox"
+                class="moodboard-card-checkbox"
+                data-role="${escapeHtml(roleName)}"
+                data-person="${escapeHtml(record.id)}"
+                ${isPicked ? "checked" : ""}
+              />
+              <span class="moodboard-card-check_box" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.5 8.3 6.6 11.4 12.6 4.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <span class="moodboard-card-check_label">${escapeHtml(isPicked ? "Selected" : `Select ${roleName}`)}</span>
+            </label>
+            ${rosterCardHtml(record)}
+          `;
+          const toggleRolePick = (forceState) => {
+            const currentlyPicked = moodboardPicks[roleName] === record.id;
+            const nextPicked = typeof forceState === "boolean" ? forceState : !currentlyPicked;
+            if (nextPicked) {
+              moodboardPicks[roleName] = record.id;
+            } else if (currentlyPicked) {
+              delete moodboardPicks[roleName];
+            }
+            syncMoodboardUI(activeBoard, members, roleGroups);
+          };
+          const checkboxEl = card.querySelector(".moodboard-card-checkbox");
+          checkboxEl?.addEventListener("change", (event) => {
+            event.stopPropagation();
+            toggleRolePick(checkboxEl.checked);
+          });
+          card.querySelector(".moodboard-card-check")?.addEventListener("click", (event) => {
+            event.stopPropagation();
+          });
           card.addEventListener("click", (event) => {
+            if (moodboardMode === "select") {
+              if (event.target.closest("a, .copy-icon, .star-btn")) {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+              toggleRolePick();
+              return;
+            }
             if (event.target.closest("a, .copy-icon, .star-btn")) return;
-            open();
+            openProfile(record.id);
           });
           card.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) open();
+            if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) {
+              if (moodboardMode === "select") toggleRolePick();
+              else openProfile(record.id);
+            }
           });
           rowGrid.appendChild(card);
         });
@@ -3668,8 +4135,11 @@ function renderBoards() {
         gridEl.appendChild(section);
       });
     }
+    syncMoodboardUI(activeBoard, members, roleGroups);
     return;
   }
+
+  resetMoodboardState();
 
   overview.hidden = false;
   detail.hidden = true;
@@ -3754,9 +4224,67 @@ function paintBoardAddPanel() {
 
 function closeBoardAddPanel() {
   const panel = document.getElementById("board-add-panel");
+  const menu = document.getElementById("board-add-menu");
   const btn = document.getElementById("board-add-creative-btn");
   if (panel) panel.hidden = true;
+  if (menu) menu.hidden = true;
   if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+function addExternalHandleRow(initialValue = "") {
+  const container = document.getElementById("board-external-rows");
+  if (!container) return null;
+  const row = document.createElement("div");
+  row.className = "board-external_row";
+  row.innerHTML = `
+    <span class="add-input board-external_input">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">${CONTACT_PATHS.instagram}</svg>
+      <input
+        type="text"
+        name="external-instagram"
+        placeholder="instagram.com/username or @handle"
+        autocomplete="off"
+        value="${escapeHtml(initialValue)}"
+      />
+    </span>
+    <button type="button" class="board-external_remove" aria-label="Remove handle">×</button>
+  `;
+  const removeBtn = row.querySelector(".board-external_remove");
+  removeBtn?.addEventListener("click", () => {
+    row.remove();
+    syncExternalRemoveButtons();
+  });
+  container.appendChild(row);
+  syncExternalRemoveButtons();
+  return row.querySelector("input");
+}
+
+function syncExternalRemoveButtons() {
+  const rows = [...document.querySelectorAll("#board-external-rows .board-external_row")];
+  rows.forEach((row) => {
+    const btn = row.querySelector(".board-external_remove");
+    if (btn) btn.hidden = rows.length <= 1;
+  });
+}
+
+function setBoardExternalOpen(open) {
+  const dialog = document.getElementById("board-external-dialog");
+  const container = document.getElementById("board-external-rows");
+  const errorEl = document.getElementById("board-external-error");
+  if (!dialog) return;
+  dialog.hidden = !open;
+  document.body.classList.toggle("add-open", open);
+  closeBoardAddPanel();
+  if (errorEl) errorEl.textContent = "";
+  if (open) {
+    if (container) {
+      container.innerHTML = "";
+      const firstInput = addExternalHandleRow();
+      requestAnimationFrame(() => firstInput?.focus());
+    }
+  } else if (container) {
+    container.innerHTML = "";
+  }
 }
 
 let activeDateAnchor = null;
@@ -4128,8 +4656,8 @@ function bindBoards() {
       closeBoardPicker();
     }
     const addWrap = document.getElementById("board-add-wrap");
-    const addPanel = document.getElementById("board-add-panel");
-    if (addPanel && !addPanel.hidden && addWrap && !addWrap.contains(event.target)) {
+    const addMenu = document.getElementById("board-add-menu");
+    if (addMenu && !addMenu.hidden && addWrap && !addWrap.contains(event.target)) {
       closeBoardAddPanel();
     }
     const shareWrap = document.getElementById("board-share-wrap");
@@ -4172,9 +4700,20 @@ function bindBoards() {
         closeBoardDatePicker();
         return;
       }
+      const moodboardDialog = document.getElementById("board-moodboard-dialog");
+      if (moodboardDialog && !moodboardDialog.hidden) {
+        resetMoodboardState();
+        renderBoards();
+        return;
+      }
       const deleteDialog = document.getElementById("board-delete-dialog");
       if (deleteDialog && !deleteDialog.hidden) {
         closeDeleteBoardDialog();
+        return;
+      }
+      const externalDialog = document.getElementById("board-external-dialog");
+      if (externalDialog && !externalDialog.hidden) {
+        setBoardExternalOpen(false);
         return;
       }
       const createDialog = document.getElementById("boards-create-dialog");
@@ -4182,6 +4721,7 @@ function bindBoards() {
         setBoardCreateOpen(false);
         return;
       }
+      closeBoardAddPanel();
       closeBoardSharePanel();
       closeBoardPicker();
     }
@@ -4284,8 +4824,145 @@ function bindBoards() {
     closeBoardAddPanel();
     closeBoardSharePanel();
     closeBoardDatePicker();
+    resetMoodboardState();
     state.board = "";
     render({ url: "push" });
+  });
+
+  const moodboardBtn = document.getElementById("board-moodboard-btn");
+  const moodboardDialog = document.getElementById("board-moodboard-dialog");
+  const moodboardCancelBtn = document.getElementById("board-moodboard-cancel");
+  const moodboardGenerateBtn = document.getElementById("board-moodboard-generate");
+  const moodboardShuffleBtn = document.getElementById("board-moodboard-shuffle");
+  const moodboardEditBtn = document.getElementById("board-moodboard-edit");
+  const moodboardXBtn = document.getElementById("board-moodboard-x");
+
+  moodboardBtn?.addEventListener("click", () => {
+    if (!state.board) return;
+    const board = readBoards().find((item) => item.id === state.board);
+    if (!board) return;
+    moodboardPicks = {};
+    moodboardMode = "select";
+    renderBoards();
+  });
+
+  moodboardCancelBtn?.addEventListener("click", () => {
+    resetMoodboardState();
+    renderBoards();
+  });
+
+  moodboardGenerateBtn?.addEventListener("click", () => {
+    if (!state.board) return;
+    const board = readBoards().find((item) => item.id === state.board);
+    if (!board) return;
+    const members = board.people
+      .map((id) => PEOPLE.find((person) => person.id === id))
+      .filter(Boolean);
+    const roleGroups = boardRoleGroupsMap(members);
+    const hasAnyPick = [...roleGroups.keys()].some((roleName) => Boolean(moodboardPicks[roleName]));
+    if (!hasAnyPick) {
+      roleGroups.forEach((records, roleName) => {
+        if (records[0]) moodboardPicks[roleName] = records[0].id;
+      });
+    }
+    moodboardSeed = 1;
+    moodboardMode = "preview";
+    renderBoards();
+  });
+
+  moodboardShuffleBtn?.addEventListener("click", () => {
+    moodboardSeed += 1;
+    renderBoards();
+  });
+
+  moodboardEditBtn?.addEventListener("click", () => {
+    moodboardMode = "select";
+    renderBoards();
+  });
+
+  const dismissMoodboardModal = () => {
+    resetMoodboardState();
+    renderBoards();
+  };
+
+  moodboardXBtn?.addEventListener("click", dismissMoodboardModal);
+  moodboardDialog?.addEventListener("click", (event) => {
+    if (event.target === moodboardDialog) dismissMoodboardModal();
+  });
+
+  const addCreativeBtn = document.getElementById("board-add-creative-btn");
+  const addMenu = document.getElementById("board-add-menu");
+  const addExternalBtn = document.getElementById("board-add-external");
+  const emptyAddExternalBtn = document.getElementById("board-empty-add-external");
+  const externalDialog = document.getElementById("board-external-dialog");
+  const externalForm = document.getElementById("board-external-form");
+  const externalMoreBtn = document.getElementById("board-external-more");
+  const externalCancelBtn = document.getElementById("board-external-cancel");
+  const externalCloseBtn = document.getElementById("board-external-close");
+  const externalError = document.getElementById("board-external-error");
+
+  addCreativeBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!addMenu) return;
+    const next = addMenu.hidden;
+    closeBoardSharePanel();
+    addMenu.hidden = !next;
+    addCreativeBtn.setAttribute("aria-expanded", String(next));
+  });
+
+  addExternalBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setBoardExternalOpen(true);
+  });
+
+  emptyAddExternalBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    setBoardExternalOpen(true);
+  });
+
+  externalMoreBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    const input = addExternalHandleRow();
+    input?.focus();
+  });
+
+  externalCancelBtn?.addEventListener("click", () => setBoardExternalOpen(false));
+  externalCloseBtn?.addEventListener("click", () => setBoardExternalOpen(false));
+  externalDialog?.addEventListener("click", (event) => {
+    if (event.target === externalDialog) setBoardExternalOpen(false);
+  });
+
+  externalForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const inputs = [...document.querySelectorAll('#board-external-rows input[name="external-instagram"]')];
+    const handles = extractInstagramHandles(inputs.map((input) => input.value));
+    if (!handles.length) {
+      if (externalError) externalError.textContent = "Enter at least one Instagram link or @handle.";
+      inputs[0]?.focus();
+      return;
+    }
+    if (!state.board) {
+      setBoardExternalOpen(false);
+      return;
+    }
+    const boards = readBoards();
+    const board = boards.find((item) => item.id === state.board);
+    if (!board) {
+      setBoardExternalOpen(false);
+      return;
+    }
+    handles.forEach((handle) => {
+      const person = ensureExternalPerson(handle);
+      if (person && !board.people.includes(person.id)) {
+        board.people.push(person.id);
+      }
+    });
+    saveBoards(boards);
+    syncStarButtons();
+    renderHomeBoards();
+    setBoardExternalOpen(false);
+    renderBoards();
   });
 
   const shareBtn = document.getElementById("board-share-btn");
@@ -4378,6 +5055,7 @@ document.addEventListener("click", (event) => {
 }, true);
 
 loadAddedPeople();
+loadExternalPeople();
 
 PEOPLE.forEach((record) => {
   record.images = record.images || [];

@@ -15,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     />
     <meta http-equiv="Cache-Control" content="no-cache" />
-    <link rel="stylesheet" href="styles.css?v=243" />
+    <link rel="stylesheet" href="styles.css?v=250" />
   </head>
   <body data-page="boards" data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -174,7 +174,40 @@
             <p class="boards-sub" id="board-detail-count"></p>
           </div>
           <div class="board-detail_actions">
-            <a class="tool-pill tool-pill_add" id="board-add-creative-btn" href="results.html?browse=1">Browse creatives</a>
+            <button class="tool-pill board-moodboard-cta" id="board-moodboard-btn" type="button" hidden>
+              <svg class="moodboard-sparkle-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M12 2.5l1.9 5.1 5.1 1.9-5.1 1.9L12 16.5l-1.9-5.1-5.1-1.9 5.1-1.9L12 2.5z" fill="currentColor" />
+                <path d="M19 14.5l.95 2.55 2.55.95-2.55.95L19 21.5l-.95-2.55-2.55-.95 2.55-.95L19 14.5z" fill="currentColor" />
+                <path d="M5.5 14l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" fill="currentColor" />
+              </svg>
+              <span>Generate moodboard</span>
+            </button>
+            <div class="board-add-wrap" id="board-add-wrap">
+              <button class="tool-pill tool-pill_add board-add-toggle" id="board-add-creative-btn" type="button" aria-expanded="false" aria-controls="board-add-menu">
+                <span>+ Add creative</span>
+                <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+                  <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <div class="board-share-panel board-add-menu" id="board-add-menu" hidden role="menu" aria-label="Add creative">
+                <a class="board-share-item" id="board-add-internal" href="results.html?browse=1" role="menuitem">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M3.8 18.5c.6-2.7 2.5-4.1 5.2-4.1s4.6 1.4 5.2 4.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    <path d="M17.5 8v6M14.5 11h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                  <span>Browse internal creatives</span>
+                </a>
+                <button class="board-share-item" id="board-add-external" type="button" role="menuitem">
+                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <circle cx="16.6" cy="7.4" r="1" fill="currentColor" />
+                  </svg>
+                  <span>Add external creative</span>
+                </button>
+              </div>
+            </div>
             <div class="board-share-wrap" id="board-share-wrap">
               <button class="board-share-btn" id="board-share-btn" type="button" aria-label="Share board" aria-expanded="false" aria-controls="board-share-panel">
                 <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -235,10 +268,38 @@
           <h2>This board is waiting for its crew.</h2>
           <p>Star creatives on the roster and pick this board to start pinning people here.</p>
           <div class="boards-empty_actions">
-            <a class="tool-pill tool-pill_add" href="results.html?browse=1">Browse creatives</a>
+            <a class="tool-pill tool-pill_add" href="results.html?browse=1">Browse internal creatives</a>
+            <button class="tool-pill boards-empty_new" id="board-empty-add-external" type="button">+ Add external creative</button>
           </div>
         </div>
-        <div class="results-page" data-results-view="list">
+        <div class="moodboard-bar" id="board-moodboard-bar" hidden>
+          <div class="moodboard-bar_glow" aria-hidden="true"></div>
+          <div class="moodboard-bar_copy">
+            <div class="moodboard-bar_title">
+              <span class="moodboard-bar_badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="15" height="15">
+                  <path d="M12 2.5l1.9 5.1 5.1 1.9-5.1 1.9L12 16.5l-1.9-5.1-5.1-1.9 5.1-1.9L12 2.5z" fill="currentColor" />
+                  <path d="M19 14.5l.95 2.55 2.55.95-2.55.95L19 21.5l-.95-2.55-2.55-.95 2.55-.95L19 14.5z" fill="currentColor" />
+                </svg>
+              </span>
+              <strong>Select 1 creative from each role</strong>
+            </div>
+            <span id="board-moodboard-hint">Check one creative per role below, then click Generate.</span>
+            <div class="moodboard-bar_picks" id="board-moodboard-picks"></div>
+          </div>
+          <div class="moodboard-bar_actions">
+            <button class="board-cancel-pill" id="board-moodboard-cancel" type="button">Cancel</button>
+            <button class="tool-pill moodboard-generate-btn" id="board-moodboard-generate" type="button">
+              <svg class="moodboard-generate-btn_icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M12 2.5l1.9 5.1 5.1 1.9-5.1 1.9L12 16.5l-1.9-5.1-5.1-1.9 5.1-1.9L12 2.5z" fill="currentColor" />
+                <path d="M19 14.5l.95 2.55 2.55.95-2.55.95L19 21.5l-.95-2.55-2.55-.95 2.55-.95L19 14.5z" fill="currentColor" />
+                <path d="M5.5 14l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" fill="currentColor" />
+              </svg>
+              <span>Generate</span>
+            </button>
+          </div>
+        </div>
+        <div class="results-page" id="board-detail-results" data-results-view="list">
           <div class="board-role-groups" id="board-detail-grid"></div>
         </div>
       </div>
@@ -302,8 +363,47 @@
       </div>
     </div>
 
+    <div class="add-dialog board-external-dialog" id="board-external-dialog" hidden>
+      <form class="add-dialog_panel board-external_panel" id="board-external-form" novalidate role="dialog" aria-modal="true" aria-labelledby="board-external-title">
+        <button class="add-dialog_close" id="board-external-close" type="button" aria-label="Close">×</button>
+        <h2 id="board-external-title">Add external creatives</h2>
+        <p class="add-dialog_lede">Paste one or more Instagram links or @handles to generate external cards on this board.</p>
+        <div class="add-field">
+          <span>Instagram handles or links</span>
+          <div class="board-external_rows" id="board-external-rows"></div>
+          <button class="add-more" id="board-external-more" type="button">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+            <span>Add another handle</span>
+          </button>
+        </div>
+        <p class="add-dialog_error" id="board-external-error" role="alert"></p>
+        <div class="add-dialog_actions">
+          <button class="add-cancel" id="board-external-cancel" type="button">Cancel</button>
+          <button class="add-submit" type="submit">Add to board</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="add-dialog board-moodboard-dialog" id="board-moodboard-dialog" hidden>
+      <div class="add-dialog_panel moodboard-stage" id="board-moodboard-stage" role="dialog" aria-modal="true" aria-labelledby="board-moodboard-title">
+        <button class="add-dialog_close" id="board-moodboard-x" type="button" aria-label="Close">×</button>
+        <div class="moodboard-stage_head">
+          <div>
+            <h2 id="board-moodboard-title">Generated moodboard</h2>
+            <p class="moodboard-stage_sub" id="board-moodboard-sub">Visualizing how your selected crew's work looks together.</p>
+          </div>
+          <div class="moodboard-stage_actions">
+            <button class="board-cancel-pill" id="board-moodboard-shuffle" type="button">Shuffle layout</button>
+            <button class="board-cancel-pill" id="board-moodboard-edit" type="button">Change lineup</button>
+          </div>
+        </div>
+        <div class="moodboard-crew" id="board-moodboard-crew"></div>
+        <div class="moodboard-canvas" id="board-moodboard-canvas"></div>
+      </div>
+    </div>
+
     <script src="people.js?v=24"></script>
     <script src="projects.js?v=45"></script>
-    <script src="app.js?v=202"></script>
+    <script src="app.js?v=208"></script>
   </body>
 </html>
