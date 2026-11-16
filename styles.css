@@ -8440,14 +8440,12 @@ body.share-preview-open {
 
 .moodboard-stage {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  display: block;
   width: min(1120px, 100%);
   max-height: min(88vh, 860px);
   overflow-y: auto;
   margin: 0;
-  padding: 28px 30px 36px;
+  padding: 0 30px 36px;
   border: 1px solid rgba(255, 255, 255, 0.88);
   border-radius: 30px;
   background-color: rgba(252, 249, 246, 0.96);
@@ -8463,15 +8461,37 @@ body.share-preview-open {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+.moodboard-stage > .add-dialog_close {
+  position: sticky;
+  top: 22px;
+  right: auto;
+  z-index: 30;
+  float: right;
+  margin: 22px -14px -54px 0;
+}
+
+.moodboard-stage_pin {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  margin: 0 -30px 18px;
+  padding: 24px 30px 16px;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.06);
+  background-color: rgba(252, 249, 246, 0.96);
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 244, 238, 0.94) 52%, rgba(242, 236, 255, 0.92) 100%);
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.05);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
 .moodboard-stage_head {
   grid-column: 1;
   grid-row: 1;
   padding-right: 16px;
-  margin-bottom: 18px;
-}
-
-.moodboard-stage_pin {
-  display: contents;
+  margin-bottom: 14px;
 }
 
 .moodboard-stage_head h2 {
@@ -8524,7 +8544,7 @@ body.share-preview-open {
   gap: 10px;
   grid-column: 1 / -1;
   grid-row: 2;
-  margin-bottom: 26px;
+  margin-bottom: 0;
 }
 
 .moodboard-canvas {
