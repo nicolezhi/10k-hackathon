@@ -4196,10 +4196,24 @@ function placeMoodboardDialog() {
   dialog.style.top = Math.round(header.getBoundingClientRect().bottom) + "px";
 }
 
+function closeMoodboardPickMenus(exceptDrop = null) {
+  document
+    .querySelectorAll("#board-moodboard-picks .moodboard-pick-drop, #board-moodboard-crew .moodboard-pick-drop")
+    .forEach((drop) => {
+      if (drop === exceptDrop) return;
+      drop.classList.remove("is-open");
+      const btn = drop.querySelector(".moodboard-pick-chip, .moodboard-crew_pill");
+      const menu = drop.querySelector(".moodboard-pick-menu");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+      if (menu) menu.hidden = true;
+    });
+}
+
 function resetMoodboardState() {
   moodboardMode = "";
   moodboardBoardId = "";
   moodboardPicks = {};
+  closeMoodboardPickMenus();
   const dlg = document.getElementById("board-moodboard-dialog");
   if (dlg) dlg.hidden = true;
   document.body.classList.remove("add-open");
@@ -4319,16 +4333,80 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
       } else {
         picksEl.innerHTML = roles
           .map((roleName) => {
-            const chosen = moodboardPickList(roleName)
-              .map((id) => roleGroups.get(roleName).find((person) => person.id === id))
-              .filter(Boolean);
-            const emptyLabel = moodboardRoleAllowsMany(roleName) ? "Select any" : "Check 1 below";
-            return `<span class="moodboard-pick-chip${chosen.length ? " is-picked" : ""}">
-              <strong>${escapeHtml(roleName)}:</strong>
-              <span>${escapeHtml(chosen.length ? chosen.map((person) => person.name).join(", ") : emptyLabel)}</span>
-            </span>`;
+            const groupRecords = roleGroups.get(roleName) || [];
+            const pickedIds = moodboardPickList(roleName);
+            const chosen = groupRecords.find((p) => pickedIds.includes(p.id));
+            const optionsHtml = groupRecords
+              .map((person) => {
+                const isSelected = pickedIds.includes(person.id);
+                const sub = person.city || (person.instagram ? `@${person.instagram.replace(/^@/, "")}` : "");
+                return `
+                  <button type="button" class="moodboard-pick-option${isSelected ? " is-selected" : ""}" data-person-id="${escapeHtml(person.id)}" role="option" aria-selected="${Boolean(isSelected)}">
+                    ${avatarHtml(person, "moodboard-pick-option_avatar")}
+                    <span class="moodboard-pick-option_meta">
+                      <strong>${escapeHtml(person.name)}</strong>
+                      ${sub ? `<span>${escapeHtml(sub)}</span>` : ""}
+                    </span>
+                    <span class="moodboard-pick-option_check" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3.5 8.3 6.6 11.4 12.6 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                  </button>
+                `;
+              })
+              .join("");
+            const clearHtml = chosen
+              ? `<button type="button" class="moodboard-pick-clear" data-clear-role="${escapeHtml(roleName)}">Clear selection</button>`
+              : "";
+            return `
+              <div class="moodboard-pick-drop" data-role="${escapeHtml(roleName)}">
+                <button type="button" class="moodboard-pick-chip${chosen ? " is-picked" : ""}" aria-haspopup="listbox" aria-expanded="false">
+                  <strong>${escapeHtml(roleName)}:</strong>
+                  <span>${escapeHtml(chosen ? chosen.name : "Select creative")}</span>
+                  <svg class="moodboard-pick-chevron" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                    <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+                <div class="moodboard-pick-menu" hidden role="listbox" aria-label="${escapeHtml(roleName)}">
+                  ${optionsHtml}
+                  ${clearHtml}
+                </div>
+              </div>
+            `;
           })
           .join("");
+
+        picksEl.querySelectorAll(".moodboard-pick-drop").forEach((drop) => {
+          const roleName = drop.dataset.role || "";
+          const btn = drop.querySelector(".moodboard-pick-chip");
+          const menu = drop.querySelector(".moodboard-pick-menu");
+          btn?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            if (!menu) return;
+            const willOpen = menu.hidden;
+            closeMoodboardPickMenus(drop);
+            drop.classList.toggle("is-open", willOpen);
+            menu.hidden = !willOpen;
+            btn.setAttribute("aria-expanded", String(willOpen));
+          });
+          drop.querySelectorAll(".moodboard-pick-option").forEach((opt) => {
+            opt.addEventListener("click", (event) => {
+              event.stopPropagation();
+              const personId = opt.dataset.personId || "";
+              const pickedIds = moodboardPickList(roleName);
+              if (pickedIds.includes(personId)) {
+                delete moodboardPicks[roleName];
+              } else {
+                moodboardPicks[roleName] = personId;
+              }
+              syncMoodboardUI(activeBoard, members, roleGroups);
+            });
+          });
+          drop.querySelector(".moodboard-pick-clear")?.addEventListener("click", (event) => {
+            event.stopPropagation();
+            delete moodboardPicks[roleName];
+            syncMoodboardUI(activeBoard, members, roleGroups);
+          });
+        });
       }
     }
 
@@ -4381,7 +4459,10 @@ function paintMoodboardStage(roleGroups) {
   });
   if (!selectedCrew.length) {
     roleGroups.forEach((groupRecords, roleName) => {
-      if (groupRecords[0]) selectedCrew.push({ role: roleName, record: groupRecords[0] });
+      if (groupRecords[0]) {
+        moodboardPicks[roleName] = groupRecords[0].id;
+        selectedCrew.push({ role: roleName, record: groupRecords[0] });
+      }
     });
   }
 
@@ -4392,26 +4473,93 @@ function paintMoodboardStage(roleGroups) {
       : "Visualizing how your selected crew's work looks together.";
   }
 
-  crewEl.innerHTML = selectedCrew
-    .map(
-      ({ role, record }) => `
-      <button type="button" class="moodboard-crew_pill" data-person="${escapeHtml(record.id)}">
-        ${avatarHtml(record, "moodboard-crew_avatar")}
-        <span class="moodboard-crew_meta">
-          <strong>${escapeHtml(record.name)}</strong>
-          <span>${escapeHtml(role)}</span>
-        </span>
-      </button>
-    `
-    )
+  const allRoles = [...roleGroups.keys()];
+  crewEl.innerHTML = allRoles
+    .map((roleName) => {
+      const groupRecords = roleGroups.get(roleName) || [];
+      const pickedIds = moodboardPickList(roleName);
+      const chosen = groupRecords.find((p) => pickedIds.includes(p.id));
+      const optionsHtml = groupRecords
+        .map((person) => {
+          const isSelected = pickedIds.includes(person.id);
+          const sub = person.city || (person.instagram ? `@${person.instagram.replace(/^@/, "")}` : "");
+          return `
+            <button type="button" class="moodboard-pick-option${isSelected ? " is-selected" : ""}" data-person-id="${escapeHtml(person.id)}" role="option" aria-selected="${Boolean(isSelected)}">
+              ${avatarHtml(person, "moodboard-pick-option_avatar")}
+              <span class="moodboard-pick-option_meta">
+                <strong>${escapeHtml(person.name)}</strong>
+                ${sub ? `<span>${escapeHtml(sub)}</span>` : ""}
+              </span>
+              <span class="moodboard-pick-option_check" aria-hidden="true">
+                <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3.5 8.3 6.6 11.4 12.6 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+            </button>
+          `;
+        })
+        .join("");
+      const clearHtml =
+        chosen && selectedCrew.length > 1
+          ? `<button type="button" class="moodboard-pick-clear" data-clear-role="${escapeHtml(roleName)}">Remove from moodboard</button>`
+          : "";
+      const pillInner = chosen
+        ? `
+          ${avatarHtml(chosen, "moodboard-crew_avatar")}
+          <span class="moodboard-crew_meta">
+            <strong>${escapeHtml(chosen.name)}</strong>
+            <span>${escapeHtml(roleName)}</span>
+          </span>
+        `
+        : `
+          <span class="moodboard-crew_avatar moodboard-crew_avatar-add" aria-hidden="true">+</span>
+          <span class="moodboard-crew_meta">
+            <strong>Add ${escapeHtml(roleName)}</strong>
+            <span>${groupRecords.length === 1 ? "1 option" : `${groupRecords.length} options`}</span>
+          </span>
+        `;
+      return `
+        <div class="moodboard-pick-drop" data-role="${escapeHtml(roleName)}">
+          <button type="button" class="moodboard-crew_pill${chosen ? "" : " is-unpicked"}" aria-haspopup="listbox" aria-expanded="false">
+            ${pillInner}
+            <svg class="moodboard-pick-chevron" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+              <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <div class="moodboard-pick-menu" hidden role="listbox" aria-label="Change ${escapeHtml(roleName)}">
+            ${optionsHtml}
+            ${clearHtml}
+          </div>
+        </div>
+      `;
+    })
     .join("");
 
-  crewEl.querySelectorAll(".moodboard-crew_pill").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      if (btn.dataset.person) {
-        resetMoodboardState();
-        openProfile(btn.dataset.person);
-      }
+  crewEl.querySelectorAll(".moodboard-pick-drop").forEach((drop) => {
+    const roleName = drop.dataset.role || "";
+    const btn = drop.querySelector(".moodboard-crew_pill");
+    const menu = drop.querySelector(".moodboard-pick-menu");
+    btn?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!menu) return;
+      const willOpen = menu.hidden;
+      closeMoodboardPickMenus(drop);
+      drop.classList.toggle("is-open", willOpen);
+      menu.hidden = !willOpen;
+      btn.setAttribute("aria-expanded", String(willOpen));
+    });
+    drop.querySelectorAll(".moodboard-pick-option").forEach((opt) => {
+      opt.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const personId = opt.dataset.personId || "";
+        moodboardPicks[roleName] = personId;
+        closeMoodboardPickMenus();
+        renderBoards();
+      });
+    });
+    drop.querySelector(".moodboard-pick-clear")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      delete moodboardPicks[roleName];
+      closeMoodboardPickMenus();
+      renderBoards();
     });
   });
 
@@ -5265,6 +5413,9 @@ function bindBoards() {
     ) {
       closeBoardDatePicker();
     }
+    if (!event.target.closest(".moodboard-pick-drop")) {
+      closeMoodboardPickMenus();
+    }
   });
 
   window.addEventListener(
@@ -5286,6 +5437,10 @@ function bindBoards() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (document.querySelector(".moodboard-pick-drop.is-open")) {
+        closeMoodboardPickMenus();
+        return;
+      }
       const datePop = document.getElementById("board-date-picker");
       if (datePop && !datePop.hidden) {
         closeBoardDatePicker();
