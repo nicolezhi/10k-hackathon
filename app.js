@@ -4164,6 +4164,17 @@ let moodboardBoardId = "";
 let moodboardPicks = {};
 let moodboardSeed = 1;
 
+function moodboardPickList(roleName) {
+  const value = moodboardPicks[roleName];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (value) return [value];
+  return [];
+}
+
+function moodboardRoleAllowsMany(roleName) {
+  return mobileLayout() && /photograph/i.test(roleName);
+}
+
 function boardRoleGroupsMap(members) {
   const roleGroups = new Map();
   members.forEach((record) => {
@@ -4174,6 +4185,17 @@ function boardRoleGroupsMap(members) {
   return roleGroups;
 }
 
+function placeMoodboardDialog() {
+  const dialog = document.getElementById("board-moodboard-dialog");
+  if (!dialog) return;
+  const header = document.querySelector(".results-top");
+  if (dialog.hidden || !mobileLayout() || !header) {
+    dialog.style.top = "";
+    return;
+  }
+  dialog.style.top = Math.round(header.getBoundingClientRect().bottom) + "px";
+}
+
 function resetMoodboardState() {
   moodboardMode = "";
   moodboardBoardId = "";
@@ -4181,6 +4203,7 @@ function resetMoodboardState() {
   const dlg = document.getElementById("board-moodboard-dialog");
   if (dlg) dlg.hidden = true;
   document.body.classList.remove("add-open");
+  placeMoodboardDialog();
 }
 
 function syncMoodboardUI(activeBoard, members, roleGroups) {
@@ -4200,6 +4223,7 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
     if (dialog) dialog.hidden = true;
     if (resultsWrap) resultsWrap.hidden = false;
     detail.removeAttribute("data-moodboard-mode");
+    placeMoodboardDialog();
     return;
   }
 
@@ -4221,15 +4245,35 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
     if (resultsWrap) resultsWrap.hidden = false;
 
     const roles = [...roleGroups.keys()];
-    const pickedCount = roles.filter((r) =>
-      roleGroups.get(r).some((person) => person.id === moodboardPicks[r])
-    ).length;
+    const pickedCount = roles.filter((roleName) => moodboardPickList(roleName).length > 0).length;
+    const multiPhoto = roles.some(
+      (roleName) => moodboardRoleAllowsMany(roleName) && roleGroups.get(roleName).length > 1
+    );
 
     if (hintEl) {
-      hintEl.textContent =
-        pickedCount === roles.length
-          ? `All ${roles.length} ${roles.length === 1 ? "role" : "roles"} checked — click Generate to preview!`
-          : `Check 1 creative from each role row below (${pickedCount} of ${roles.length} roles selected).`;
+      if (mobileLayout()) {
+        const others = roles.filter((roleName) => !moodboardRoleAllowsMany(roleName));
+        hintEl.textContent = multiPhoto
+          ? others.length
+            ? "Tap any photographers, and one person from each other role."
+            : "Tap the photographers you want, then Generate."
+          : "Tap one person from each role, then Generate.";
+      } else if (multiPhoto) {
+        const others = roles.filter((roleName) => !moodboardRoleAllowsMany(roleName));
+        hintEl.textContent = others.length
+          ? "Select any photographers, and 1 creative from each other role."
+          : "Select one or more photographers, then tap Generate.";
+      } else {
+        hintEl.textContent =
+          pickedCount === roles.length
+            ? `All ${roles.length} ${roles.length === 1 ? "role" : "roles"} checked — click Generate to preview!`
+            : `Check 1 creative from each role row below (${pickedCount} of ${roles.length} roles selected).`;
+      }
+    }
+
+    const barTitle = document.querySelector("#board-moodboard-bar .moodboard-bar_title strong");
+    if (barTitle) {
+      barTitle.textContent = mobileLayout() ? "Choose your lineup" : "Select 1 creative from each role";
     }
 
     const genBtn = document.getElementById("board-moodboard-generate");
@@ -4238,22 +4282,61 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
     }
 
     if (picksEl) {
-      picksEl.innerHTML = roles
-        .map((roleName) => {
-          const chosen = roleGroups.get(roleName).find((p) => p.id === moodboardPicks[roleName]);
-          return `<span class="moodboard-pick-chip${chosen ? " is-picked" : ""}">
-            <strong>${escapeHtml(roleName)}:</strong>
-            <span>${escapeHtml(chosen ? chosen.name : "Check 1 below")}</span>
-          </span>`;
-        })
-        .join("");
+      if (mobileLayout()) {
+        picksEl.innerHTML = roles
+          .map((roleName) => {
+            const people = roleGroups.get(roleName);
+            const picks = moodboardPickList(roleName);
+            const buttons = people
+              .map((person) => {
+                const on = picks.includes(person.id);
+                return `<button type="button" class="moodboard-person-btn${on ? " is-on" : ""}" data-role="${escapeHtml(roleName)}" data-person="${escapeHtml(person.id)}" aria-pressed="${on ? "true" : "false"}">${avatarHtml(person, "moodboard-person-btn_avatar")}<span>${escapeHtml(person.name)}</span></button>`;
+              })
+              .join("");
+            return `<div class="moodboard-pick-role">
+              <span class="moodboard-pick-role_label">${escapeHtml(pluralRole(roleName, people.length))}</span>
+              <div class="moodboard-pick-people">${buttons}</div>
+            </div>`;
+          })
+          .join("");
+        picksEl.querySelectorAll(".moodboard-person-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const roleName = btn.dataset.role || "";
+            const personId = btn.dataset.person || "";
+            const picks = moodboardPickList(roleName);
+            if (picks.includes(personId)) {
+              const remaining = picks.filter((id) => id !== personId);
+              if (remaining.length) moodboardPicks[roleName] = remaining;
+              else delete moodboardPicks[roleName];
+            } else if (moodboardRoleAllowsMany(roleName)) {
+              moodboardPicks[roleName] = [...picks, personId];
+            } else {
+              moodboardPicks[roleName] = [personId];
+            }
+            syncMoodboardUI(activeBoard, members, roleGroups);
+          });
+        });
+      } else {
+        picksEl.innerHTML = roles
+          .map((roleName) => {
+            const chosen = moodboardPickList(roleName)
+              .map((id) => roleGroups.get(roleName).find((person) => person.id === id))
+              .filter(Boolean);
+            const emptyLabel = moodboardRoleAllowsMany(roleName) ? "Select any" : "Check 1 below";
+            return `<span class="moodboard-pick-chip${chosen.length ? " is-picked" : ""}">
+              <strong>${escapeHtml(roleName)}:</strong>
+              <span>${escapeHtml(chosen.length ? chosen.map((person) => person.name).join(", ") : emptyLabel)}</span>
+            </span>`;
+          })
+          .join("");
+      }
     }
 
     document.querySelectorAll("#board-detail-grid .board-role-group").forEach((groupEl) => {
       const roleName = groupEl.dataset.role || "";
-      const selectedId = moodboardPicks[roleName] || "";
+      const selectedIds = moodboardPickList(roleName);
       groupEl.querySelectorAll(".result-card").forEach((card) => {
-        const isPicked = card.dataset.id === selectedId;
+        const isPicked = selectedIds.includes(card.dataset.id);
         card.classList.toggle("is-moodboard-picked", isPicked);
         const checkbox = card.querySelector(".moodboard-card-checkbox");
         if (checkbox) checkbox.checked = isPicked;
@@ -4261,6 +4344,7 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
         if (labelEl) labelEl.textContent = isPicked ? "Selected" : `Select ${roleName}`;
       });
     });
+    placeMoodboardDialog();
     return;
   }
 
@@ -4270,6 +4354,8 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
     document.body.classList.add("add-open");
     if (resultsWrap) resultsWrap.hidden = false;
     paintMoodboardStage(roleGroups);
+    if (mobileLayout()) window.scrollTo(0, 0);
+    placeMoodboardDialog();
     return;
   }
 
@@ -4277,6 +4363,7 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
   if (dialog) dialog.hidden = true;
   document.body.classList.remove("add-open");
   if (resultsWrap) resultsWrap.hidden = false;
+  placeMoodboardDialog();
 }
 
 function paintMoodboardStage(roleGroups) {
@@ -4287,8 +4374,10 @@ function paintMoodboardStage(roleGroups) {
 
   const selectedCrew = [];
   roleGroups.forEach((groupRecords, roleName) => {
-    const picked = groupRecords.find((person) => person.id === moodboardPicks[roleName]);
-    if (picked) selectedCrew.push({ role: roleName, record: picked });
+    const pickedIds = moodboardPickList(roleName);
+    groupRecords.forEach((person) => {
+      if (pickedIds.includes(person.id)) selectedCrew.push({ role: roleName, record: person });
+    });
   });
   if (!selectedCrew.length) {
     roleGroups.forEach((groupRecords, roleName) => {
@@ -4467,7 +4556,7 @@ function renderBoards() {
         rowGrid.className = "grid";
         groupRecords.forEach((record) => {
           const card = document.createElement("article");
-          const isPicked = moodboardPicks[roleName] === record.id;
+          const isPicked = moodboardPickList(roleName).includes(record.id);
           card.className = [
             "result-card",
             record.external ? "is-external" : "",
@@ -4495,12 +4584,17 @@ function renderBoards() {
             ${rosterCardHtml(record)}
           `;
           const toggleRolePick = (forceState) => {
-            const currentlyPicked = moodboardPicks[roleName] === record.id;
+            const picks = moodboardPickList(roleName);
+            const currentlyPicked = picks.includes(record.id);
             const nextPicked = typeof forceState === "boolean" ? forceState : !currentlyPicked;
             if (nextPicked) {
-              moodboardPicks[roleName] = record.id;
-            } else if (currentlyPicked) {
-              delete moodboardPicks[roleName];
+              moodboardPicks[roleName] = moodboardRoleAllowsMany(roleName)
+                ? [...picks, record.id]
+                : [record.id];
+            } else {
+              const remaining = picks.filter((id) => id !== record.id);
+              if (remaining.length) moodboardPicks[roleName] = remaining;
+              else delete moodboardPicks[roleName];
             }
             syncMoodboardUI(activeBoard, members, roleGroups);
           };
@@ -5334,14 +5428,15 @@ function bindBoards() {
   const moodboardEditBtn = document.getElementById("board-moodboard-edit");
   const moodboardXBtn = document.getElementById("board-moodboard-x");
 
-  moodboardBtn?.addEventListener("click", () => {
+  const startMoodboardSelect = () => {
     if (!state.board) return;
     const board = readBoards().find((item) => item.id === state.board);
     if (!board) return;
     moodboardPicks = {};
     moodboardMode = "select";
     renderBoards();
-  });
+  };
+  moodboardBtn?.addEventListener("click", startMoodboardSelect);
 
   moodboardCancelBtn?.addEventListener("click", () => {
     resetMoodboardState();
@@ -5356,10 +5451,10 @@ function bindBoards() {
       .map((id) => PEOPLE.find((person) => person.id === id))
       .filter(Boolean);
     const roleGroups = boardRoleGroupsMap(members);
-    const hasAnyPick = [...roleGroups.keys()].some((roleName) => Boolean(moodboardPicks[roleName]));
+    const hasAnyPick = [...roleGroups.keys()].some((roleName) => moodboardPickList(roleName).length > 0);
     if (!hasAnyPick) {
       roleGroups.forEach((records, roleName) => {
-        if (records[0]) moodboardPicks[roleName] = records[0].id;
+        if (records[0]) moodboardPicks[roleName] = [records[0].id];
       });
     }
     moodboardSeed = 1;
@@ -5382,6 +5477,7 @@ function bindBoards() {
     renderBoards();
   };
 
+  window.addEventListener("resize", placeMoodboardDialog);
   moodboardXBtn?.addEventListener("click", dismissMoodboardModal);
   moodboardDialog?.addEventListener("click", (event) => {
     if (event.target === moodboardDialog) dismissMoodboardModal();
@@ -5980,14 +6076,32 @@ function initLayoutToggle() {
   toggle.setAttribute("role", "group");
   toggle.setAttribute("aria-label", "Layout");
   toggle.innerHTML = `
-    <button type="button" data-layout="desktop" aria-pressed="true">Desktop</button>
-    <button type="button" data-layout="mobile" aria-pressed="false">Mobile</button>
+    <button type="button" data-layout="desktop" aria-pressed="true" aria-label="Desktop">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 16v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button type="button" data-layout="mobile" aria-pressed="false" aria-label="Mobile">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 18.5h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
   `;
   const stage = document.createElement("div");
   stage.className = "device-stage";
+  const phone = document.createElement("div");
+  phone.className = "device-phone";
+  phone.innerHTML = `
+    <span class="device-side device-side-action" aria-hidden="true"></span>
+    <span class="device-side device-side-volup" aria-hidden="true"></span>
+    <span class="device-side device-side-voldown" aria-hidden="true"></span>
+    <span class="device-side device-side-power" aria-hidden="true"></span>
+    <div class="device-chassis">
+      <div class="device-screen"></div>
+      <div class="device-island" aria-hidden="true"></div>
+      <div class="device-home" aria-hidden="true"></div>
+    </div>
+  `;
   const iframe = document.createElement("iframe");
-  iframe.title = "Mobile version";
-  stage.appendChild(iframe);
+  iframe.title = "iPhone 16";
+  phone.querySelector(".device-screen").appendChild(iframe);
+  stage.appendChild(phone);
   document.body.append(stage, toggle);
 
   function paint(mode) {
