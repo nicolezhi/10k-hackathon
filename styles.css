@@ -4234,12 +4234,25 @@ body.add-open {
   margin-top: 16px;
 }
 
-.add-long {
-  display: none;
+.add-lookup {
+  min-height: 18px;
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
-.add-short {
-  display: block;
+.add-bio_note {
+  margin: -8px 0 18px;
+  color: #6b7280;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.add-bio_note[hidden] {
+  display: none;
 }
 
 .add-yesno {
@@ -4247,7 +4260,7 @@ body.add-open {
 }
 
 .add-dialog_panel {
-  width: min(480px, 100%);
+  width: min(640px, 100%);
 }
 
 .add-check {

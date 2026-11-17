@@ -277,7 +277,7 @@ function summaryText(list) {
   if (state.genres.length) parts.push(state.genres.join(", "));
   if (state.tenk) parts.push("10K projects");
   if (state.query.trim()) parts.push(`“${state.query.trim()}”`);
-  if (!parts.length) return PEOPLE.length ? "Everyone in the creatives." : "";
+  if (!parts.length) return "Explore your creative network.";
   return parts.join(" · ");
 }
 
@@ -3223,7 +3223,18 @@ function createRolePicker(config) {
     }
     paint();
     changed();
+    config.onUserChange?.();
     if (single) close();
+  }
+
+  function assign(role, genres = []) {
+    if (!role || blocked().includes(role)) return false;
+    const allowed = new Set(formRoleMenu().find((item) => item.role === role)?.genres || []);
+    pick.roles = [role];
+    pick.roleGenres = { [role]: genres.filter((genre) => allowed.has(genre)) };
+    build();
+    changed();
+    return true;
   }
 
   function toggleGenre(role, genre) {
@@ -3292,6 +3303,7 @@ function createRolePicker(config) {
       paintLabel();
       paintGenres();
     },
+    assign,
     roles() {
       return pick.roles.slice();
     },
@@ -3306,6 +3318,10 @@ function createRolePicker(config) {
 
 const secondaryPickers = [];
 let secondaryCount = 0;
+const addFilled = new Set();
+let addLookup = null;
+let addLookupTimer = 0;
+let addLookupToken = 0;
 
 const mainPicker = createRolePicker({
   single: true,
@@ -3322,6 +3338,9 @@ const mainPicker = createRolePicker({
   },
   onChange() {
     secondaryPickers.forEach((picker) => picker.drop(mainPicker.roles()));
+  },
+  onUserChange() {
+    addFilled.delete("main");
   },
 });
 
@@ -3346,9 +3365,9 @@ function secondaryTaken(except) {
   return [...taken];
 }
 
-function addSecondaryField() {
+function addSecondaryField({ open = true } = {}) {
   const list = document.getElementById("add-secondary-list");
-  if (!list || secondaryPickers.length >= 1) return;
+  if (!list || secondaryPickers.length >= 1) return null;
   const id = `add-secondary-${secondaryCount}`;
   secondaryCount += 1;
   const wrap = document.createElement("div");
@@ -3384,6 +3403,9 @@ function addSecondaryField() {
         if (other !== picker) other.close();
       });
     },
+    onUserChange() {
+      addFilled.delete("secondary");
+    },
   });
   secondaryPickers.push(picker);
   picker.bind();
@@ -3396,7 +3418,8 @@ function addSecondaryField() {
     syncSecondaryAdd();
   });
   syncSecondaryAdd();
-  picker.open();
+  if (open) picker.open();
+  return picker;
 }
 
 function closeCityMenus(except) {
@@ -3437,6 +3460,7 @@ function paintCityMenu(wrap) {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       input.value = button.dataset.city;
+      addFilled.delete("add-city");
       input.dispatchEvent(new Event("change", { bubbles: true }));
       paintCityMenu(wrap);
       setCityOpen(wrap, false);
@@ -3592,6 +3616,13 @@ function setAddOpen(open) {
   fillAddForm();
   document.getElementById("add-form").reset();
   document.getElementById("add-error").textContent = "";
+  addFilled.clear();
+  addLookup = null;
+  addLookupToken += 1;
+  const note = document.getElementById("add-bio-note");
+  if (note) note.hidden = true;
+  const lookup = document.getElementById("add-lookup");
+  if (lookup) lookup.textContent = "";
   syncInstagramLinkCheck();
   document.getElementById("add-instagram-link")?.focus();
 }
@@ -3679,6 +3710,7 @@ async function addPersonFromForm() {
     error.textContent = "Preferred contact needs a value.";
     return;
   }
+  const sameLookup = addLookup && addLookup.instagram && instagram && addLookup.instagram.toLowerCase() === instagram.toLowerCase();
   const record = person(rosterId(name), name, city, [], roles, genres, false, {
     instagram,
     email,
@@ -3691,10 +3723,111 @@ async function addPersonFromForm() {
     bio,
     rate: "",
     past: [],
-    avatar: "",
-    images: [],
+    avatar: sameLookup ? addLookup.avatar || "" : "",
+    images: sameLookup && Array.isArray(addLookup.images) ? addLookup.images : [],
   });
   commitAddedPerson(record);
+}
+
+function addFieldWritable(id) {
+  const field = document.getElementById(id);
+  if (!field) return false;
+  return addFilled.has(id) || !String(field.value || "").trim();
+}
+
+function writeAddField(id, value) {
+  const field = document.getElementById(id);
+  if (!field || !addFieldWritable(id)) return;
+  const next = String(value || "");
+  field.value = next;
+  if (next.trim()) addFilled.add(id);
+  else addFilled.delete(id);
+}
+
+function setAddCityValue(name) {
+  const input = document.getElementById("add-city");
+  const wrap = document.getElementById("add-city-wrap");
+  if (!input || !wrap || !addFieldWritable("add-city")) return;
+  const known = CITIES.some((city) => city.name === name);
+  input.value = known ? name : "";
+  if (input.value) addFilled.add("add-city");
+  else addFilled.delete("add-city");
+  paintCityMenu(wrap);
+}
+
+function removeAutofillSecondary() {
+  if (!addFilled.has("secondary")) return;
+  const picker = secondaryPickers[0];
+  picker?.close();
+  secondaryPickers.splice(0, secondaryPickers.length);
+  document.getElementById("add-secondary-list")?.replaceChildren();
+  addFilled.delete("secondary");
+  syncSecondaryAdd();
+}
+
+function applyInstagramLookup(profile) {
+  addLookup = profile;
+  writeAddField("add-name", profile.name);
+  writeAddField("add-instagram", profile.instagram);
+  writeAddField("add-email", profile.email);
+  writeAddField("add-phone", profile.phone);
+  writeAddField("add-portfolio", profile.portfolio);
+  writeAddField("add-bio", profile.bio);
+  const note = document.getElementById("add-bio-note");
+  if (note) note.hidden = !(profile.bio && addFilled.has("add-bio"));
+  if (profile.city) setAddCityValue(profile.city);
+  if (profile.role && (addFilled.has("main") || !mainPicker.roles().length)) {
+    if (mainPicker.assign(profile.role, profile.genres || [])) addFilled.add("main");
+  }
+  if (profile.secondary) {
+    const existing = secondaryPickers[0];
+    const writable = addFilled.has("secondary") || !existing || !existing.roles().length;
+    if (writable) {
+      const picker = existing || addSecondaryField({ open: false });
+      if (picker?.assign(profile.secondary, profile.secondaryGenres || [])) addFilled.add("secondary");
+    }
+  } else {
+    removeAutofillSecondary();
+  }
+  const preferred = document.querySelector('#add-form input[name="preferred"]:checked');
+  const instagramChoice = document.querySelector('#add-form input[name="preferred"][value="instagram"]');
+  if (instagramChoice && profile.instagram && (!preferred || addFilled.has("preferred"))) {
+    instagramChoice.checked = true;
+    addFilled.add("preferred");
+  }
+}
+
+async function lookupInstagramProfile(handle) {
+  const token = ++addLookupToken;
+  const lookup = document.getElementById("add-lookup");
+  if (lookup) lookup.textContent = "Reading their Instagram…";
+  try {
+    const response = await fetch(`/api/instagram?handle=${encodeURIComponent(handle)}`);
+    const payload = await response.json();
+    if (token !== addLookupToken) return;
+    if (!response.ok || !payload.ok) {
+      if (lookup) lookup.textContent = "Couldn't read that profile. Fill in the rest yourself.";
+      return;
+    }
+    applyInstagramLookup(payload);
+    if (lookup) lookup.textContent = "Pulled in information from their Instagram. Edit anything as needed.";
+  } catch (lookupError) {
+    if (token !== addLookupToken) return;
+    if (lookup) lookup.textContent = "Couldn't read that profile. Fill in the rest yourself.";
+  }
+}
+
+function queueInstagramLookup() {
+  const handle = instagramLinkHandle(document.getElementById("add-instagram-link")?.value);
+  window.clearTimeout(addLookupTimer);
+  if (!handle) {
+    addLookupToken += 1;
+    const lookup = document.getElementById("add-lookup");
+    if (lookup) lookup.textContent = "";
+    return;
+  }
+  if (addLookup?.instagram?.toLowerCase() === handle.toLowerCase()) return;
+  addLookupTimer = window.setTimeout(() => lookupInstagramProfile(handle), 450);
 }
 
 async function addPersonFromShortForm() {
@@ -3800,9 +3933,22 @@ function bindAddRoster() {
   });
   document.getElementById("add-form").addEventListener("submit", (event) => {
     event.preventDefault();
-    addPersonFromShortForm();
+    addPersonFromForm();
   });
-  document.getElementById("add-instagram-link")?.addEventListener("input", syncInstagramLinkCheck);
+  document.getElementById("add-instagram-link")?.addEventListener("input", () => {
+    syncInstagramLinkCheck();
+    queueInstagramLookup();
+  });
+  ["add-name", "add-bio", "add-email", "add-phone", "add-portfolio", "add-instagram"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("input", () => {
+      addFilled.delete(id);
+      if (id === "add-bio") {
+        const note = document.getElementById("add-bio-note");
+        if (note) note.hidden = true;
+      }
+    });
+  });
+  document.getElementById("add-preferred")?.addEventListener("change", () => addFilled.delete("preferred"));
 }
 
 function markSkeletonNav() {
