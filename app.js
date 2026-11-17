@@ -2606,6 +2606,7 @@ function writeUrl(mode) {
   if (state.tenk) params.set("tenk", "1");
   if (state.browse) params.set("browse", "1");
   if (state.board) params.set("board", state.board);
+  if (state.shared) params.set("shared", "1");
   if (state.profile) params.set("person", state.profile);
   if (document.documentElement.classList.contains("is-frame")) params.set("frame", "1");
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
@@ -2642,7 +2643,9 @@ function readUrl() {
   state.tenk = params.get("tenk") === "1";
   state.browse = params.get("browse") === "1";
   state.board = params.get("board") || "";
+  state.shared = params.get("shared") === "1";
   state.profile = params.get("person") || "";
+  document.body.dataset.shared = state.shared ? "true" : "";
 }
 
 function openProfile(id) {
@@ -4768,15 +4771,31 @@ function renderBoards() {
   if (!overview || !detail) return;
 
   const boards = readBoards();
-  const activeBoard = state.board ? boards.find((item) => item.id === state.board) : null;
+  let activeBoard = state.board ? boards.find((item) => item.id === state.board) : null;
+  if (!activeBoard && state.board && state.shared) {
+    const params = new URLSearchParams(location.search);
+    const paramMembers = (params.get("members") || "").split(",").filter(Boolean);
+    activeBoard = {
+      id: state.board,
+      name: params.get("title") || "Shared Board",
+      date: params.get("date") || "",
+      description: params.get("desc") || "",
+      people: paramMembers,
+    };
+  }
   if (state.board && !activeBoard) {
     state.board = "";
+    state.shared = false;
   }
+
+  document.body.dataset.shared = state.shared && activeBoard ? "true" : "";
+  const sharedBanner = document.getElementById("board-shared-banner");
+  if (sharedBanner) sharedBanner.hidden = !(state.shared && activeBoard);
 
   if (activeBoard) {
     overview.hidden = true;
     detail.hidden = false;
-    document.title = `${activeBoard.name} · Boards · 10K Creatives`;
+    document.title = `${activeBoard.name} · ${state.shared ? "Shared Board" : "Boards"} · 10K Creatives`;
     const titleEl = document.getElementById("board-detail-title");
     const countEl = document.getElementById("board-detail-count");
     const descEl = document.getElementById("board-detail-desc");
@@ -4792,15 +4811,22 @@ function renderBoards() {
     const dateLabel = formatBoardDate(activeBoard.date);
     if (titleEl) titleEl.textContent = activeBoard.name;
     if (countEl) countEl.textContent = countLabel;
-    if (descEl && document.activeElement !== descEl) {
-      descEl.value = activeBoard.description || "";
-      requestAnimationFrame(() => sizeBoardDescInput(descEl));
+    if (descEl) {
+      descEl.readOnly = Boolean(state.shared);
+      descEl.hidden = Boolean(state.shared && !activeBoard.description);
+      if (document.activeElement !== descEl) {
+        descEl.value = activeBoard.description || "";
+        requestAnimationFrame(() => sizeBoardDescInput(descEl));
+      }
     }
     if (dateEl) {
       dateEl.value = activeBoard.date || "";
     }
     if (dateTextEl) dateTextEl.textContent = dateLabel || "Add date";
-    if (dateWrapEl) dateWrapEl.classList.toggle("is-empty", !dateLabel);
+    if (dateWrapEl) {
+      dateWrapEl.classList.toggle("is-empty", !dateLabel);
+      dateWrapEl.hidden = Boolean(state.shared && !dateLabel);
+    }
     const roleGroups = boardRoleGroupsMap(members);
     if (boardRoleTabOwner !== activeBoard.id) {
       boardRoleTabOwner = activeBoard.id;
@@ -5504,7 +5530,105 @@ function closeBoardSharePanel() {
 function boardShareUrl(board) {
   const url = new URL("boards.html", location.href);
   if (board?.id) url.searchParams.set("board", board.id);
+  url.searchParams.set("shared", "1");
   return url.toString();
+}
+
+function openEmailPreview(rawBoard) {
+  const root = document.getElementById("email-preview");
+  const board = readBoards().find((item) => item.id === (rawBoard?.id || state.board)) || rawBoard;
+  const inboxView = document.getElementById("gmail-inbox-view");
+  const threadView = document.getElementById("gmail-thread-view");
+  const unreadRow = document.getElementById("gmail-unread-row");
+  const inboxBadge = document.getElementById("gmail-inbox-badge");
+  const rowSubject = document.getElementById("gmail-row-subject");
+  const rowSnippet = document.getElementById("gmail-row-snippet");
+  const threadSubject = document.getElementById("gmail-thread-subject");
+  const cardCollage = document.getElementById("gmail-card-collage");
+  const cardTitle = document.getElementById("gmail-card-title");
+  const cardMeta = document.getElementById("gmail-card-meta");
+  const cardDesc = document.getElementById("gmail-card-desc");
+  const cardRoles = document.getElementById("gmail-card-roles");
+  const openBtn = document.getElementById("gmail-open-board-link");
+  const rawLink = document.getElementById("gmail-raw-link");
+  if (!root || !board) return;
+
+  const shareUrl = boardShareUrl(board);
+  const dateLabel = formatBoardDate(board.date);
+  const members = (board.people || [])
+    .map((id) => PEOPLE.find((person) => person.id === id))
+    .filter(Boolean);
+  const countLabel = members.length === 1 ? "1 creative saved" : `${members.length} creatives saved`;
+  const metaText = [countLabel, dateLabel].filter(Boolean).join(" · ");
+  const subjectText = `Shared board: ${board.name}`;
+  const snippetText = board.description
+    ? ` — ${board.description}`
+    : ` — ${countLabel} for this shoot. Open to browse the roster and test lineups in the moodboard generator.`;
+
+  if (rowSubject) rowSubject.textContent = subjectText;
+  if (rowSnippet) rowSnippet.textContent = snippetText;
+  if (threadSubject) threadSubject.textContent = subjectText;
+  if (cardTitle) cardTitle.textContent = board.name || "Board";
+  if (cardMeta) cardMeta.textContent = metaText;
+  if (cardDesc) {
+    const desc = String(board.description || "").trim();
+    cardDesc.textContent = desc;
+    cardDesc.hidden = !desc;
+  }
+
+  if (cardCollage) {
+    const shots = boardPreviewShots(board);
+    const cells = shots.length
+      ? shots.map((shot) =>
+          shot.src
+            ? `<img src="${escapeHtml(shot.src)}" alt="" />`
+            : `<span class="share-collage_empty">${escapeHtml(initials(shot.name))}</span>`
+        )
+      : [`<span class="share-collage_empty"></span>`];
+    cardCollage.dataset.count = String(shots.length || 1);
+    cardCollage.innerHTML = cells.join("");
+  }
+
+  if (cardRoles) {
+    const roleGroups = boardRoleGroupsMap(members);
+    cardRoles.innerHTML = [...roleGroups.entries()]
+      .map(([roleName, list]) => {
+        const label =
+          roleName === "Videographer / DP" && list.length > 1
+            ? "Videographers / DPs"
+            : pluralRole(roleName, list.length);
+        return `<span class="gmail-role-chip">${list.length} ${escapeHtml(label)}</span>`;
+      })
+      .join("");
+  }
+
+  if (openBtn) openBtn.href = shareUrl;
+  if (rawLink) {
+    rawLink.href = shareUrl;
+    rawLink.textContent = shareFieldLink(board);
+  }
+
+  if (inboxView) inboxView.hidden = false;
+  if (threadView) threadView.hidden = true;
+  if (unreadRow) unreadRow.classList.add("is-unread");
+  if (inboxBadge) {
+    inboxBadge.textContent = "1";
+    inboxBadge.hidden = false;
+  }
+
+  root.hidden = false;
+  document.body.classList.add("share-preview-open");
+}
+
+function closeEmailPreview() {
+  const root = document.getElementById("email-preview");
+  if (root) root.hidden = true;
+  document.body.classList.remove("share-preview-open");
+  window.setTimeout(() => {
+    closeBoardSharePanel();
+    const label = document.getElementById("board-share-email-label");
+    if (label) label.textContent = "Email";
+  }, 400);
 }
 
 function syncBoardShareLinks() {
@@ -5755,6 +5879,7 @@ function bindBoards() {
   detailDateBtn?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (state.shared) return;
     openBoardDatePicker(detailDateBtn, detailDate?.value || "", (iso) => {
       if (detailDate) detailDate.value = iso;
       if (state.board) {
@@ -5977,9 +6102,18 @@ function bindBoards() {
     window.setTimeout(() => openSharePreview(board), 700);
   });
 
-  shareEmailLink?.addEventListener("click", () => {
-    syncBoardShareLinks();
-    closeBoardSharePanel();
+  shareEmailLink?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const board = readBoards().find((item) => item.id === state.board);
+    if (!board) return;
+    const url = boardShareUrl(board);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {}
+    const label = document.getElementById("board-share-email-label");
+    if (label) label.textContent = "Copied link";
+    window.setTimeout(() => openEmailPreview(board), 350);
   });
 
   document.getElementById("board-share-scrim")?.addEventListener("click", (event) => {
@@ -5987,11 +6121,53 @@ function bindBoards() {
     closeBoardSharePanel();
   });
 
+  document.getElementById("gmail-unread-row")?.addEventListener("click", () => {
+    const inboxView = document.getElementById("gmail-inbox-view");
+    const threadView = document.getElementById("gmail-thread-view");
+    const unreadRow = document.getElementById("gmail-unread-row");
+    const inboxBadge = document.getElementById("gmail-inbox-badge");
+    if (inboxView) inboxView.hidden = true;
+    if (threadView) threadView.hidden = false;
+    if (unreadRow) unreadRow.classList.remove("is-unread");
+    if (inboxBadge) inboxBadge.hidden = true;
+  });
+
+  document.getElementById("gmail-back-btn")?.addEventListener("click", () => {
+    const inboxView = document.getElementById("gmail-inbox-view");
+    const threadView = document.getElementById("gmail-thread-view");
+    if (threadView) threadView.hidden = true;
+    if (inboxView) inboxView.hidden = false;
+  });
+
+  const enterSharedBoardFromPreview = (event) => {
+    event.preventDefault();
+    closeEmailPreview();
+    closeSharePreview();
+    resetMoodboardState();
+    state.shared = true;
+    document.body.dataset.shared = "true";
+    render({ url: "push" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  document.getElementById("gmail-open-board-link")?.addEventListener("click", enterSharedBoardFromPreview);
+  document.getElementById("gmail-board-card")?.addEventListener("click", enterSharedBoardFromPreview);
+  document.getElementById("gmail-raw-link")?.addEventListener("click", enterSharedBoardFromPreview);
+  document.querySelector("#share-sent .share-card")?.addEventListener("click", enterSharedBoardFromPreview);
+
+  document.getElementById("email-preview-close")?.addEventListener("click", closeEmailPreview);
+  document.getElementById("email-preview-scrim")?.addEventListener("click", closeEmailPreview);
   document.getElementById("share-preview-close")?.addEventListener("click", closeSharePreview);
   document.getElementById("share-preview-scrim")?.addEventListener("click", closeSharePreview);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && document.getElementById("share-preview") && !document.getElementById("share-preview").hidden) {
-      closeSharePreview();
+    if (event.key === "Escape") {
+      if (document.getElementById("email-preview") && !document.getElementById("email-preview").hidden) {
+        closeEmailPreview();
+        return;
+      }
+      if (document.getElementById("share-preview") && !document.getElementById("share-preview").hidden) {
+        closeSharePreview();
+      }
     }
   });
 
