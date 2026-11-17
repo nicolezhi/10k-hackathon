@@ -34,7 +34,7 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=367" />
+    <link rel="stylesheet" href="styles.css?v=392" />
   </head>
   <body data-page="boards" data-view="home" class="has-float-dock">
     <nav class="float-dock" id="float-dock" aria-label="Sections">
@@ -221,35 +221,14 @@
               <span>Generate moodboard</span>
             </button>
             <div class="board-add-wrap" id="board-add-wrap">
-              <button class="tool-pill tool-pill_add board-add-toggle" id="board-add-creative-btn" type="button" aria-label="Add creative" aria-expanded="false" aria-controls="board-add-menu">
+              <a class="tool-pill tool-pill_add board-add-toggle" id="board-add-creative-btn" href="results.html?browse=1" aria-label="Browse creatives">
                 <svg class="board-add-plus" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                   <circle cx="9" cy="8" r="2.7" fill="none" stroke="currentColor" stroke-width="1.7" />
                   <path d="M3.6 17.4c.55-2.5 2.35-3.8 5.15-3.8 1.35 0 2.5.35 3.35 1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
                   <path d="M17.2 11v5.4M14.5 13.7h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
                 </svg>
-                <span>+ Add creative</span>
-                <svg class="board-add-chevron" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-                  <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </button>
-              <div class="board-share-panel board-add-menu" id="board-add-menu" hidden role="menu" aria-label="Add creative">
-                <a class="board-share-item" id="board-add-internal" href="results.html?browse=1" role="menuitem">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                    <circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M3.8 18.5c.6-2.7 2.5-4.1 5.2-4.1s4.6 1.4 5.2 4.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                    <path d="M17.5 8v6M14.5 11h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  </svg>
-                  <span>Browse internal creatives</span>
-                </a>
-                <button class="board-share-item" id="board-add-external" type="button" role="menuitem">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                    <rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.8" />
-                    <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8" />
-                    <circle cx="16.6" cy="7.4" r="1" fill="currentColor" />
-                  </svg>
-                  <span>Add external creative</span>
-                </button>
-              </div>
+                <span>Browse creatives</span>
+              </a>
             </div>
             <div class="board-share-wrap" id="board-share-wrap">
               <button class="board-share-btn" id="board-share-btn" type="button" aria-label="Share board" aria-expanded="false" aria-controls="board-share-panel">
@@ -265,7 +244,7 @@
                     <div class="board-share-collage" id="board-share-collage"></div>
                   </div>
                   <div class="board-share-rule" aria-hidden="true"></div>
-                  <h2 class="board-share-sheet_title">Share board</h2>
+                  <h2 class="board-share-sheet_title" id="board-share-sheet-title">Share board</h2>
                   <div class="board-share-sheet_actions">
                     <button class="board-share-item" id="board-share-copy" type="button">
                       <span class="board-share-icon board-share-icon-link">
@@ -277,11 +256,15 @@
                     </button>
                     <a class="board-share-item" id="board-share-text" href="sms:">
                       <span class="board-share-icon board-share-icon-text">
-                        <svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">
+                        <svg class="board-share-icon_plain" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path d="M20 14.5a3.5 3.5 0 0 1-3.5 3.5H8l-4 3V7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg class="board-share-icon_brand" viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">
                           <path fill="currentColor" d="M28 13.2c-9.7 0-17.6 6.3-17.6 14.1 0 4.5 2.6 8.5 6.7 11.1-.4 2.1-1.4 4.6-3.2 6.8 3.4-.5 6.4-2.2 8.2-3.7 1.8.5 3.8.8 5.9.8 9.7 0 17.6-6.3 17.6-14.1S37.7 13.2 28 13.2z" />
                         </svg>
                       </span>
-                      <span id="board-share-text-label">Messages</span>
+                      <span id="board-share-text-label" class="board-share-label_desk">Text</span>
+                      <span class="board-share-label_phone">Messages</span>
                     </a>
                     <a class="board-share-item" id="board-share-email" href="mailto:">
                       <span class="board-share-icon board-share-icon-mail">
@@ -297,7 +280,8 @@
                           <path fill="#fbc02d" d="M45 12.3V16.2l-10 7.5V11.2l3.1-2.3c.8-.6 1.7-.9 2.6-.9 2.4 0 4.3 1.9 4.3 4.3z" />
                         </svg>
                       </span>
-                      <span>Gmail</span>
+                      <span id="board-share-email-label" class="board-share-label_desk">Email</span>
+                      <span class="board-share-label_phone">Gmail</span>
                     </a>
                   </div>
                 </div>
@@ -308,6 +292,16 @@
                 <path d="M4.5 6.5h15M9.5 6.5V4.8a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3v1.7M6.8 6.5l.8 12.2a1.8 1.8 0 0 0 1.8 1.7h5.2a1.8 1.8 0 0 0 1.8-1.7l.8-12.2M10 10.5v6M14 10.5v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </button>
+            <div class="board-more-wrap" id="board-more-wrap" hidden>
+              <button class="board-more-btn" id="board-more-btn" type="button" aria-label="More board actions" aria-expanded="false" aria-controls="board-more-menu">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                  <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+                </svg>
+              </button>
+              <div class="board-more-menu" id="board-more-menu" hidden role="menu" aria-label="More board actions"></div>
+            </div>
           </div>
         </div>
         <div class="boards-empty" id="board-detail-empty" hidden>
@@ -335,8 +329,7 @@
           <h2>This board is waiting for its crew.</h2>
           <p>Star creatives on the roster and pick this board to start pinning people here.</p>
           <div class="boards-empty_actions">
-            <a class="tool-pill tool-pill_add" href="results.html?browse=1">Browse internal creatives</a>
-            <button class="tool-pill boards-empty_new" id="board-empty-add-external" type="button">+ Add external creative</button>
+            <a class="tool-pill tool-pill_add" href="results.html?browse=1">Browse creatives</a>
           </div>
         </div>
         <div class="moodboard-popup" id="board-moodboard-popup" hidden>
@@ -432,27 +425,6 @@
           <button class="add-submit board-delete_confirm" id="board-delete-confirm" type="button">Delete board</button>
         </div>
       </div>
-    </div>
-
-    <div class="add-dialog board-external-dialog" id="board-external-dialog" hidden>
-      <form class="add-dialog_panel board-external_panel" id="board-external-form" novalidate role="dialog" aria-modal="true" aria-labelledby="board-external-title">
-        <button class="add-dialog_close" id="board-external-close" type="button" aria-label="Close">×</button>
-        <h2 id="board-external-title">Add external creatives</h2>
-        <p class="add-dialog_lede">Paste one or more Instagram links or @handles to generate external cards on this board.</p>
-        <div class="add-field">
-          <span>Instagram handles or links</span>
-          <div class="board-external_rows" id="board-external-rows"></div>
-          <button class="add-more" id="board-external-more" type="button">
-            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
-            <span>Add another handle</span>
-          </button>
-        </div>
-        <p class="add-dialog_error" id="board-external-error" role="alert"></p>
-        <div class="add-dialog_actions">
-          <button class="add-cancel" id="board-external-cancel" type="button">Cancel</button>
-          <button class="add-submit" type="submit">Add to board</button>
-        </div>
-      </form>
     </div>
 
     <div class="add-dialog board-moodboard-dialog" id="board-moodboard-dialog" hidden>
@@ -676,6 +648,6 @@
 
     <script src="people.js?v=26"></script>
     <script src="projects.js?v=46"></script>
-    <script src="app.js?v=282"></script>
+    <script src="app.js?v=296"></script>
   </body>
 </html>

@@ -778,6 +778,11 @@ function tenkStampHtml(record) {
   return `<span class="tenk-stamp" title="Worked with 10K">10K</span>`;
 }
 
+function externalStampHtml(record) {
+  if (!record.external) return "";
+  return `<span class="tenk-stamp" title="External creative">E</span>`;
+}
+
 function rosterCardHtml(record) {
   const city = cityRecord(record.city);
   const tags = (record.genres || []).join(" · ");
@@ -797,13 +802,13 @@ function rosterCardHtml(record) {
   const showContactRow = !isExternal || Boolean(record.portfolio || record.phone || record.email);
   return `
     <div class="result-card_actions">
-      ${isExternal ? `<span class="external-stamp">External</span>` : ""}
+      ${isExternal && !isBoardsPage() ? `<span class="external-stamp">External</span>` : ""}
       ${instagramContactHtml(instagramHref, "ig-mark")}
       ${starButtonHtml(record.id)}
     </div>
     ${avatarHtml(record, "result-card_avatar")}
     <div class="result-card_body">
-      <h3><span class="result-card_name">${escapeHtml(record.name)}</span>${tenkStampHtml(record)}</h3>
+      <h3><span class="result-card_name">${escapeHtml(record.name)}</span>${tenkStampHtml(record)}${isBoardsPage() ? externalStampHtml(record) : ""}</h3>
       <p class="result-card_role">${escapeHtml(roleNames(record).join(" · "))}</p>
       ${placeOrHandle}
       ${tagsLine}
@@ -1283,8 +1288,13 @@ function renderProfile() {
   const root = document.getElementById("profile");
   if (!root) return;
   const record = PEOPLE.find((item) => item.id === state.profile);
-  document.body.dataset.view = record ? "profile" : "home";
-  if (!record) {
+  if (record?.external) {
+    state.profile = "";
+    if (isBoardsPage()) renderBoards();
+    else renderResults(isResultsPage() ? filteredPeople() : PEOPLE);
+  }
+  document.body.dataset.view = record && !record.external ? "profile" : "home";
+  if (!record || record.external) {
     root.hidden = true;
     root.innerHTML = "";
     document.title = isResultsPage()
@@ -2649,6 +2659,8 @@ function readUrl() {
 }
 
 function openProfile(id) {
+  const record = PEOPLE.find((item) => item.id === id);
+  if (!record || record.external) return;
   state.profile = id;
   render({ url: "push" });
 }
@@ -4013,7 +4025,8 @@ function updateBoardDetails(boardId, { name, description, date }, { rerender = t
 function sizeBoardDescInput(el) {
   if (!el) return;
   el.style.height = "auto";
-  el.style.height = `${Math.max(24, el.scrollHeight)}px`;
+  const border = el.offsetHeight - el.clientHeight;
+  el.style.height = `${Math.max(24, el.scrollHeight + border)}px`;
 }
 
 function deleteBoard(boardId) {
@@ -4882,7 +4895,7 @@ function paintMoodboardStage(roleGroups) {
       const ratio = aspects[(idx + moodboardSeed) % aspects.length];
       return `
         <figure
-          class="moodboard-item"
+          class="moodboard-item${item.record.external ? " is-external" : ""}"
           style="--mb-rot:${rot}deg;--mb-lift:${lift}px;--mb-ratio:${ratio}"
           data-person="${escapeHtml(item.record.id)}"
         >
@@ -4892,7 +4905,10 @@ function paintMoodboardStage(roleGroups) {
           <figcaption class="moodboard-item_cap">
             ${avatarHtml(item.record, "moodboard-item_avatar")}
             <span class="moodboard-item_credit">
-              <strong>${escapeHtml(item.record.name)}</strong>
+              <span class="moodboard-item_name">
+                <strong>${escapeHtml(item.record.name)}</strong>
+                ${externalStampHtml(item.record)}
+              </span>
               <span>${escapeHtml(item.role)}</span>
             </span>
           </figcaption>
@@ -4902,6 +4918,7 @@ function paintMoodboardStage(roleGroups) {
     .join("");
 
   canvasEl.querySelectorAll(".moodboard-item").forEach((card) => {
+    if (card.classList.contains("is-external")) return;
     card.addEventListener("click", () => {
       if (card.dataset.person) {
         resetMoodboardState();
@@ -5033,7 +5050,7 @@ function renderBoards() {
           ]
             .filter(Boolean)
             .join(" ");
-          card.tabIndex = 0;
+          card.tabIndex = record.external && moodboardMode !== "select" ? -1 : 0;
           card.dataset.id = record.id;
           card.dataset.role = roleName;
           card.innerHTML = `
@@ -5084,12 +5101,13 @@ function renderBoards() {
               return;
             }
             if (event.target.closest("a, .copy-icon, .star-btn")) return;
+            if (record.external) return;
             openProfile(record.id);
           });
           card.addEventListener("keydown", (event) => {
             if (event.key === "Enter" && !event.target.closest("a, .copy-icon, .star-btn")) {
               if (moodboardMode === "select") toggleRolePick();
-              else openProfile(record.id);
+              else if (!record.external) openProfile(record.id);
             }
           });
           rowGrid.appendChild(card);
@@ -5199,59 +5217,40 @@ function closeBoardAddPanel() {
   if (btn) btn.setAttribute("aria-expanded", "false");
 }
 
-function addExternalHandleRow(initialValue = "") {
-  const container = document.getElementById("board-external-rows");
-  if (!container) return null;
-  const row = document.createElement("div");
-  row.className = "board-external_row";
-  row.innerHTML = `
-    <span class="add-input board-external_input">
-      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">${CONTACT_PATHS.instagram}</svg>
-      <input
-        type="text"
-        name="external-instagram"
-        placeholder="instagram.com/username or @handle"
-        autocomplete="off"
-        value="${escapeHtml(initialValue)}"
-      />
-    </span>
-    <button type="button" class="board-external_remove" aria-label="Remove handle">×</button>
-  `;
-  const removeBtn = row.querySelector(".board-external_remove");
-  removeBtn?.addEventListener("click", () => {
-    row.remove();
-    syncExternalRemoveButtons();
-  });
-  container.appendChild(row);
-  syncExternalRemoveButtons();
-  return row.querySelector("input");
+function setExternalSubmitBusy(busy) {
+  const submit = document.querySelector("#board-external-form .add-submit");
+  if (!submit) return;
+  submit.disabled = busy;
+  submit.textContent = busy ? "Adding…" : "Add to board";
 }
 
-function syncExternalRemoveButtons() {
-  const rows = [...document.querySelectorAll("#board-external-rows .board-external_row")];
-  rows.forEach((row) => {
-    const btn = row.querySelector(".board-external_remove");
-    if (btn) btn.hidden = rows.length <= 1;
-  });
+function applyExternalInstagram(person, profile) {
+  if (!person || !profile) return person;
+  if (profile.name) person.name = profile.name;
+  if (profile.avatar) person.avatar = profile.avatar;
+  const images = (Array.isArray(profile.images) ? profile.images : [])
+    .filter((item) => item && item.src)
+    .slice(0, 3);
+  if (images.length) person.images = images;
+  const saved = readExternalPeople().filter((item) => item.id !== person.id);
+  saved.unshift(person);
+  saveExternalPeople(saved);
+  return person;
 }
 
 function setBoardExternalOpen(open) {
   const dialog = document.getElementById("board-external-dialog");
-  const container = document.getElementById("board-external-rows");
+  const input = document.getElementById("board-external-instagram");
   const errorEl = document.getElementById("board-external-error");
   if (!dialog) return;
   dialog.hidden = !open;
   document.body.classList.toggle("add-open", open);
   closeBoardAddPanel();
   if (errorEl) errorEl.textContent = "";
-  if (open) {
-    if (container) {
-      container.innerHTML = "";
-      const firstInput = addExternalHandleRow();
-      requestAnimationFrame(() => firstInput?.focus());
-    }
-  } else if (container) {
-    container.innerHTML = "";
+  setExternalSubmitBusy(false);
+  if (open && input) {
+    input.value = "";
+    requestAnimationFrame(() => input.focus());
   }
 }
 
@@ -5558,7 +5557,25 @@ function boardShareCollageShots(board) {
   return shots;
 }
 
+function shareBoardLabel(name) {
+  const clean = String(name || "").trim();
+  if (!clean) return "";
+  return /\bboard$/i.test(clean) ? clean : `${clean} board`;
+}
+
+function shareSheetTitle(board) {
+  const name = String(board?.name || "").trim();
+  return name ? `Share '${name}' board` : "Share board";
+}
+
 function paintBoardShareSheet(board) {
+  const title = document.getElementById("board-share-sheet-title");
+  const panel = document.getElementById("board-share-panel");
+  const shareBtn = document.getElementById("board-share-btn");
+  const label = shareSheetTitle(board);
+  if (title) title.textContent = label;
+  if (panel) panel.setAttribute("aria-label", label);
+  if (shareBtn) shareBtn.setAttribute("aria-label", label);
   const collage = document.getElementById("board-share-collage");
   if (!collage) return;
   const shots = boardShareCollageShots(board);
@@ -5629,7 +5646,7 @@ function openSharePreview(board) {
     : [`<span class="share-collage_empty"></span>`];
   collage.dataset.count = String(shots.length || 1);
   collage.innerHTML = cells.join("");
-  if (subtitle) subtitle.textContent = board?.name || "";
+  if (subtitle) subtitle.textContent = String(board?.name || "").trim();
   resetSharePreview();
   root.hidden = false;
   document.body.classList.add("share-preview-open");
@@ -5661,7 +5678,7 @@ function closeSharePreview() {
   window.setTimeout(() => {
     closeBoardSharePanel();
     const label = document.getElementById("board-share-text-label");
-    if (label) label.textContent = "Messages";
+    if (label) label.textContent = "Text";
   }, 900);
 }
 
@@ -5671,6 +5688,13 @@ function closeBoardSharePanel() {
   if (panel) panel.hidden = true;
   if (btn) btn.setAttribute("aria-expanded", "false");
   document.body.classList.remove("board-share-open");
+}
+
+function closeBoardMoreMenu() {
+  const menu = document.getElementById("board-more-menu");
+  const btn = document.getElementById("board-more-btn");
+  if (menu) menu.hidden = true;
+  if (btn) btn.setAttribute("aria-expanded", "false");
 }
 
 function boardShareUrl(board) {
@@ -5714,7 +5738,7 @@ function openEmailPreview(rawBoard) {
   if (rowSubject) rowSubject.textContent = subjectText;
   if (rowSnippet) rowSnippet.textContent = snippetText;
   if (threadSubject) threadSubject.textContent = subjectText;
-  if (cardTitle) cardTitle.textContent = board.name || "Board";
+  if (cardTitle) cardTitle.textContent = shareBoardLabel(board.name) || "Board";
   if (cardMeta) cardMeta.textContent = metaText;
   if (cardDesc) {
     const desc = String(board.description || "").trim();
@@ -5862,8 +5886,20 @@ function bindBoards() {
     }
     const shareWrap = document.getElementById("board-share-wrap");
     const sharePanel = document.getElementById("board-share-panel");
-    if (sharePanel && !sharePanel.hidden && shareWrap && !shareWrap.contains(event.target)) {
+    const shareBtn = document.getElementById("board-share-btn");
+    if (
+      sharePanel &&
+      !sharePanel.hidden &&
+      shareWrap &&
+      !shareWrap.contains(event.target) &&
+      !(shareBtn && shareBtn.contains(event.target))
+    ) {
       closeBoardSharePanel();
+    }
+    const moreWrap = document.getElementById("board-more-wrap");
+    const moreMenu = document.getElementById("board-more-menu");
+    if (moreMenu && !moreMenu.hidden && moreWrap && !moreWrap.contains(event.target)) {
+      closeBoardMoreMenu();
     }
     const datePop = document.getElementById("board-date-picker");
     if (
@@ -5940,6 +5976,7 @@ function bindBoards() {
       }
       closeBoardAddPanel();
       closeBoardSharePanel();
+      closeBoardMoreMenu();
       closeBoardPicker();
     }
   });
@@ -6115,25 +6152,13 @@ function bindBoards() {
     if (event.target === moodboardDialog) dismissMoodboardModal();
   });
 
-  const addCreativeBtn = document.getElementById("board-add-creative-btn");
-  const addMenu = document.getElementById("board-add-menu");
   const addExternalBtn = document.getElementById("board-add-external");
   const emptyAddExternalBtn = document.getElementById("board-empty-add-external");
   const externalDialog = document.getElementById("board-external-dialog");
   const externalForm = document.getElementById("board-external-form");
-  const externalMoreBtn = document.getElementById("board-external-more");
   const externalCancelBtn = document.getElementById("board-external-cancel");
   const externalCloseBtn = document.getElementById("board-external-close");
   const externalError = document.getElementById("board-external-error");
-
-  addCreativeBtn?.addEventListener("click", (event) => {
-    event.stopPropagation();
-    if (!addMenu) return;
-    const next = addMenu.hidden;
-    closeBoardSharePanel();
-    addMenu.hidden = !next;
-    addCreativeBtn.setAttribute("aria-expanded", String(next));
-  });
 
   addExternalBtn?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -6146,25 +6171,19 @@ function bindBoards() {
     setBoardExternalOpen(true);
   });
 
-  externalMoreBtn?.addEventListener("click", (event) => {
-    event.preventDefault();
-    const input = addExternalHandleRow();
-    input?.focus();
-  });
-
   externalCancelBtn?.addEventListener("click", () => setBoardExternalOpen(false));
   externalCloseBtn?.addEventListener("click", () => setBoardExternalOpen(false));
   externalDialog?.addEventListener("click", (event) => {
     if (event.target === externalDialog) setBoardExternalOpen(false);
   });
 
-  externalForm?.addEventListener("submit", (event) => {
+  externalForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const inputs = [...document.querySelectorAll('#board-external-rows input[name="external-instagram"]')];
-    const handles = extractInstagramHandles(inputs.map((input) => input.value));
-    if (!handles.length) {
-      if (externalError) externalError.textContent = "Enter at least one Instagram link or @handle.";
-      inputs[0]?.focus();
+    const input = document.getElementById("board-external-instagram");
+    const handle = instagramLinkHandle(input?.value) || extractInstagramHandles([input?.value || ""])[0];
+    if (!handle) {
+      if (externalError) externalError.textContent = "Paste an Instagram link.";
+      input?.focus();
       return;
     }
     if (!state.board) {
@@ -6177,17 +6196,32 @@ function bindBoards() {
       setBoardExternalOpen(false);
       return;
     }
-    handles.forEach((handle) => {
-      const person = ensureExternalPerson(handle);
-      if (person && !board.people.includes(person.id)) {
-        board.people.push(person.id);
+    setExternalSubmitBusy(true);
+    if (externalError) externalError.textContent = "";
+    try {
+      const response = await fetch(`/api/instagram?handle=${encodeURIComponent(handle)}`);
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        if (externalError) externalError.textContent = "Couldn't read that Instagram. Check the link and try again.";
+        return;
       }
-    });
-    saveBoards(boards);
-    syncStarButtons();
-    renderHomeBoards();
-    setBoardExternalOpen(false);
-    renderBoards();
+      const person = ensureExternalPerson(handle);
+      if (!person) {
+        if (externalError) externalError.textContent = "Paste an Instagram link.";
+        return;
+      }
+      applyExternalInstagram(person, payload);
+      if (!board.people.includes(person.id)) board.people.push(person.id);
+      saveBoards(boards);
+      syncStarButtons();
+      renderHomeBoards();
+      setBoardExternalOpen(false);
+      renderBoards();
+    } catch {
+      if (externalError) externalError.textContent = "Couldn't read that Instagram. Check the link and try again.";
+    } finally {
+      setExternalSubmitBusy(false);
+    }
   });
 
   const shareBtn = document.getElementById("board-share-btn");
@@ -6204,6 +6238,7 @@ function bindBoards() {
     sharePanel.hidden = !next;
     shareBtn.setAttribute("aria-expanded", String(next));
     if (next) {
+      closeBoardMoreMenu();
       if (shareCopyLabel) shareCopyLabel.textContent = "Copy link";
       syncBoardShareLinks();
       const board = readBoards().find((item) => item.id === state.board);
@@ -6318,7 +6353,20 @@ function bindBoards() {
   });
 
   document.getElementById("board-delete-btn")?.addEventListener("click", () => {
+    closeBoardMoreMenu();
     if (state.board) requestDeleteBoard(state.board);
+  });
+
+  const moreBtn = document.getElementById("board-more-btn");
+  const moreMenu = document.getElementById("board-more-menu");
+  moreBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!moreMenu) return;
+    const next = moreMenu.hidden;
+    closeBoardAddPanel();
+    closeBoardSharePanel();
+    moreMenu.hidden = !next;
+    moreBtn.setAttribute("aria-expanded", String(next));
   });
 
   const deleteDialog = document.getElementById("board-delete-dialog");
@@ -6506,19 +6554,26 @@ function syncFloatDock() {
   const addWrap = document.getElementById("board-add-wrap");
   const share = document.getElementById("board-share-wrap");
   const remove = document.getElementById("board-delete-btn");
+  const moreWrap = document.getElementById("board-more-wrap");
+  const moreMenu = document.getElementById("board-more-menu");
+  const shareBtn = document.getElementById("board-share-btn");
   const onBoard = mobileLayout() && isBoardsPage() && Boolean(state.board) && Boolean(document.getElementById("board-detail")) && !document.getElementById("board-detail").hidden;
   document.body.classList.toggle("has-float-dock", mobileLayout() && !onBoard);
   document.body.classList.toggle("has-board-dock", onBoard);
   if (nav) nav.hidden = !mobileLayout() || onBoard;
-  if (boardDock) boardDock.hidden = !onBoard;
+  if (boardDock) boardDock.hidden = true;
 
-  if (!actions || !header || !generate || !addWrap || !share || !remove) return;
+  if (!actions || !header || !generate || !addWrap || !share || !remove || !moreWrap || !moreMenu || !shareBtn) return;
   if (onBoard) {
-    header.append(share, remove);
-    boardDock?.append(generate, addWrap);
+    header.append(generate, addWrap, moreWrap, share);
+    moreMenu.append(shareBtn, remove);
+    moreWrap.hidden = false;
     return;
   }
-  actions.append(generate, addWrap, share, remove);
+  share.prepend(shareBtn);
+  closeBoardMoreMenu();
+  moreWrap.hidden = true;
+  actions.append(generate, addWrap, share, remove, moreWrap);
 }
 
 function initHeroMap() {
