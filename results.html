@@ -29,9 +29,20 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=317" />
+    <link rel="stylesheet" href="styles.css?v=367" />
   </head>
-  <body data-page="results" data-view="home">
+  <body data-page="results" data-view="home" class="has-float-dock">
+    <nav class="float-dock" id="float-dock" aria-label="Sections">
+      <a class="float-dock_item is-current" id="float-dock-creatives" href="results.html?browse=1" aria-label="Creatives" aria-current="page">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.2 19.4c.9-3.1 3.1-4.6 6.8-4.6s5.9 1.5 6.8 4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </a>
+      <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.6 15.6 20.2 20.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <a class="float-dock_item" id="float-dock-boards" href="boards.html" aria-label="Boards">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
+      </a>
+    </nav>
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <header class="navbar results-top">
       <a class="nav_brand" href="/" aria-label="Draft, home">
@@ -297,9 +308,9 @@
     </div>
 
     <script src="people.js?v=26"></script>
-    <script src="projects.js?v=45"></script>
+    <script src="projects.js?v=46"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=245"></script>
+    <script src="app.js?v=282"></script>
   </body>
 </html>

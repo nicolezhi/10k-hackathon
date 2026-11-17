@@ -830,7 +830,9 @@ if (document.body.dataset.page === "explore") {
       people: roster,
       openProfile(id) {
         try { sessionStorage.setItem("10k-skeleton", String(Date.now())); } catch (error) {}
-        location.href = `./?person=${encodeURIComponent(id)}`;
+          location.href = document.documentElement.classList.contains("is-frame")
+            ? `./?person=${encodeURIComponent(id)}&frame=1`
+            : `./?person=${encodeURIComponent(id)}`;
       },
     });
   }

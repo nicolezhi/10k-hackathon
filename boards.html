@@ -34,9 +34,20 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=317" />
+    <link rel="stylesheet" href="styles.css?v=367" />
   </head>
-  <body data-page="boards" data-view="home">
+  <body data-page="boards" data-view="home" class="has-float-dock">
+    <nav class="float-dock" id="float-dock" aria-label="Sections">
+      <a class="float-dock_item" id="float-dock-creatives" href="results.html?browse=1" aria-label="Creatives">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.2 19.4c.9-3.1 3.1-4.6 6.8-4.6s5.9 1.5 6.8 4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </a>
+      <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.6 15.6 20.2 20.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <a class="float-dock_item is-current" id="float-dock-boards" href="boards.html" aria-label="Boards" aria-current="page">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
+      </a>
+    </nav>
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <header class="navbar results-top">
       <a class="nav_brand" href="/" aria-label="Draft, home">
@@ -197,7 +208,7 @@
             <p class="boards-sub" id="board-detail-count"></p>
           </div>
           <div class="board-detail_actions">
-            <button class="tool-pill board-moodboard-cta" id="board-moodboard-btn" type="button" hidden>
+            <button class="tool-pill board-moodboard-cta" id="board-moodboard-btn" type="button" hidden aria-label="Generate moodboard">
               <svg class="moodboard-sparkle-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                 <path d="M12 2.5l1.9 5.1 5.1 1.9-5.1 1.9L12 16.5l-1.9-5.1-5.1-1.9 5.1-1.9L12 2.5z" fill="currentColor" />
                 <path d="M19 14.5l.95 2.55 2.55.95-2.55.95L19 21.5l-.95-2.55-2.55-.95 2.55-.95L19 14.5z" fill="currentColor" />
@@ -208,7 +219,9 @@
             <div class="board-add-wrap" id="board-add-wrap">
               <button class="tool-pill tool-pill_add board-add-toggle" id="board-add-creative-btn" type="button" aria-label="Add creative" aria-expanded="false" aria-controls="board-add-menu">
                 <svg class="board-add-plus" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  <circle cx="9" cy="8" r="2.7" fill="none" stroke="currentColor" stroke-width="1.7" />
+                  <path d="M3.6 17.4c.55-2.5 2.35-3.8 5.15-3.8 1.35 0 2.5.35 3.35 1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                  <path d="M17.2 11v5.4M14.5 13.7h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
                 </svg>
                 <span>+ Add creative</span>
                 <svg class="board-add-chevron" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
@@ -240,26 +253,50 @@
                   <path d="M12 3.8v11M7.8 8 12 3.8 16.2 8M5 13.5v4.8A1.7 1.7 0 0 0 6.7 20h10.6a1.7 1.7 0 0 0 1.7-1.7v-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
               </button>
-              <div class="board-share-panel" id="board-share-panel" hidden role="menu" aria-label="Share board">
-                <button class="board-share-item" id="board-share-copy" type="button" role="menuitem">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                    <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.7 5.22M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 1 0 7.07 7.07l1.41-1.41" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                  <span id="board-share-copy-label">Copy link</span>
-                </button>
-                <a class="board-share-item" id="board-share-text" href="sms:" role="menuitem">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                    <path d="M20 14.5a3.5 3.5 0 0 1-3.5 3.5H8l-4 3V7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                  <span id="board-share-text-label">Text</span>
-                </a>
-                <a class="board-share-item" id="board-share-email" href="mailto:" role="menuitem">
-                  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                    <rect x="3.5" y="5.5" width="17" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />
-                    <path d="M4.5 7 12 12.2 19.5 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                  <span>Email</span>
-                </a>
+              <div class="board-share-panel" id="board-share-panel" hidden role="dialog" aria-label="Share board">
+                <button class="board-share-scrim" id="board-share-scrim" type="button" aria-label="Close share"></button>
+                <div class="board-share-sheet">
+                  <div class="board-share-grab" aria-hidden="true"></div>
+                  <div class="board-share-preview" id="board-share-preview">
+                    <div class="board-share-collage" id="board-share-collage"></div>
+                  </div>
+                  <div class="board-share-rule" aria-hidden="true"></div>
+                  <h2 class="board-share-sheet_title">Share board</h2>
+                  <div class="board-share-sheet_actions">
+                    <button class="board-share-item" id="board-share-copy" type="button">
+                      <span class="board-share-icon board-share-icon-link">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.7 5.22M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 1 0 7.07 7.07l1.41-1.41" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                      </span>
+                      <span id="board-share-copy-label">Copy link</span>
+                    </button>
+                    <a class="board-share-item" id="board-share-text" href="sms:">
+                      <span class="board-share-icon board-share-icon-text">
+                        <svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true">
+                          <path fill="currentColor" d="M28 13.2c-9.7 0-17.6 6.3-17.6 14.1 0 4.5 2.6 8.5 6.7 11.1-.4 2.1-1.4 4.6-3.2 6.8 3.4-.5 6.4-2.2 8.2-3.7 1.8.5 3.8.8 5.9.8 9.7 0 17.6-6.3 17.6-14.1S37.7 13.2 28 13.2z" />
+                        </svg>
+                      </span>
+                      <span id="board-share-text-label">Messages</span>
+                    </a>
+                    <a class="board-share-item" id="board-share-email" href="mailto:">
+                      <span class="board-share-icon board-share-icon-mail">
+                        <svg class="board-share-icon_plain" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                          <rect x="3.5" y="5.5" width="17" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+                          <path d="M4.5 7 12 12.2 19.5 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg class="board-share-icon_brand" viewBox="0 0 48 48" width="28" height="28" aria-hidden="true">
+                          <path fill="#4caf50" d="M45 16.2 35 23.7 35 40h7c1.7 0 3-1.3 3-3V16.2z" />
+                          <path fill="#1e88e5" d="M3 16.2 13 23.7V40H6c-1.7 0-3-1.3-3-3V16.2z" />
+                          <path fill="#e53935" d="M35 11.2 24 19.5 13 11.2 13 23.7 24 32 35 23.7z" />
+                          <path fill="#c62828" d="M3 12.3V16.2l10 7.5V11.2L9.9 8.9C9.1 8.3 8.2 8 7.3 8 4.9 8 3 9.9 3 12.3z" />
+                          <path fill="#fbc02d" d="M45 12.3V16.2l-10 7.5V11.2l3.1-2.3c.8-.6 1.7-.9 2.6-.9 2.4 0 4.3 1.9 4.3 4.3z" />
+                        </svg>
+                      </span>
+                      <span>Gmail</span>
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
             <button class="board-delete-btn" id="board-delete-btn" type="button" aria-label="Delete board">
@@ -298,7 +335,9 @@
             <button class="tool-pill boards-empty_new" id="board-empty-add-external" type="button">+ Add external creative</button>
           </div>
         </div>
-        <div class="moodboard-bar" id="board-moodboard-bar" hidden>
+        <div class="moodboard-popup" id="board-moodboard-popup" hidden>
+          <button class="moodboard-popup_scrim" id="board-moodboard-scrim" type="button" aria-label="Close"></button>
+          <div class="moodboard-bar" id="board-moodboard-bar">
           <div class="moodboard-bar_glow" aria-hidden="true"></div>
           <div class="moodboard-bar_copy">
             <div class="moodboard-bar_title">
@@ -325,7 +364,9 @@
             </button>
           </div>
         </div>
+        </div>
         <div class="results-page" id="board-detail-results" data-results-view="list">
+          <div class="board-role-tabs" id="board-role-tabs" hidden role="tablist" aria-label="Roles on this board"></div>
           <div class="board-role-groups" id="board-detail-grid"></div>
         </div>
       </div>
@@ -412,8 +453,8 @@
 
     <div class="add-dialog board-moodboard-dialog" id="board-moodboard-dialog" hidden>
       <div class="add-dialog_panel moodboard-stage" id="board-moodboard-stage" role="dialog" aria-modal="true" aria-labelledby="board-moodboard-title">
-        <button class="add-dialog_close" id="board-moodboard-x" type="button" aria-label="Close">×</button>
         <div class="moodboard-stage_pin">
+          <button class="add-dialog_close" id="board-moodboard-x" type="button" aria-label="Close">×</button>
           <div class="moodboard-stage_head">
             <div>
               <h2 id="board-moodboard-title">Generated moodboard</h2>
@@ -493,7 +534,7 @@
     </div>
 
     <script src="people.js?v=26"></script>
-    <script src="projects.js?v=45"></script>
-    <script src="app.js?v=245"></script>
+    <script src="projects.js?v=46"></script>
+    <script src="app.js?v=282"></script>
   </body>
 </html>

@@ -729,15 +729,11 @@ function starButtonHtml(personId, extraClass = "") {
 
 let igGradSeq = 0;
 
-function instagramPillHtml(instagramHref, extraClass = "") {
-  const cls = ["ig-btn", extraClass, instagramHref ? "" : "is-empty"].filter(Boolean).join(" ");
-  if (!instagramHref) {
-    const emptyIcon = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${CONTACT_PATHS.instagram}</svg>`;
-    return `<span class="${cls}" aria-label="Instagram">${emptyIcon}</span>`;
-  }
+function instagramMark(active) {
+  if (!active) return tinyIcon(CONTACT_PATHS.instagram);
   igGradSeq += 1;
   const gradId = `ig-g-${igGradSeq}`;
-  const icon = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+  return `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
     <defs>
       <linearGradient id="${gradId}" x1="4" y1="20" x2="20" y2="4" gradientUnits="userSpaceOnUse">
         <stop offset="0%" stop-color="#feda75" />
@@ -751,6 +747,18 @@ function instagramPillHtml(instagramHref, extraClass = "") {
     <circle cx="12" cy="12" r="3.4" fill="none" stroke="url(#${gradId})" stroke-width="1.9"/>
     <circle cx="16.6" cy="7.4" r="1" fill="url(#${gradId})"/>
   </svg>`;
+}
+
+function instagramContactHtml(instagramHref, className = "roster-icon") {
+  const icon = instagramMark(Boolean(instagramHref));
+  if (!instagramHref) return `<span class="${className} is-empty" aria-label="Instagram">${icon}</span>`;
+  return `<a class="${className}" href="${escapeHtml(instagramHref)}" target="_blank" rel="noreferrer" aria-label="Instagram">${icon}</a>`;
+}
+
+function instagramPillHtml(instagramHref, extraClass = "") {
+  const cls = ["ig-btn", extraClass, instagramHref ? "" : "is-empty"].filter(Boolean).join(" ");
+  const icon = instagramMark(Boolean(instagramHref));
+  if (!instagramHref) return `<span class="${cls}" aria-label="Instagram">${icon}</span>`;
   return `<a class="${cls}" href="${escapeHtml(instagramHref)}" target="_blank" rel="noreferrer" aria-label="Instagram">${icon}</a>`;
 }
 
@@ -790,7 +798,7 @@ function rosterCardHtml(record) {
   return `
     <div class="result-card_actions">
       ${isExternal ? `<span class="external-stamp">External</span>` : ""}
-      ${instagramPillHtml(instagramHref)}
+      ${instagramContactHtml(instagramHref, "ig-mark")}
       ${starButtonHtml(record.id)}
     </div>
     ${avatarHtml(record, "result-card_avatar")}
@@ -936,7 +944,7 @@ function mapPopup(record) {
   return `
     <div class="roster-pop">
       <div class="roster-pop_actions">
-        ${instagramPillHtml(instagramHref)}
+        ${instagramContactHtml(instagramHref, "ig-mark")}
         ${starButtonHtml(record.id)}
       </div>
       <button class="roster-pop_close" type="button" aria-label="Close">
@@ -1549,7 +1557,17 @@ function searchPopupOpen() {
 function syncSearchPopup() {
   const open = searchPopupOpen();
   document.body.classList.toggle("is-search-open", open);
-  if (!open) return;
+  if (!open) {
+    document.body.classList.remove("is-search-rising", "search-rose");
+    document.querySelector(".search-rise")?.remove();
+    const search = document.querySelector(".search");
+    if (search) {
+      search.style.transition = "";
+      search.style.transform = "";
+      search.style.opacity = "";
+    }
+    return;
+  }
   ensureSearchChrome();
   document.querySelector(".navbar")?.classList.remove("is-nav-open");
   document.getElementById("nav-toggle")?.setAttribute("aria-expanded", "false");
@@ -1576,9 +1594,8 @@ function exitSearchView() {
 function syncSearchActions() {
   const airbnb = document.getElementById("airbnb");
   if (!airbnb) return;
-  const whereSet = Boolean(activeCities().length || state.country);
   const whoSet = state.roles.length > 0;
-  airbnb.classList.toggle("is-searching", whereSet && whoSet);
+  airbnb.classList.toggle("is-searching", whoSet);
 }
 
 function openCitySearch() {
@@ -1604,7 +1621,8 @@ function ensureSearchPrompt() {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "search-prompt";
-  button.textContent = "Search for creatives";
+  button.setAttribute("aria-label", "Search for creatives");
+  button.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.2 15.2 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Search for creatives</span>`;
   airbnb.insertBefore(button, airbnb.firstChild);
   button.addEventListener("click", (event) => {
     event.preventDefault();
@@ -1848,8 +1866,41 @@ function paintWhoSub() {
   alignSubmenu(sub, row, 8);
 }
 
+function allRolesSelected(bag) {
+  return SEARCH_ROLES.every((role) => bagIsAll(bag, role));
+}
+
+function bagToggleAllRoles(bag) {
+  if (allRolesSelected(bag)) {
+    bag.roles = bag.roles.filter((role) => !SEARCH_ROLES.includes(role));
+    SEARCH_ROLES.forEach((role) => {
+      delete bag.roleGenres[role];
+    });
+    return;
+  }
+  SEARCH_ROLES.forEach((role) => {
+    if (!bag.roles.includes(role)) bag.roles = [...bag.roles, role];
+    bag.roleGenres[role] = [];
+  });
+}
+
 function renderRoleGroups(container, bag, after) {
   container.innerHTML = "";
+  if (mobileLayout() && container.id === "who-options") {
+    const all = document.createElement("button");
+    all.type = "button";
+    all.className = "where-city who-all-roles";
+    const on = allRolesSelected(bag);
+    all.setAttribute("aria-pressed", on ? "true" : "false");
+    all.setAttribute("aria-checked", on ? "true" : "false");
+    all.innerHTML = `${checkHtml()}<span>All roles</span>`;
+    all.addEventListener("click", (event) => {
+      event.stopPropagation();
+      bagToggleAllRoles(bag);
+      after();
+    });
+    container.append(all);
+  }
   SEARCH_ROLES.forEach((name) => {
     const role = ROLES.find((item) => item.name === name);
     if (!role) return;
@@ -1911,7 +1962,11 @@ function paintSearch() {
   placeSearchPanels();
   const prompt = document.querySelector("#airbnb .search-prompt");
   if (prompt) {
-    prompt.textContent = searchPromptLabel();
+    const label = prompt.querySelector("span");
+    const text = searchPromptLabel();
+    if (label) label.textContent = text;
+    else prompt.textContent = text;
+    prompt.setAttribute("aria-label", text);
     prompt.classList.toggle("is-centered", mobileLayout() && isResultsPage() && !state.browse);
   }
   document.getElementById("airbnb")?.classList.toggle("is-started", composerOpen());
@@ -2493,6 +2548,13 @@ function isBoardsPage() {
   return document.body.dataset.page === "boards";
 }
 
+function frameHref(href) {
+  if (!document.documentElement.classList.contains("is-frame")) return href;
+  const url = new URL(href, location.href);
+  url.searchParams.set("frame", "1");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 function resultsQuery() {
   const params = new URLSearchParams();
   if (state.query) params.set("q", state.query);
@@ -2545,6 +2607,7 @@ function writeUrl(mode) {
   if (state.browse) params.set("browse", "1");
   if (state.board) params.set("board", state.board);
   if (state.profile) params.set("person", state.profile);
+  if (document.documentElement.classList.contains("is-frame")) params.set("frame", "1");
   const next = `${location.pathname}${params.toString() ? `?${params}` : ""}`;
   if (next === `${location.pathname}${location.search}`) return;
   if (mode === "push") history.pushState(null, "", next);
@@ -2753,7 +2816,7 @@ function bind() {
     document.getElementById("where-filter").value = "";
     if (!isResultsPage()) {
       markSkeletonNav();
-      location.href = resultsQuery();
+      location.href = frameHref(resultsQuery());
       return;
     }
     render({ url: "push" });
@@ -3890,6 +3953,10 @@ function ensureBoardPicker() {
 
 function positionBoardPicker(picker, anchor) {
   if (!picker || !anchor) return;
+  if (!anchor.isConnected) {
+    closeBoardPicker();
+    return;
+  }
   const rect = anchor.getBoundingClientRect();
   const pickerWidth = 280;
   const margin = 12;
@@ -3960,7 +4027,16 @@ function paintBoardPicker() {
   picker.querySelectorAll(".board-picker_row").forEach((row) => {
     row.addEventListener("click", (event) => {
       event.stopPropagation();
-      togglePersonInBoard(activePickerPerson, row.dataset.boardId);
+      const added = togglePersonInBoard(activePickerPerson, row.dataset.boardId);
+      const viewingThisBoard = isBoardsPage() && state.board === row.dataset.boardId;
+      if (!added && viewingThisBoard) {
+        closeBoardPicker();
+        return;
+      }
+      if (activePickerAnchor && !activePickerAnchor.isConnected) {
+        closeBoardPicker();
+        return;
+      }
       paintBoardPicker();
     });
   });
@@ -4092,7 +4168,7 @@ function renderHomeBoards() {
       buildBoardCardElement(board, {
         onOpen: () => {
           markSkeletonNav();
-          location.href = `boards.html?board=${encodeURIComponent(board.id)}`;
+          location.href = frameHref(`boards.html?board=${encodeURIComponent(board.id)}`);
         },
       })
     );
@@ -4163,6 +4239,10 @@ let moodboardMode = "";
 let moodboardBoardId = "";
 let moodboardPicks = {};
 let moodboardSeed = 1;
+let boardRoleTab = "";
+let boardRoleTabOwner = "";
+
+let moodboardMenuRole = "";
 
 function moodboardPickList(roleName) {
   const value = moodboardPicks[roleName];
@@ -4171,8 +4251,125 @@ function moodboardPickList(roleName) {
   return [];
 }
 
-function moodboardRoleAllowsMany(roleName) {
-  return mobileLayout() && /photograph/i.test(roleName);
+function setMoodboardPickIds(roleName, ids) {
+  const next = [];
+  ids.forEach((id) => {
+    if (id && !next.includes(id)) next.push(id);
+  });
+  if (next.length) moodboardPicks[roleName] = next;
+  else delete moodboardPicks[roleName];
+}
+
+function moodboardSelectionLabel(records, pickedIds) {
+  if (!pickedIds.length) return "Select";
+  if (pickedIds.length === 1) {
+    return records.find((person) => person.id === pickedIds[0])?.name || "1 selected";
+  }
+  if (records.length > 1 && pickedIds.length === records.length) return "All";
+  return `${pickedIds.length} selected`;
+}
+
+function moodboardCheckBoxHtml() {
+  return `<span class="moodboard-pick-option_check" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+}
+
+function moodboardPeopleMenuHtml(records, pickedIds) {
+  const showAll = records.length > 1;
+  const allOn = showAll && records.every((person) => pickedIds.includes(person.id));
+  const allRow = showAll
+    ? `<button type="button" class="moodboard-pick-option moodboard-pick-all${allOn ? " is-selected" : ""}" data-all-role="1" role="menuitemcheckbox" aria-checked="${allOn}">
+      ${moodboardCheckBoxHtml()}
+      <span class="moodboard-pick-option_meta"><strong>All</strong></span>
+    </button>`
+    : "";
+  const rows = records
+    .map((person) => {
+      const isSelected = pickedIds.includes(person.id);
+      const sub = person.city || (person.instagram ? `@${person.instagram.replace(/^@/, "")}` : "");
+      return `<button type="button" class="moodboard-pick-option${isSelected ? " is-selected" : ""}" data-person-id="${escapeHtml(person.id)}" role="menuitemcheckbox" aria-checked="${isSelected}">
+          ${moodboardCheckBoxHtml()}
+          ${avatarHtml(person, "moodboard-pick-option_avatar")}
+          <span class="moodboard-pick-option_meta">
+            <strong>${escapeHtml(person.name)}</strong>
+            ${sub ? `<span>${escapeHtml(sub)}</span>` : ""}
+          </span>
+        </button>`;
+    })
+    .join("");
+  return allRow + rows;
+}
+
+function openMoodboardDrop(drop) {
+  const btn = drop.querySelector(".moodboard-pick-chip, .moodboard-crew_pill");
+  const menu = drop.querySelector(".moodboard-pick-menu");
+  if (!btn || !menu) return;
+  drop.classList.add("is-open");
+  menu.hidden = false;
+  btn.setAttribute("aria-expanded", "true");
+  placeMoodboardPickMenu(menu, btn);
+}
+
+function restoreMoodboardMenu() {
+  if (!moodboardMenuRole) return;
+  const drop = [...document.querySelectorAll(".moodboard-pick-drop")].find(
+    (item) => item.dataset.role === moodboardMenuRole && item.getClientRects().length
+  );
+  if (drop) openMoodboardDrop(drop);
+}
+
+function bindMoodboardMenu(drop, records, rerender) {
+  const roleName = drop.dataset.role || "";
+  const btn = drop.querySelector(".moodboard-pick-chip, .moodboard-crew_pill");
+  const menu = drop.querySelector(".moodboard-pick-menu");
+  btn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (!menu) return;
+    const willOpen = menu.hidden;
+    closeMoodboardPickMenus(willOpen ? drop : null);
+    moodboardMenuRole = willOpen ? roleName : "";
+    if (!willOpen) {
+      drop.classList.remove("is-open");
+      btn.setAttribute("aria-expanded", "false");
+      releaseMoodboardPickMenu(menu);
+      return;
+    }
+    openMoodboardDrop(drop);
+  });
+  drop.querySelectorAll(".moodboard-pick-option").forEach((opt) => {
+    opt.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (opt.hasAttribute("data-all-role")) {
+        const picked = moodboardPickList(roleName);
+        const allOn = records.length > 0 && records.every((person) => picked.includes(person.id));
+        setMoodboardPickIds(
+          roleName,
+          allOn ? [] : records.map((person) => person.id)
+        );
+      } else {
+        const personId = opt.dataset.personId || "";
+        const picked = moodboardPickList(roleName);
+        const next = picked.includes(personId) ? picked.filter((id) => id !== personId) : [...picked, personId];
+        setMoodboardPickIds(roleName, next);
+      }
+      closeMoodboardPickMenus();
+      moodboardMenuRole = roleName;
+      rerender();
+    });
+  });
+  drop.querySelector(".moodboard-pick-clear")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    delete moodboardPicks[roleName];
+    closeMoodboardPickMenus();
+    moodboardMenuRole = roleName;
+    rerender();
+  });
+}
+
+function roleTabLabel(roleName) {
+  if (/videographer/i.test(roleName)) return "Videographers";
+  return pluralRole(roleName, 2);
 }
 
 function boardRoleGroupsMap(members) {
@@ -4185,28 +4382,80 @@ function boardRoleGroupsMap(members) {
   return roleGroups;
 }
 
+function setMoodboardBarOpen(open) {
+  const bar = document.getElementById("board-moodboard-bar");
+  const popup = document.getElementById("board-moodboard-popup");
+  if (bar) bar.hidden = !open;
+  if (popup) popup.hidden = !open;
+  document.body.classList.toggle("moodboard-select-open", open && mobileLayout());
+}
+
 function placeMoodboardDialog() {
   const dialog = document.getElementById("board-moodboard-dialog");
   if (!dialog) return;
   const header = document.querySelector(".results-top");
+  dialog.style.top = "";
   if (dialog.hidden || !mobileLayout() || !header) {
-    dialog.style.top = "";
+    dialog.style.paddingTop = "";
     return;
   }
-  dialog.style.top = Math.round(header.getBoundingClientRect().bottom) + "px";
+  dialog.style.paddingTop = `${Math.round(header.getBoundingClientRect().bottom)}px`;
+}
+
+function clearMoodboardPickMenuBox(menu) {
+  menu.style.top = "";
+  menu.style.left = "";
+  menu.style.right = "";
+  menu.style.width = "";
+}
+
+function releaseMoodboardPickMenu(menu) {
+  if (!menu) return;
+  menu.hidden = true;
+  clearMoodboardPickMenuBox(menu);
+  const home = menu._moodboardHome;
+  if (!home) return;
+  menu._moodboardHome = null;
+  if (home.isConnected) home.appendChild(menu);
+  else menu.remove();
 }
 
 function closeMoodboardPickMenus(exceptDrop = null) {
-  document
-    .querySelectorAll("#board-moodboard-picks .moodboard-pick-drop, #board-moodboard-crew .moodboard-pick-drop")
-    .forEach((drop) => {
-      if (drop === exceptDrop) return;
-      drop.classList.remove("is-open");
-      const btn = drop.querySelector(".moodboard-pick-chip, .moodboard-crew_pill");
-      const menu = drop.querySelector(".moodboard-pick-menu");
-      if (btn) btn.setAttribute("aria-expanded", "false");
-      if (menu) menu.hidden = true;
-    });
+  if (!exceptDrop) moodboardMenuRole = "";
+  document.querySelectorAll(".moodboard-pick-menu").forEach((menu) => {
+    const drop = menu._moodboardHome || menu.closest(".moodboard-pick-drop");
+    if (exceptDrop && drop === exceptDrop) return;
+    drop?.classList.remove("is-open");
+    const btn = drop?.querySelector(".moodboard-pick-chip, .moodboard-crew_pill");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+    releaseMoodboardPickMenu(menu);
+  });
+}
+
+function placeMoodboardPickMenu(menu, anchor) {
+  if (!menu) return;
+  if (!mobileLayout() || !anchor) {
+    clearMoodboardPickMenuBox(menu);
+    return;
+  }
+  // The selection card and moodboard stage use backdrop-filter, which traps
+  // position:fixed. Park the menu on the body so it opens against the screen.
+  if (!menu._moodboardHome) menu._moodboardHome = menu.parentElement;
+  if (menu.parentElement !== document.body) document.body.appendChild(menu);
+  const rect = anchor.getBoundingClientRect();
+  const maxHeight = 220;
+  const height = Math.min(maxHeight, menu.scrollHeight || maxHeight);
+  let top = rect.bottom + 6;
+  if (top + height > window.innerHeight - 12) top = Math.max(12, rect.top - 6 - height);
+  menu.style.top = `${Math.round(top)}px`;
+  menu.style.width = "max-content";
+  menu.style.minWidth = `${Math.max(220, Math.round(rect.width))}px`;
+  menu.style.maxWidth = `${Math.round(window.innerWidth - 24)}px`;
+  menu.style.left = `${Math.round(Math.max(12, rect.left))}px`;
+  menu.style.right = "auto";
+  const box = menu.getBoundingClientRect();
+  const overflow = box.right - (window.innerWidth - 12);
+  if (overflow > 0) menu.style.left = `${Math.max(12, Math.round(box.left - overflow))}px`;
 }
 
 function resetMoodboardState() {
@@ -4217,13 +4466,13 @@ function resetMoodboardState() {
   const dlg = document.getElementById("board-moodboard-dialog");
   if (dlg) dlg.hidden = true;
   document.body.classList.remove("add-open");
+  document.body.classList.remove("moodboard-select-open");
   placeMoodboardDialog();
 }
 
 function syncMoodboardUI(activeBoard, members, roleGroups) {
   const detail = document.getElementById("board-detail");
   const ctaBtn = document.getElementById("board-moodboard-btn");
-  const bar = document.getElementById("board-moodboard-bar");
   const picksEl = document.getElementById("board-moodboard-picks");
   const hintEl = document.getElementById("board-moodboard-hint");
   const dialog = document.getElementById("board-moodboard-dialog");
@@ -4233,7 +4482,7 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
   if (!activeBoard || members.length === 0) {
     resetMoodboardState();
     if (ctaBtn) ctaBtn.hidden = true;
-    if (bar) bar.hidden = true;
+    setMoodboardBarOpen(false);
     if (dialog) dialog.hidden = true;
     if (resultsWrap) resultsWrap.hidden = false;
     detail.removeAttribute("data-moodboard-mode");
@@ -4253,41 +4502,23 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
   detail.dataset.moodboardMode = moodboardMode || "";
 
   if (moodboardMode === "select") {
-    if (bar) bar.hidden = false;
+    setMoodboardBarOpen(true);
     if (dialog) dialog.hidden = true;
     document.body.classList.remove("add-open");
     if (resultsWrap) resultsWrap.hidden = false;
 
     const roles = [...roleGroups.keys()];
     const pickedCount = roles.filter((roleName) => moodboardPickList(roleName).length > 0).length;
-    const multiPhoto = roles.some(
-      (roleName) => moodboardRoleAllowsMany(roleName) && roleGroups.get(roleName).length > 1
-    );
 
     if (hintEl) {
-      if (mobileLayout()) {
-        const others = roles.filter((roleName) => !moodboardRoleAllowsMany(roleName));
-        hintEl.textContent = multiPhoto
-          ? others.length
-            ? "Tap any photographers, and one person from each other role."
-            : "Tap the photographers you want, then Generate."
-          : "Tap one person from each role, then Generate.";
-      } else if (multiPhoto) {
-        const others = roles.filter((roleName) => !moodboardRoleAllowsMany(roleName));
-        hintEl.textContent = others.length
-          ? "Select any photographers, and 1 creative from each other role."
-          : "Select one or more photographers, then tap Generate.";
-      } else {
-        hintEl.textContent =
-          pickedCount === roles.length
-            ? `All ${roles.length} ${roles.length === 1 ? "role" : "roles"} checked — click Generate to preview!`
-            : `Check 1 creative from each role row below (${pickedCount} of ${roles.length} roles selected).`;
-      }
+      hintEl.textContent = mobileLayout()
+        ? "Check the creatives you want, then Generate."
+        : "Check the creatives you want. You can check everyone in a role.";
     }
 
     const barTitle = document.querySelector("#board-moodboard-bar .moodboard-bar_title strong");
     if (barTitle) {
-      barTitle.textContent = mobileLayout() ? "Choose your lineup" : "Select 1 creative from each role";
+      barTitle.textContent = mobileLayout() ? "Generate moodboard" : "Select creatives";
     }
 
     const genBtn = document.getElementById("board-moodboard-generate");
@@ -4296,78 +4527,25 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
     }
 
     if (picksEl) {
-      if (mobileLayout()) {
-        picksEl.innerHTML = roles
-          .map((roleName) => {
-            const people = roleGroups.get(roleName);
-            const picks = moodboardPickList(roleName);
-            const buttons = people
-              .map((person) => {
-                const on = picks.includes(person.id);
-                return `<button type="button" class="moodboard-person-btn${on ? " is-on" : ""}" data-role="${escapeHtml(roleName)}" data-person="${escapeHtml(person.id)}" aria-pressed="${on ? "true" : "false"}">${avatarHtml(person, "moodboard-person-btn_avatar")}<span>${escapeHtml(person.name)}</span></button>`;
-              })
-              .join("");
-            return `<div class="moodboard-pick-role">
-              <span class="moodboard-pick-role_label">${escapeHtml(pluralRole(roleName, people.length))}</span>
-              <div class="moodboard-pick-people">${buttons}</div>
-            </div>`;
-          })
-          .join("");
-        picksEl.querySelectorAll(".moodboard-person-btn").forEach((btn) => {
-          btn.addEventListener("click", () => {
-            const roleName = btn.dataset.role || "";
-            const personId = btn.dataset.person || "";
-            const picks = moodboardPickList(roleName);
-            if (picks.includes(personId)) {
-              const remaining = picks.filter((id) => id !== personId);
-              if (remaining.length) moodboardPicks[roleName] = remaining;
-              else delete moodboardPicks[roleName];
-            } else if (moodboardRoleAllowsMany(roleName)) {
-              moodboardPicks[roleName] = [...picks, personId];
-            } else {
-              moodboardPicks[roleName] = [personId];
-            }
-            syncMoodboardUI(activeBoard, members, roleGroups);
-          });
-        });
-      } else {
-        picksEl.innerHTML = roles
+      picksEl.innerHTML = roles
           .map((roleName) => {
             const groupRecords = roleGroups.get(roleName) || [];
             const pickedIds = moodboardPickList(roleName);
-            const chosen = groupRecords.find((p) => pickedIds.includes(p.id));
-            const optionsHtml = groupRecords
-              .map((person) => {
-                const isSelected = pickedIds.includes(person.id);
-                const sub = person.city || (person.instagram ? `@${person.instagram.replace(/^@/, "")}` : "");
-                return `
-                  <button type="button" class="moodboard-pick-option${isSelected ? " is-selected" : ""}" data-person-id="${escapeHtml(person.id)}" role="option" aria-selected="${Boolean(isSelected)}">
-                    ${avatarHtml(person, "moodboard-pick-option_avatar")}
-                    <span class="moodboard-pick-option_meta">
-                      <strong>${escapeHtml(person.name)}</strong>
-                      ${sub ? `<span>${escapeHtml(sub)}</span>` : ""}
-                    </span>
-                    <span class="moodboard-pick-option_check" aria-hidden="true">
-                      <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3.5 8.3 6.6 11.4 12.6 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </span>
-                  </button>
-                `;
-              })
-              .join("");
-            const clearHtml = chosen
+            const label = moodboardSelectionLabel(groupRecords, pickedIds);
+            const clearHtml = pickedIds.length
               ? `<button type="button" class="moodboard-pick-clear" data-clear-role="${escapeHtml(roleName)}">Clear selection</button>`
               : "";
             return `
               <div class="moodboard-pick-drop" data-role="${escapeHtml(roleName)}">
-                <button type="button" class="moodboard-pick-chip${chosen ? " is-picked" : ""}" aria-haspopup="listbox" aria-expanded="false">
+                <button type="button" class="moodboard-pick-chip${pickedIds.length ? " is-picked" : ""}" aria-haspopup="menu" aria-expanded="false">
                   <strong>${escapeHtml(roleName)}:</strong>
-                  <span>${escapeHtml(chosen ? chosen.name : "Select creative")}</span>
+                  <span>${escapeHtml(label)}</span>
                   <svg class="moodboard-pick-chevron" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
                     <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </button>
-                <div class="moodboard-pick-menu" hidden role="listbox" aria-label="${escapeHtml(roleName)}">
-                  ${optionsHtml}
+                <div class="moodboard-pick-menu" hidden role="group" aria-label="${escapeHtml(roleName)}">
+                  ${moodboardPeopleMenuHtml(groupRecords, pickedIds)}
                   ${clearHtml}
                 </div>
               </div>
@@ -4377,37 +4555,11 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
 
         picksEl.querySelectorAll(".moodboard-pick-drop").forEach((drop) => {
           const roleName = drop.dataset.role || "";
-          const btn = drop.querySelector(".moodboard-pick-chip");
-          const menu = drop.querySelector(".moodboard-pick-menu");
-          btn?.addEventListener("click", (event) => {
-            event.stopPropagation();
-            if (!menu) return;
-            const willOpen = menu.hidden;
-            closeMoodboardPickMenus(drop);
-            drop.classList.toggle("is-open", willOpen);
-            menu.hidden = !willOpen;
-            btn.setAttribute("aria-expanded", String(willOpen));
-          });
-          drop.querySelectorAll(".moodboard-pick-option").forEach((opt) => {
-            opt.addEventListener("click", (event) => {
-              event.stopPropagation();
-              const personId = opt.dataset.personId || "";
-              const pickedIds = moodboardPickList(roleName);
-              if (pickedIds.includes(personId)) {
-                delete moodboardPicks[roleName];
-              } else {
-                moodboardPicks[roleName] = personId;
-              }
-              syncMoodboardUI(activeBoard, members, roleGroups);
-            });
-          });
-          drop.querySelector(".moodboard-pick-clear")?.addEventListener("click", (event) => {
-            event.stopPropagation();
-            delete moodboardPicks[roleName];
+          bindMoodboardMenu(drop, roleGroups.get(roleName) || [], () => {
             syncMoodboardUI(activeBoard, members, roleGroups);
           });
         });
-      }
+        restoreMoodboardMenu();
     }
 
     document.querySelectorAll("#board-detail-grid .board-role-group").forEach((groupEl) => {
@@ -4427,7 +4579,7 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
   }
 
   if (moodboardMode === "preview") {
-    if (bar) bar.hidden = true;
+    setMoodboardBarOpen(false);
     if (dialog) dialog.hidden = false;
     document.body.classList.add("add-open");
     if (resultsWrap) resultsWrap.hidden = false;
@@ -4437,7 +4589,7 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
     return;
   }
 
-  if (bar) bar.hidden = true;
+  setMoodboardBarOpen(false);
   if (dialog) dialog.hidden = true;
   document.body.classList.remove("add-open");
   if (resultsWrap) resultsWrap.hidden = false;
@@ -4478,25 +4630,15 @@ function paintMoodboardStage(roleGroups) {
     .map((roleName) => {
       const groupRecords = roleGroups.get(roleName) || [];
       const pickedIds = moodboardPickList(roleName);
-      const chosen = groupRecords.find((p) => pickedIds.includes(p.id));
-      const optionsHtml = groupRecords
-        .map((person) => {
-          const isSelected = pickedIds.includes(person.id);
-          const sub = person.city || (person.instagram ? `@${person.instagram.replace(/^@/, "")}` : "");
-          return `
-            <button type="button" class="moodboard-pick-option${isSelected ? " is-selected" : ""}" data-person-id="${escapeHtml(person.id)}" role="option" aria-selected="${Boolean(isSelected)}">
-              ${avatarHtml(person, "moodboard-pick-option_avatar")}
-              <span class="moodboard-pick-option_meta">
-                <strong>${escapeHtml(person.name)}</strong>
-                ${sub ? `<span>${escapeHtml(sub)}</span>` : ""}
-              </span>
-              <span class="moodboard-pick-option_check" aria-hidden="true">
-                <svg viewBox="0 0 16 16" width="13" height="13"><path d="M3.5 8.3 6.6 11.4 12.6 4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </span>
-            </button>
-          `;
-        })
-        .join("");
+      const chosenPeople = groupRecords.filter((person) => pickedIds.includes(person.id));
+      const chosen = chosenPeople[0];
+      const pillName = !chosenPeople.length
+        ? ""
+        : chosenPeople.length === 1
+          ? chosen.name
+          : chosenPeople.length === groupRecords.length
+            ? "All"
+            : `${chosen.name} +${chosenPeople.length - 1}`;
       const clearHtml =
         chosen && selectedCrew.length > 1
           ? `<button type="button" class="moodboard-pick-clear" data-clear-role="${escapeHtml(roleName)}">Remove from moodboard</button>`
@@ -4505,7 +4647,7 @@ function paintMoodboardStage(roleGroups) {
         ? `
           ${avatarHtml(chosen, "moodboard-crew_avatar")}
           <span class="moodboard-crew_meta">
-            <strong>${escapeHtml(chosen.name)}</strong>
+            <strong>${escapeHtml(pillName)}</strong>
             <span>${escapeHtml(roleName)}</span>
           </span>
         `
@@ -4518,14 +4660,14 @@ function paintMoodboardStage(roleGroups) {
         `;
       return `
         <div class="moodboard-pick-drop" data-role="${escapeHtml(roleName)}">
-          <button type="button" class="moodboard-crew_pill${chosen ? "" : " is-unpicked"}" aria-haspopup="listbox" aria-expanded="false">
+          <button type="button" class="moodboard-crew_pill${chosen ? "" : " is-unpicked"}" aria-haspopup="menu" aria-expanded="false">
             ${pillInner}
             <svg class="moodboard-pick-chevron" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
               <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
           </button>
-          <div class="moodboard-pick-menu" hidden role="listbox" aria-label="Change ${escapeHtml(roleName)}">
-            ${optionsHtml}
+          <div class="moodboard-pick-menu" hidden role="group" aria-label="Change ${escapeHtml(roleName)}">
+            ${moodboardPeopleMenuHtml(groupRecords, pickedIds)}
             ${clearHtml}
           </div>
         </div>
@@ -4535,33 +4677,11 @@ function paintMoodboardStage(roleGroups) {
 
   crewEl.querySelectorAll(".moodboard-pick-drop").forEach((drop) => {
     const roleName = drop.dataset.role || "";
-    const btn = drop.querySelector(".moodboard-crew_pill");
-    const menu = drop.querySelector(".moodboard-pick-menu");
-    btn?.addEventListener("click", (event) => {
-      event.stopPropagation();
-      if (!menu) return;
-      const willOpen = menu.hidden;
-      closeMoodboardPickMenus(drop);
-      drop.classList.toggle("is-open", willOpen);
-      menu.hidden = !willOpen;
-      btn.setAttribute("aria-expanded", String(willOpen));
-    });
-    drop.querySelectorAll(".moodboard-pick-option").forEach((opt) => {
-      opt.addEventListener("click", (event) => {
-        event.stopPropagation();
-        const personId = opt.dataset.personId || "";
-        moodboardPicks[roleName] = personId;
-        closeMoodboardPickMenus();
-        renderBoards();
-      });
-    });
-    drop.querySelector(".moodboard-pick-clear")?.addEventListener("click", (event) => {
-      event.stopPropagation();
-      delete moodboardPicks[roleName];
-      closeMoodboardPickMenus();
+    bindMoodboardMenu(drop, roleGroups.get(roleName) || [], () => {
       renderBoards();
     });
   });
+  restoreMoodboardMenu();
 
   const buckets = selectedCrew.map(({ role, record }) => {
     const rawImages = (record.images || [])
@@ -4682,11 +4802,40 @@ function renderBoards() {
     if (dateTextEl) dateTextEl.textContent = dateLabel || "Add date";
     if (dateWrapEl) dateWrapEl.classList.toggle("is-empty", !dateLabel);
     const roleGroups = boardRoleGroupsMap(members);
+    if (boardRoleTabOwner !== activeBoard.id) {
+      boardRoleTabOwner = activeBoard.id;
+      boardRoleTab = "";
+    }
+    const roleNamesOnBoard = [...roleGroups.keys()];
+    const tabsEl = document.getElementById("board-role-tabs");
+    const showRoleTabs = mobileLayout() && roleNamesOnBoard.length > 0;
+    if (showRoleTabs && !roleNamesOnBoard.includes(boardRoleTab)) boardRoleTab = roleNamesOnBoard[0];
+    if (tabsEl) {
+      tabsEl.hidden = !showRoleTabs;
+      tabsEl.innerHTML = showRoleTabs
+        ? roleNamesOnBoard
+            .map(
+              (roleName) => `
+                <button type="button" class="board-role-tab${roleName === boardRoleTab ? " is-on" : ""}" role="tab" aria-selected="${roleName === boardRoleTab}" data-role="${escapeHtml(roleName)}">
+                  ${escapeHtml(roleTabLabel(roleName))}
+                </button>
+              `
+            )
+            .join("")
+        : "";
+      tabsEl.querySelectorAll(".board-role-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          boardRoleTab = tab.dataset.role || "";
+          renderBoards();
+        });
+      });
+    }
     if (emptyEl) emptyEl.hidden = members.length !== 0;
     if (gridEl) {
       gridEl.innerHTML = "";
-      const showRoleHeaders = roleGroups.size > 1 || moodboardMode === "select";
+      const showRoleHeaders = !showRoleTabs && (roleGroups.size > 1 || moodboardMode === "select");
       roleGroups.forEach((groupRecords, roleName) => {
+        if (showRoleTabs && roleName !== boardRoleTab) return;
         const section = document.createElement("section");
         section.className = "board-role-group";
         section.dataset.role = roleName;
@@ -4736,14 +4885,13 @@ function renderBoards() {
             const currentlyPicked = picks.includes(record.id);
             const nextPicked = typeof forceState === "boolean" ? forceState : !currentlyPicked;
             if (nextPicked) {
-              moodboardPicks[roleName] = moodboardRoleAllowsMany(roleName)
-                ? [...picks, record.id]
-                : [record.id];
+              moodboardPicks[roleName] = picks.includes(record.id) ? picks : [...picks, record.id];
             } else {
               const remaining = picks.filter((id) => id !== record.id);
               if (remaining.length) moodboardPicks[roleName] = remaining;
               else delete moodboardPicks[roleName];
             }
+            moodboardMenuRole = "";
             syncMoodboardUI(activeBoard, members, roleGroups);
           };
           const checkboxEl = card.querySelector(".moodboard-card-checkbox");
@@ -4779,6 +4927,7 @@ function renderBoards() {
       });
     }
     syncMoodboardUI(activeBoard, members, roleGroups);
+    syncFloatDock();
     return;
   }
 
@@ -4799,7 +4948,10 @@ function renderBoards() {
   }
   if (recentSection) recentSection.hidden = boards.length === 0;
   if (empty) empty.hidden = boards.length !== 0;
-  if (!grid) return;
+  if (!grid) {
+    syncFloatDock();
+    return;
+  }
   grid.innerHTML = "";
   boards.forEach((board) => {
     grid.appendChild(
@@ -4821,6 +4973,7 @@ function renderBoards() {
       })
     );
   }
+  syncFloatDock();
 }
 
 function paintBoardAddPanel() {
@@ -5211,6 +5364,43 @@ function closeBoardDatePicker() {
   activeDateHover = "";
 }
 
+function boardShareCollageShots(board) {
+  const people = (board?.people || [])
+    .map((id) => PEOPLE.find((person) => person.id === id))
+    .filter(Boolean);
+  const shots = [];
+  const push = (src) => {
+    if (src && !shots.includes(src) && shots.length < 9) shots.push(src);
+  };
+  people.forEach((person) => {
+    const images = (person.images || [])
+      .map((item) => (typeof item === "string" ? item : item?.src))
+      .filter(Boolean);
+    push(images[0] || person.avatar || "");
+  });
+  people.forEach((person) => {
+    (person.images || []).slice(1).forEach((item) => {
+      push(typeof item === "string" ? item : item?.src);
+    });
+  });
+  return shots;
+}
+
+function paintBoardShareSheet(board) {
+  const collage = document.getElementById("board-share-collage");
+  if (!collage) return;
+  const shots = boardShareCollageShots(board);
+  if (!shots.length) {
+    collage.innerHTML = `<span class="board-share-collage_empty"></span>`;
+    return;
+  }
+  let loop = shots.slice();
+  while (loop.length < 9) loop = loop.concat(shots);
+  loop = loop.slice(0, 9);
+  const cells = loop.map((src) => `<img src="${escapeHtml(src)}" alt="" />`).join("");
+  collage.innerHTML = `<div class="board-share-collage_track"><div class="board-share-collage_set">${cells}</div><div class="board-share-collage_set" aria-hidden="true">${cells}</div></div>`;
+}
+
 function boardPreviewShots(board) {
   return (board?.people || [])
     .map((id) => PEOPLE.find((person) => person.id === id))
@@ -5299,7 +5489,7 @@ function closeSharePreview() {
   window.setTimeout(() => {
     closeBoardSharePanel();
     const label = document.getElementById("board-share-text-label");
-    if (label) label.textContent = "Text";
+    if (label) label.textContent = "Messages";
   }, 900);
 }
 
@@ -5308,6 +5498,7 @@ function closeBoardSharePanel() {
   const btn = document.getElementById("board-share-btn");
   if (panel) panel.hidden = true;
   if (btn) btn.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("board-share-open");
 }
 
 function boardShareUrl(board) {
@@ -5413,10 +5604,20 @@ function bindBoards() {
     ) {
       closeBoardDatePicker();
     }
-    if (!event.target.closest(".moodboard-pick-drop")) {
+    if (!event.target.closest(".moodboard-pick-drop, .moodboard-pick-menu")) {
+      moodboardMenuRole = "";
       closeMoodboardPickMenus();
     }
   });
+
+  document.addEventListener(
+    "scroll",
+    (event) => {
+      if (event.target.closest && event.target.closest(".moodboard-pick-menu")) return;
+      if (document.querySelector(".moodboard-pick-menu:not([hidden])")) closeMoodboardPickMenus();
+    },
+    true
+  );
 
   window.addEventListener(
     "scroll",
@@ -5598,6 +5799,11 @@ function bindBoards() {
     renderBoards();
   });
 
+  document.getElementById("board-moodboard-scrim")?.addEventListener("click", () => {
+    resetMoodboardState();
+    renderBoards();
+  });
+
   moodboardGenerateBtn?.addEventListener("click", () => {
     if (!state.board) return;
     const board = readBoards().find((item) => item.id === state.board);
@@ -5729,6 +5935,13 @@ function bindBoards() {
     if (next) {
       if (shareCopyLabel) shareCopyLabel.textContent = "Copy link";
       syncBoardShareLinks();
+      const board = readBoards().find((item) => item.id === state.board);
+      if (mobileLayout()) {
+        paintBoardShareSheet(board);
+        document.body.classList.add("board-share-open");
+      }
+    } else {
+      document.body.classList.remove("board-share-open");
     }
   });
 
@@ -5747,6 +5960,11 @@ function bindBoards() {
   });
 
   shareTextLink?.addEventListener("click", async (event) => {
+    if (mobileLayout()) {
+      syncBoardShareLinks();
+      closeBoardSharePanel();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const board = readBoards().find((item) => item.id === state.board);
@@ -5761,6 +5979,11 @@ function bindBoards() {
 
   shareEmailLink?.addEventListener("click", () => {
     syncBoardShareLinks();
+    closeBoardSharePanel();
+  });
+
+  document.getElementById("board-share-scrim")?.addEventListener("click", (event) => {
+    event.stopPropagation();
     closeBoardSharePanel();
   });
 
@@ -5814,6 +6037,23 @@ document.addEventListener("click", (event) => {
   let url;
   try { url = new URL(anchor.href, location.href); } catch (error) { return; }
   if (url.origin !== location.origin) return;
+  if (anchor.closest("#float-dock") && mobileLayout()) {
+    if (document.documentElement.classList.contains("is-frame")) url.searchParams.set("frame", "1");
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    if (next === `${location.pathname}${location.search}${location.hash}`) {
+      event.preventDefault();
+      return;
+    }
+  }
+  if (document.documentElement.classList.contains("is-frame")) {
+    url.searchParams.set("frame", "1");
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    if (next === `${location.pathname}${location.search}${location.hash}`) return;
+    event.preventDefault();
+    markSkeletonNav();
+    location.href = next;
+    return;
+  }
   if (url.pathname === location.pathname && url.search === location.search) return;
   markSkeletonNav();
 }, true);
@@ -5830,6 +6070,135 @@ bindAddRoster();
 bindBoards();
 readUrl();
 syncControls();
+initFloatDock();
+function riseSearchFromDock() {
+  const button = document.getElementById("float-dock-search");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const from = !reduce && mobileLayout() && button ? button.getBoundingClientRect() : null;
+  searchExpanded = true;
+  openPanel = "where";
+  openWhoRole = "";
+  setFiltersOpen(false);
+  setLocationOpen(false);
+  paintSearch();
+  const search = document.querySelector(".search");
+  if (!from || !search) return;
+  const to = search.getBoundingClientRect();
+  const dy = Math.round(from.top - to.top);
+  if (dy < 8) return;
+  search.style.transition = "none";
+  search.style.transform = `translate3d(0, ${dy}px, 0)`;
+  search.style.opacity = "0";
+  document.body.classList.add("is-search-rising");
+  let settled = false;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    search.style.transition = "";
+    search.style.transform = "";
+    search.style.opacity = "";
+    document.body.classList.remove("is-search-rising");
+    document.body.classList.add("search-rose");
+  };
+  requestAnimationFrame(() => {
+    search.getBoundingClientRect();
+    requestAnimationFrame(() => {
+      if (settled) return;
+      search.style.transition = "transform 460ms cubic-bezier(0.22, 0.8, 0.28, 1), opacity 240ms ease";
+      search.style.transform = "translate3d(0, 0, 0)";
+      search.style.opacity = "1";
+      search.addEventListener("transitionend", (event) => {
+        if (event.target === search && event.propertyName === "transform") finish();
+      }, { once: true });
+      setTimeout(finish, 560);
+    });
+  });
+}
+
+function floatDockMarkup() {
+  return `
+    <a class="float-dock_item" id="float-dock-creatives" href="results.html?browse=1" aria-label="Creatives">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.2 19.4c.9-3.1 3.1-4.6 6.8-4.6s5.9 1.5 6.8 4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+    </a>
+    <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.6 15.6 20.2 20.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <a class="float-dock_item" id="float-dock-boards" href="boards.html" aria-label="Boards">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
+    </a>
+  `;
+}
+
+function initFloatDock() {
+  let nav = document.getElementById("float-dock");
+  if (!nav) {
+    nav = document.createElement("nav");
+    nav.className = "float-dock";
+    nav.id = "float-dock";
+    nav.setAttribute("aria-label", "Sections");
+    nav.innerHTML = floatDockMarkup();
+    document.body.append(nav);
+  }
+  if (!document.getElementById("float-dock-board")) {
+    const boardDock = document.createElement("nav");
+    boardDock.className = "float-dock float-dock-board";
+    boardDock.id = "float-dock-board";
+    boardDock.hidden = true;
+    boardDock.setAttribute("aria-label", "Board actions");
+    document.body.append(boardDock);
+  }
+
+  const search = nav.querySelector("#float-dock-search");
+  if (search && !search.dataset.bound) {
+    search.dataset.bound = "1";
+    search.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (document.body.classList.contains("is-search-open")) {
+        exitSearchView();
+        return;
+      }
+      riseSearchFromDock();
+    });
+  }
+
+  const page = document.body.dataset.page || "";
+  nav.querySelector("#float-dock-creatives").classList.toggle("is-current", page === "results");
+  nav.querySelector("#float-dock-boards").classList.toggle("is-current", page === "boards");
+  if (page === "results") nav.querySelector("#float-dock-creatives").setAttribute("aria-current", "page");
+  if (page === "boards") nav.querySelector("#float-dock-boards").setAttribute("aria-current", "page");
+
+  if (!initFloatDock.watching) {
+    initFloatDock.watching = true;
+    window.matchMedia("(max-width: 800px)").addEventListener("change", syncFloatDock);
+  }
+  syncFloatDock();
+}
+
+function syncFloatDock() {
+  const nav = document.getElementById("float-dock");
+  const boardDock = document.getElementById("float-dock-board");
+  const actions = document.querySelector("#board-detail .board-detail_actions");
+  const header = document.querySelector(".results-top");
+  const generate = document.getElementById("board-moodboard-btn");
+  const addWrap = document.getElementById("board-add-wrap");
+  const share = document.getElementById("board-share-wrap");
+  const remove = document.getElementById("board-delete-btn");
+  const onBoard = mobileLayout() && isBoardsPage() && Boolean(state.board) && Boolean(document.getElementById("board-detail")) && !document.getElementById("board-detail").hidden;
+  document.body.classList.toggle("has-float-dock", mobileLayout() && !onBoard);
+  document.body.classList.toggle("has-board-dock", onBoard);
+  if (nav) nav.hidden = !mobileLayout() || onBoard;
+  if (boardDock) boardDock.hidden = !onBoard;
+
+  if (!actions || !header || !generate || !addWrap || !share || !remove) return;
+  if (onBoard) {
+    header.append(share, remove);
+    boardDock?.append(generate, addWrap);
+    return;
+  }
+  actions.append(generate, addWrap, share, remove);
+}
+
 function initHeroMap() {
   const stage = document.getElementById("hero-stage");
   const svg = document.getElementById("hero-map");
@@ -5851,8 +6220,9 @@ function initHeroMap() {
   stage.style.aspectRatio = mobile ? `${board.w} / ${board.h}` : "";
   svg.setAttribute("viewBox", `0 0 ${board.w} ${board.h}`);
   const pin = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>`;
-  const origin = mobile ? [172, 124] : [348, 150];
-  const steps = mobile
+  const nudge = mobile ? { x: 20, y: 0 } : { x: 0, y: 0 };
+  const origin = mobile ? [172 + nudge.x, 124 + nudge.y] : [348, 150];
+  const steps = (mobile
     ? [
         { name: "Patricia Rosingana", caption: "Photographer\n(Los Angeles)", src: "images/hero/DJRvgVUtFxW.jpg", href: "https://www.instagram.com/p/DJRvgVUtFxW/?img_index=1", x: 6, y: 4, w: 70, h: 88, inn: [74, 88], bend: 0 },
         { name: "petrosstudio", caption: "Creative Director\n(New York)", src: "images/hero/C7zebkCteQ5.jpg", href: "https://www.instagram.com/p/C7zebkCteQ5/", x: 196, y: 4, w: 68, h: 68, inn: [200, 68], bend: 0 },
@@ -5870,7 +6240,12 @@ function initHeroMap() {
         { name: "Charlie Harris", caption: "Videographer (Finland)", src: "posts/charlie-harris-charliebarclayharris/1.jpg", href: "https://www.instagram.com/p/DexHNlXjB3P/?img_index=1", x: 548, y: 188, w: 62, h: 74, inn: [540, 225], bend: -40 },
         { name: "Randy", caption: "Designer (London)", src: "images/hero/DSafSA0kbCB-2.jpg", href: "https://www.instagram.com/p/DSafSA0kbCB/?img_index=2", x: 300, y: 214, w: 102, h: 68, inn: [351, 206], bend: 4, focus: "center top" },
         { name: "petrosstudio", caption: "Model\n(Paris)", src: "images/hero/DW3SuiliCHg.jpg", href: "https://www.instagram.com/p/DW3SuiliCHg/", x: 112, y: 128, w: 84, h: 112, inn: [202, 184], bend: -22 },
-      ];
+      ]).map((step) => ({
+        ...step,
+        x: step.x + nudge.x,
+        y: step.y + nudge.y,
+        inn: [step.inn[0] + nudge.x, step.inn[1] + nudge.y],
+      }));
 
   const NEON = [
     ["#ff2bd6", "#ff8ae0"],
@@ -6071,7 +6446,7 @@ function revealPage() {
     const open = document.body.dataset.page === "explore"
       ? (id) => {
           markSkeletonNav();
-          location.href = `./?person=${encodeURIComponent(id)}`;
+          location.href = frameHref(`./?person=${encodeURIComponent(id)}`);
         }
       : openProfile;
     initProjects({ people: PEOPLE, openProfile: open });
@@ -6250,6 +6625,16 @@ function initLayoutToggle() {
     <div class="device-chassis">
       <div class="device-screen"></div>
       <div class="device-island" aria-hidden="true"></div>
+      <div class="device-status" aria-hidden="true">
+        <span class="device-status_time">9:41</span>
+        <span class="device-status_power">
+          <span class="device-status_level">100</span>
+          <span class="device-status_battery">
+            <span class="device-status_battery-body"><span class="device-status_battery-fill"></span></span>
+            <span class="device-status_battery-cap"></span>
+          </span>
+        </span>
+      </div>
       <div class="device-home" aria-hidden="true"></div>
     </div>
   `;
@@ -6258,6 +6643,42 @@ function initLayoutToggle() {
   phone.querySelector(".device-screen").appendChild(iframe);
   stage.appendChild(phone);
   document.body.append(stage, toggle);
+
+  const timeEl = phone.querySelector(".device-status_time");
+  const levelEl = phone.querySelector(".device-status_level");
+  const fillEl = phone.querySelector(".device-status_battery-fill");
+
+  function paintStatusTime() {
+    const now = new Date();
+    const cycle = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hourCycle;
+    let hour = now.getHours();
+    const minute = String(now.getMinutes()).padStart(2, "0");
+    if (cycle === "h12" || cycle === "h11") hour = hour % 12 || 12;
+    else hour = String(hour).padStart(2, "0");
+    if (timeEl) timeEl.textContent = `${hour}:${minute}`;
+  }
+
+  function paintStatusBattery(level) {
+    const value = Number(level);
+    if (!Number.isFinite(value)) return;
+    const pct = Math.max(0, Math.min(100, Math.round(value <= 1 ? value * 100 : value)));
+    if (levelEl) levelEl.textContent = String(pct);
+    if (fillEl) {
+      fillEl.style.width = `${pct}%`;
+      fillEl.style.background = pct <= 20 ? "#ff3b30" : "#111";
+    }
+  }
+
+  paintStatusTime();
+  window.setInterval(paintStatusTime, 15000);
+  paintStatusBattery(1);
+  if (navigator.getBattery) {
+    navigator.getBattery().then((battery) => {
+      const apply = () => paintStatusBattery(battery.level);
+      apply();
+      battery.addEventListener("levelchange", apply);
+    }).catch(() => {});
+  }
 
   function paint(mode) {
     const mobile = mode === "mobile";
