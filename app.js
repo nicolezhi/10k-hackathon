@@ -6442,47 +6442,12 @@ readUrl();
 syncControls();
 initFloatDock();
 function riseSearchFromDock() {
-  const button = document.getElementById("float-dock-search");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const from = !reduce && mobileLayout() && button ? button.getBoundingClientRect() : null;
   searchExpanded = true;
   openPanel = "where";
   openWhoRole = "";
   setFiltersOpen(false);
   setLocationOpen(false);
   paintSearch();
-  const search = document.querySelector(".search");
-  if (!from || !search) return;
-  const to = search.getBoundingClientRect();
-  const dy = Math.round(from.top - to.top);
-  if (dy < 8) return;
-  search.style.transition = "none";
-  search.style.transform = `translate3d(0, ${dy}px, 0)`;
-  search.style.opacity = "0";
-  document.body.classList.add("is-search-rising");
-  let settled = false;
-  const finish = () => {
-    if (settled) return;
-    settled = true;
-    search.style.transition = "";
-    search.style.transform = "";
-    search.style.opacity = "";
-    document.body.classList.remove("is-search-rising");
-    document.body.classList.add("search-rose");
-  };
-  requestAnimationFrame(() => {
-    search.getBoundingClientRect();
-    requestAnimationFrame(() => {
-      if (settled) return;
-      search.style.transition = "transform 460ms cubic-bezier(0.22, 0.8, 0.28, 1), opacity 240ms ease";
-      search.style.transform = "translate3d(0, 0, 0)";
-      search.style.opacity = "1";
-      search.addEventListener("transitionend", (event) => {
-        if (event.target === search && event.propertyName === "transform") finish();
-      }, { once: true });
-      setTimeout(finish, 560);
-    });
-  });
 }
 
 function floatDockMarkup() {
@@ -6490,8 +6455,9 @@ function floatDockMarkup() {
     <a class="float-dock_item" id="float-dock-creatives" href="results.html?browse=1" aria-label="Creatives">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.2 19.4c.9-3.1 3.1-4.6 6.8-4.6s5.9 1.5 6.8 4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
     </a>
-    <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search">
+    <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search for creatives">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.6 15.6 20.2 20.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Search for creatives</span>
     </button>
     <a class="float-dock_item" id="float-dock-boards" href="boards.html" aria-label="Boards">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
@@ -6543,6 +6509,249 @@ function initFloatDock() {
     window.matchMedia("(max-width: 800px)").addEventListener("change", syncFloatDock);
   }
   syncFloatDock();
+  initHomeIntro();
+}
+
+function initHomeIntro() {
+  const hero = document.querySelector(".home-view .hero");
+  const title = hero?.querySelector("h1");
+  const lede = hero?.querySelector(".lede");
+  const fan = hero?.querySelector("#hero-fan");
+  const reel = hero?.querySelector("#hero-reels");
+  const introSearch = hero?.querySelector("#intro-search");
+  if (!hero || !title || !lede || !fan || !reel) return;
+  const phrase = "Draft the best talent";
+  const cards = [
+    { name: "Patricia", role: "Photographer", src: "images/hero/DJRvgVUtFxW.jpg" },
+    { name: "petros", role: "Director", src: "images/hero/C7zebkCteQ5.jpg" },
+    { name: "Patricia", role: "Stylist", src: "images/hero/DQHn4eVjPN-.jpg" },
+    { name: "Vika", role: "Cinematographer", src: "posts/vika-vikasfotos/4.jpg" },
+    { name: "petros", role: "Model", src: "images/hero/DW3SuiliCHg.jpg" },
+  ];
+  const opening = [
+    ...cards.map((card) => card.src),
+    "images/intro/fur-coat.jpg",
+    "images/intro/blue-dress.jpg",
+    "images/intro/red-poster.jpg",
+    "images/intro/blue-stage.jpg",
+    "images/intro/orange-stage.jpg",
+  ];
+  if (!fan.dataset.ready) {
+    fan.dataset.ready = "1";
+    cards.forEach((card, index) => {
+      const article = document.createElement("article");
+      article.className = "hero-fan_card";
+      article.setAttribute("aria-hidden", "true");
+      article.style.setProperty("--i", String(index));
+      article.style.setProperty("--tilt", `${(index - 2) * 3.4}deg`);
+      article.style.setProperty("--drift", `${index % 2 ? 1.6 : -1.6}deg`);
+      const shot = document.createElement("div");
+      shot.className = "hero-fan_shot";
+      const image = document.createElement("img");
+      image.src = card.src;
+      image.alt = "";
+      shot.append(image);
+      const name = document.createElement("strong");
+      name.textContent = card.name;
+      const role = document.createElement("span");
+      role.textContent = card.role;
+      article.append(shot, name, role);
+      fan.append(article);
+    });
+  }
+  if (!title.dataset.split) {
+    title.dataset.split = "1";
+    title.setAttribute("aria-label", phrase);
+    title.replaceChildren();
+    [...phrase].forEach((char) => {
+      const span = document.createElement("span");
+      span.className = char === " " ? "type-letter is-space" : "type-letter";
+      span.textContent = char === " " ? "\u00a0" : char;
+      title.append(span);
+    });
+    const caret = document.createElement("span");
+    caret.className = "type-caret";
+    caret.setAttribute("aria-hidden", "true");
+    title.append(caret);
+  }
+  if (!lede.dataset.split) {
+    lede.dataset.split = "1";
+    lede.querySelectorAll(".lede-line").forEach((line, lineIndex) => {
+      const text = line.textContent || "";
+      line.textContent = "";
+      [...text].forEach((char) => {
+        const span = document.createElement("span");
+        span.className = char === " " ? "type-letter is-space is-flat" : "type-letter is-flat";
+        span.textContent = char === " " ? "\u00a0" : char;
+        span.style.setProperty("--d", `${lineIndex * 45}ms`);
+        line.append(span);
+      });
+    });
+  }
+  if (!reel.dataset.ready) {
+    reel.dataset.ready = "1";
+    opening.forEach((src) => {
+      const image = document.createElement("img");
+      image.src = src;
+      image.alt = "";
+      reel.append(image);
+    });
+  }
+  if (introSearch && !introSearch.dataset.bound) {
+    introSearch.dataset.bound = "1";
+    introSearch.addEventListener("click", () => {
+      searchExpanded = true;
+      openPanel = "where";
+      openWhoRole = "";
+      setFiltersOpen(false);
+      setLocationOpen(false);
+      paintSearch();
+    });
+  }
+  if (!initHomeIntro.bound) {
+    initHomeIntro.bound = true;
+    window.matchMedia("(max-width: 800px)").addEventListener("change", () => {
+      title.dataset.played = "";
+      document.body.classList.remove("is-intro-done", "is-intro-lede", "is-intro-cards", "is-intro-dock", "is-intro", "is-intro-photos", "is-intro-search", "is-intro-search-open", "is-backspace", "is-title-leave", "is-lede-leave");
+      initHomeIntro();
+    });
+  }
+
+  const mobile = window.matchMedia("(max-width: 800px)").matches;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const nav = document.getElementById("float-dock");
+  if (mobile && nav && nav.parentElement !== hero) hero.append(nav);
+  if (!mobile && nav && nav.parentElement === hero) document.body.append(nav);
+
+  window.clearTimeout(initHomeIntro.timer);
+  initHomeIntro.token = (initHomeIntro.token || 0) + 1;
+  const token = initHomeIntro.token;
+  const letters = [...title.querySelectorAll(".type-letter")];
+  const ledeLetters = [...lede.querySelectorAll(".type-letter")];
+  let caret = title.querySelector(".type-caret");
+
+  const showResting = () => {
+    letters.forEach((letter) => letter.classList.add("is-in"));
+    ledeLetters.forEach((letter) => letter.classList.add("is-in"));
+    caret?.remove();
+    document.body.classList.add("hero-ready");
+    document.body.classList.remove("is-intro", "is-intro-photos", "is-intro-search", "is-backspace", "is-intro-done");
+  };
+
+  const showSearchEnd = () => {
+    letters.forEach((letter) => letter.classList.remove("is-in"));
+    ledeLetters.forEach((letter) => letter.classList.remove("is-in"));
+    caret?.remove();
+    document.body.classList.add("hero-ready", "is-intro-done", "is-intro-search", "is-intro-search-open", "is-backspace");
+    document.body.classList.remove("is-intro", "is-intro-photos", "is-intro-lede", "is-intro-cards", "is-intro-dock");
+    title.dataset.played = "1";
+  };
+
+  if (!mobile) {
+    showResting();
+    return;
+  }
+  if (reduced || title.dataset.played === "1") {
+    showSearchEnd();
+    return;
+  }
+
+  letters.forEach((letter) => letter.classList.remove("is-in"));
+  ledeLetters.forEach((letter) => letter.classList.remove("is-in"));
+  if (!caret) {
+    caret = document.createElement("span");
+    caret.className = "type-caret";
+    caret.setAttribute("aria-hidden", "true");
+  }
+  title.prepend(caret);
+  document.body.classList.add("hero-ready", "is-intro", "is-intro-photos");
+  document.body.classList.remove("is-intro-done", "is-intro-lede", "is-intro-cards", "is-intro-dock");
+
+  const later = (ms, run) => {
+    initHomeIntro.timer = window.setTimeout(() => {
+      if (token !== initHomeIntro.token) return;
+      run();
+    }, ms);
+  };
+
+  const typeLetters = (nodes, pace, done) => {
+    let index = 0;
+    const step = () => {
+      if (token !== initHomeIntro.token) return;
+      if (index >= nodes.length) {
+        done();
+        return;
+      }
+      const letter = nodes[index];
+      letter.classList.add("is-in");
+      if (pace.caret && caret) letter.after(caret);
+      index += 1;
+      const sentence = letter.textContent === "." && index < nodes.length ? 520 : 0;
+      later((letter.classList.contains("is-space") ? pace.space : pace.letter) + sentence, step);
+    };
+    step();
+  };
+
+  const playText = () => {
+    const eraseLetters = (nodes, pace, done) => {
+      document.body.classList.add("is-backspace");
+      const outbound = [...nodes].reverse();
+      let index = 0;
+      const erase = () => {
+        if (token !== initHomeIntro.token) return;
+        if (index >= outbound.length) {
+          document.body.classList.remove("is-backspace");
+          done();
+          return;
+        }
+        outbound[index].classList.remove("is-in");
+        index += 1;
+        later(pace, erase);
+      };
+      erase();
+    };
+    typeLetters(letters, { letter: 104, space: 170, caret: true }, () => {
+      caret?.remove();
+      later(1000, () => {
+        eraseLetters(letters, 32, () => {
+          document.body.classList.add("is-intro-lede");
+          later(520, () => {
+            typeLetters(ledeLetters, { letter: 18, space: 26, caret: false }, () => {
+              later(1100, () => {
+                document.body.classList.add("is-lede-leave");
+                later(760, () => {
+                  document.body.classList.remove("is-intro", "is-intro-lede");
+                  later(640, () => {
+                    document.body.classList.add("is-intro-search");
+                    later(360, () => {
+                      document.body.classList.add("is-intro-search-open", "is-intro-done");
+                      title.dataset.played = "1";
+                    });
+                  });
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  };
+
+  let photo = 0;
+  const showPhoto = () => {
+    if (token !== initHomeIntro.token) return;
+    [...reel.querySelectorAll("img")].forEach((img, index) => img.classList.toggle("is-on", index === photo));
+    photo += 1;
+    if (photo < opening.length) {
+      later(280, showPhoto);
+      return;
+    }
+    later(280, () => {
+      document.body.classList.remove("is-intro-photos");
+      later(720, () => later(720, playText));
+    });
+  };
+  later(180, showPhoto);
 }
 
 function syncFloatDock() {
@@ -6582,16 +6791,17 @@ function initHeroMap() {
   const shots = document.getElementById("hero-shots");
   if (!stage || !svg || !shots) return;
   const mobile = window.matchMedia("(max-width: 800px)").matches;
+  if (!initHeroMap.bound) {
+    initHeroMap.bound = true;
+    window.matchMedia("(max-width: 800px)").addEventListener("change", () => initHeroMap());
+  }
+  if (mobile) return;
   svg.replaceChildren();
   shots.replaceChildren();
   stage.classList.remove("is-clear");
   const token = String(Date.now());
   stage.dataset.heroToken = token;
   const alive = () => stage.isConnected && stage.dataset.heroToken === token;
-  if (!initHeroMap.bound) {
-    initHeroMap.bound = true;
-    window.matchMedia("(max-width: 800px)").addEventListener("change", () => initHeroMap());
-  }
   const ns = "http://www.w3.org/2000/svg";
   const board = mobile ? { w: 360, h: 418 } : { w: 780, h: 300 };
   stage.style.aspectRatio = mobile ? `${board.w} / ${board.h}` : "";

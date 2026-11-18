@@ -37,7 +37,7 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=383" />
+    <link rel="stylesheet" href="styles.css?v=423" />
   </head>
   <body data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -121,10 +121,19 @@
             <feGaussianBlur in="spread" stdDeviation="0.45" />
           </filter>
         </svg>
+        <div class="hero-reels" id="hero-reels" aria-hidden="true"></div>
+        <div class="hero-fan" id="hero-fan"></div>
         <h1>Draft the best talent</h1>
         <p class="lede">
-          A search engine to find freelance photographers, videographers, stylists, models, and graphic designers. See the work, then get in touch.
+          <span class="lede-line">A search engine to find freelance photographers, </span><span class="lede-line">videographers, stylists, models, and graphic designers. </span><span class="lede-line">See the work, then get in touch.</span>
         </p>
+        <button class="intro-search" id="intro-search" type="button">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.25" fill="none" stroke="currentColor" stroke-width="1.8" />
+            <path d="M15.2 15.2 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <span>Search for creatives</span>
+        </button>
       </section>
 
     </div>
@@ -150,6 +159,6 @@
 
     <script src="people.js?v=26"></script>
     <script src="projects.js?v=46"></script>
-    <script src="app.js?v=282"></script>
+    <script src="app.js?v=323"></script>
   </body>
 </html>
