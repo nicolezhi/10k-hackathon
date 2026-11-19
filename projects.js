@@ -645,12 +645,14 @@ function initProjects({ people, openProfile }) {
     grid.append(card);
   });
   projectFiltersController?.apply();
+  sortProjectGrid("newest");
   }
 
   modal.addEventListener("click", (event) => {
     if (event.target === modal) close();
   });
   modal.querySelector(".project-close").addEventListener("click", close);
+  bindProjectSort();
   const filters = bindProjectFilters(people, () => modal.hidden);
   document.addEventListener("keydown", (event) => {
     if (!modal.hidden) {
@@ -664,6 +666,74 @@ function initProjects({ people, openProfile }) {
 }
 
 const PROJECT_CHECK = `<span class="filter-check" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12"><path d="M3.2 8.2 6.4 11.4 12.8 4.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+
+function projectTime(project) {
+  const time = Date.parse(project?.date || "");
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortProjectGrid(mode) {
+  const grid = document.getElementById("project-grid");
+  if (!grid) return;
+  const byId = new Map(PROJECTS.map((project) => [project.id, project]));
+  const cards = [...grid.querySelectorAll(".project-card[data-project]")];
+  cards.sort((a, b) => {
+    const left = byId.get(a.dataset.project);
+    const right = byId.get(b.dataset.project);
+    if (mode === "az") return String(left?.title || "").localeCompare(String(right?.title || ""), undefined, { sensitivity: "base" });
+    const delta = projectTime(left) - projectTime(right);
+    if (delta) return mode === "oldest" ? delta : -delta;
+    return String(left?.title || "").localeCompare(String(right?.title || ""), undefined, { sensitivity: "base" });
+  });
+  cards.forEach((card) => grid.append(card));
+}
+
+function bindProjectSort() {
+  const root = document.getElementById("project-sort");
+  const toggle = document.getElementById("project-sort-toggle");
+  const panel = document.getElementById("project-sort-panel");
+  if (!root || !toggle || !panel || toggle.dataset.ready) return;
+  toggle.dataset.ready = "1";
+  const names = {
+    newest: "Newest to oldest",
+    oldest: "Oldest to newest",
+    az: "A to Z",
+  };
+  let mode = "newest";
+  const paint = () => {
+    toggle.setAttribute("aria-label", `Sort by, ${names[mode]}`);
+    panel.querySelectorAll("[data-sort]").forEach((button) => {
+      const on = button.dataset.sort === mode;
+      button.classList.toggle("is-on", on);
+      button.setAttribute("aria-checked", String(on));
+    });
+  };
+  const close = () => {
+    panel.hidden = true;
+    toggle.setAttribute("aria-expanded", "false");
+  };
+  toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    toggle.setAttribute("aria-expanded", String(opening));
+  });
+  panel.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-sort]");
+    if (!button) return;
+    mode = button.dataset.sort;
+    sortProjectGrid(mode);
+    paint();
+    close();
+  });
+  document.addEventListener("click", (event) => {
+    if (!root.contains(event.target)) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+  paint();
+}
 
 let projectFiltersController = null;
 

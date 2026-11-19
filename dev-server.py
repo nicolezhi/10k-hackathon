@@ -21,6 +21,29 @@ def strings(value):
     return [item for item in value if isinstance(item, str) and item.strip()]
 
 
+def clean_text(value, limit):
+    return str(value or "").strip()[:limit]
+
+
+def clean_past(value):
+    if not isinstance(value, list):
+        return []
+    items = []
+    for item in value[:12]:
+        if not isinstance(item, dict):
+            continue
+        project_id = clean_text(item.get("id"), 80)
+        if project_id and not ID_RE.fullmatch(project_id):
+            project_id = ""
+        project = clean_text(item.get("project"), 160)
+        role = clean_text(item.get("role"), 80)
+        who = clean_text(item.get("with"), 80)
+        if not project_id and not project and not who:
+            continue
+        items.append({"id": project_id, "project": project, "role": role, "with": who})
+    return items
+
+
 def clean_record(data):
     if not isinstance(data, dict):
         raise ValueError("Expected an object.")
@@ -45,17 +68,17 @@ def clean_record(data):
         "roles": roles,
         "secondary": strings(data.get("secondary")),
         "genres": strings(data.get("genres")),
-        "tenk": False,
+        "tenk": data.get("tenk") is True,
         "instagram": instagram,
         "email": str(data.get("email") or ""),
         "phone": str(data.get("phone") or ""),
         "preferred": preferred,
         "referredBy": "",
-        "rate": "",
-        "compensation": "",
+        "rate": clean_text(data.get("rate"), 80),
+        "compensation": clean_text(data.get("compensation"), 200),
         "portfolio": str(data.get("portfolio") or ""),
         "bio": str(data.get("bio") or ""),
-        "past": [],
+        "past": clean_past(data.get("past")),
         "avatar": str(data.get("avatar") or ""),
         "images": images,
     }

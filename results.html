@@ -30,7 +30,7 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=485" />
+    <link rel="stylesheet" href="styles.css?v=513" />
   </head>
   <body data-page="results" data-view="home" class="has-float-dock">
     <nav class="float-dock" id="float-dock" aria-label="Sections">
@@ -43,6 +43,9 @@
       </button>
       <a class="float-dock_item" id="float-dock-boards" href="boards.html" aria-label="Boards">
         <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
+      </a>
+      <a class="float-dock_item" id="float-dock-projects" href="projects.html" aria-label="Projects">
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 9.1v5.8l5.2-2.9L10 9.1z" fill="currentColor"/></svg>
       </a>
     </nav>
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -110,6 +113,7 @@
       <nav class="nav-links" id="nav-links" aria-label="Sections">
         <a class="nav_link is-current" href="results.html?browse=1">Creatives</a>
         <a class="nav_link" href="boards.html">Boards</a>
+        <a class="nav_link" href="projects.html">Projects</a>
       </nav>
     </header>
 
@@ -274,11 +278,50 @@
           <textarea id="add-bio" name="bio" rows="4" aria-labelledby="add-bio-label" placeholder="Suggested from their Instagram"></textarea>
         </label>
         <p class="add-bio_note" id="add-bio-note" hidden>AI-generated based on their Instagram profile.</p>
+        <fieldset class="add-field add-rate">
+          <legend>Rate</legend>
+          <div class="add-rate_tiers" role="radiogroup" aria-label="Rate">
+            <label class="add-rate_tier"><input type="radio" name="rate-tier" value="$" checked /><span class="add-rate_dot" aria-hidden="true"></span><span>$</span><span class="add-rate_fee">$500 – $2,000</span></label>
+            <label class="add-rate_tier"><input type="radio" name="rate-tier" value="$$" /><span class="add-rate_dot" aria-hidden="true"></span><span>$$</span><span class="add-rate_fee">$2,000 – $8,000</span></label>
+            <label class="add-rate_tier"><input type="radio" name="rate-tier" value="$$$" /><span class="add-rate_dot" aria-hidden="true"></span><span>$$$</span><span class="add-rate_fee">$8,000 – $20,000</span></label>
+          </div>
+          <div class="add-city add-rate_menu" id="add-rate-wrap">
+            <button class="add-role_toggle add-city_toggle is-set" id="add-rate-toggle" type="button" aria-expanded="false" aria-controls="add-rate-panel">
+              <span class="add-city_label" id="add-rate-label"><span>$</span><span class="add-rate_fee">$500 – $2,000</span></span>
+              <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </button>
+            <div class="add-city_panel" id="add-rate-panel" hidden role="listbox" aria-label="Rate"></div>
+          </div>
+        </fieldset>
         <fieldset class="add-field">
           <legend>Has this creative previously worked with 10k Projects?</legend>
           <div class="add-checks add-yesno">
             <label class="add-check"><input type="radio" name="worked" value="yes" /><span>Yes</span></label>
             <label class="add-check"><input type="radio" name="worked" value="no" /><span>No</span></label>
+          </div>
+          <div class="add-worked" id="add-worked-detail" hidden>
+            <div class="add-field">
+              <span id="add-project-caption">Project</span>
+              <div class="add-city" id="add-project-wrap">
+                <button class="add-role_toggle add-city_toggle" id="add-project-toggle" type="button" aria-expanded="false" aria-controls="add-project-panel">
+                  <span class="add-city_label" id="add-project-label">Select a project</span>
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </button>
+                <div class="add-city_panel" id="add-project-panel" hidden role="listbox" aria-label="Project"></div>
+                <input id="add-project" type="hidden" value="" />
+              </div>
+            </div>
+            <div class="add-field">
+              <span id="add-member-caption">Team member</span>
+              <div class="add-city" id="add-member-wrap">
+                <button class="add-role_toggle add-city_toggle" id="add-member-toggle" type="button" aria-expanded="false" aria-controls="add-member-panel" disabled>
+                  <span class="add-city_label" id="add-member-label">Select a team member</span>
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </button>
+                <div class="add-city_panel" id="add-member-panel" hidden role="listbox" aria-label="Team member"></div>
+                <input id="add-member" type="hidden" value="" />
+              </div>
+            </div>
           </div>
         </fieldset>
         <h3 class="add-section">Contact</h3>
@@ -320,10 +363,10 @@
       </form>
     </div>
 
-    <script src="people.js?v=26"></script>
-    <script src="projects.js?v=46"></script>
+    <script src="people.js?v=27"></script>
+    <script src="projects.js?v=48"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=359"></script>
+    <script src="app.js?v=372"></script>
   </body>
 </html>

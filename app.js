@@ -1221,27 +1221,46 @@ function renderResults(list) {
 
 function pastProjectCards(record) {
   const items = record.past || [];
-  if (!items.length) {
-    return `<div class="past-projects"><div class="past-card past-card_empty"><span class="past-card_copy"><span>No 10K projects on file yet.</span></span></div></div>`;
-  }
+  if (!items.length) return "";
   const catalog = typeof PROJECTS === "undefined" ? [] : PROJECTS;
-  return `<div class="past-projects">${items
-    .map((item) => {
-      const project = catalog.find((entry) => entry.id === item.id);
-      const title = project?.title || item.project || "Project";
-      const image = project?.images?.[0] || "";
-      const media = image
-        ? `<img src="${escapeHtml(image)}" alt="" />`
-        : `<span class="past-card_fallback" aria-hidden="true"></span>`;
-      return `<button class="past-card" type="button" data-project="${escapeHtml(item.id || "")}">
-        ${media}
-        <span class="past-card_copy">
-          <strong>${escapeHtml(title)}</strong>
-          <span>${escapeHtml(item.role || "")}</span>
-        </span>
-      </button>`;
-    })
-    .join("")}</div>`;
+  const cards = items.map((item) => {
+    const project = catalog.find((entry) => entry.id === item.id) || {
+      id: item.id || "",
+      title: item.project || "Project",
+      date: "",
+      images: [],
+    };
+    const title = project.title || item.project || "Project";
+    const image = project.images?.[0] || "";
+    const icon = image
+      ? `<img class="past-mini_icon" src="${escapeHtml(image)}" alt="" />`
+      : `<span class="past-mini_icon past-mini_icon-empty" aria-hidden="true"></span>`;
+    return `<button class="past-mini" type="button" data-project="${escapeHtml(project.id || "")}">
+      ${icon}
+      <span class="past-mini_copy">
+        <span class="past-mini_title">${escapeHtml(title)}</span>
+        <span class="past-mini_date">${escapeHtml(project.date || "")}</span>
+      </span>
+    </button>`;
+  }).join("");
+  return `<section class="profile_past"><h2>Previous projects</h2><div class="past-projects">${cards}</div></section>`;
+}
+
+function rateTierLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (RATE_BANDS[raw]) return raw;
+  return Object.keys(RATE_BANDS).find((key) => rateRangeLabel(RATE_BANDS[key]) === raw) || "";
+}
+
+function compensationNote(record) {
+  const raw = String(record.compensation || record.rate || "").trim();
+  if (!raw) return "";
+  const tier = rateTierLabel(raw);
+  const body = tier
+    ? `<span class="profile_rate_tier">${escapeHtml(tier)}</span><span class="profile_rate_amount">${escapeHtml(raw)}</span>`
+    : `<span class="profile_rate_amount">${escapeHtml(raw)}</span>`;
+  return `<section class="profile_compensation"><h2>Compensation notes</h2><p>${body}</p></section>`;
 }
 
 function preferredKeys(record) {
@@ -1350,6 +1369,7 @@ function renderProfile() {
         ${starButtonHtml(record.id, "profile_star")}
       </div>
       ${roleLine ? `<p class="profile_role">${escapeHtml(roleLine)}</p>` : ""}
+      ${rateTierLabel(record.rate || record.compensation) ? `<p class="profile_rate">${escapeHtml(rateTierLabel(record.rate || record.compensation))}</p>` : ""}
       ${place ? `<p class="profile_place">${escapeHtml(place)}</p>` : ""}
       </div>
       <div class="profile_icons">
@@ -1368,7 +1388,8 @@ function renderProfile() {
         ${workGridHtml(record)}
       </div>
       <div>
-        ${record.compensation ? `<section><h2>Compensation notes</h2><p>${escapeHtml(record.compensation)}</p></section>` : ""}
+        ${compensationNote(record)}
+        ${projects}
         <section>
           <h2>Contact</h2>
           <div class="contact-card">
@@ -1381,7 +1402,7 @@ function renderProfile() {
     </div>
   `;
 
-  root.querySelectorAll(".past-card").forEach((button) => {
+  root.querySelectorAll(".profile_past .past-mini").forEach((button) => {
     button.addEventListener("click", () => {
       if (typeof openProject === "function") openProject(button.dataset.project);
     });
@@ -3841,6 +3862,232 @@ function formRoleLabel(role) {
   return formRoleMenu().find((item) => item.role === role)?.label || role;
 }
 
+const RATE_BANDS = {
+  $: { min: 500, max: 2000 },
+  $$: { min: 2000, max: 8000 },
+  $$$: { min: 8000, max: 20000 },
+};
+
+function rateMoney(value) {
+  return `$${Number(value).toLocaleString("en-US")}`;
+}
+
+function rateSelection() {
+  const tier = document.querySelector('#add-form input[name="rate-tier"]:checked')?.value || "$";
+  return { tier, ...RATE_BANDS[tier] };
+}
+
+function rateRangeLabel(band = rateSelection()) {
+  return `${rateMoney(band.min)} – ${rateMoney(band.max)}`;
+}
+
+function syncRateControl() {
+  const label = document.getElementById("add-rate-label");
+  if (!label) return;
+  const { tier } = rateSelection();
+  label.innerHTML = `<span>${escapeHtml(tier)}</span><span class="add-rate_fee">${escapeHtml(rateRangeLabel(RATE_BANDS[tier]))}</span>`;
+}
+
+function paintRateMenu() {
+  const panel = document.getElementById("add-rate-panel");
+  if (!panel) return;
+  const selected = rateSelection().tier;
+  panel.innerHTML = Object.keys(RATE_BANDS).map((tier) => {
+    const on = tier === selected;
+    return `<button class="add-city_option${on ? " is-on" : ""}" type="button" role="option" data-tier="${escapeHtml(tier)}"><span>${escapeHtml(tier)}</span><span class="add-rate_fee">${escapeHtml(rateRangeLabel(RATE_BANDS[tier]))}</span></button>`;
+  }).join("");
+  panel.querySelectorAll("[data-tier]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const input = document.querySelector(`#add-form input[name="rate-tier"][value="${button.dataset.tier}"]`);
+      if (input) input.checked = true;
+      syncRateControl();
+      closeAddMenus();
+    });
+  });
+}
+
+function currentRateLabel() {
+  return rateRangeLabel();
+}
+
+function closeAddMenus(except) {
+  ["add-project-wrap", "add-member-wrap", "add-rate-wrap"].forEach((id) => {
+    if (id === except) return;
+    const wrap = document.getElementById(id);
+    wrap?.classList.remove("is-open");
+    wrap?.querySelector(".add-city_panel")?.setAttribute("hidden", "");
+    wrap?.querySelector("button")?.setAttribute("aria-expanded", "false");
+  });
+}
+
+const TEAM_MEMBERS = [
+  "Angel Martinez",
+  "Brianna Harrison",
+  "Tom Phillips",
+  "Tyler Gatens",
+  "Ela Semerci",
+  "Chyna Cayson",
+  "Kevin Wang",
+  "Lena Ho",
+  "Alex Figs",
+  "Rannel Ngumuya",
+  "Beryl Chen",
+  "Faith Cheung",
+  "Cassie Anderson",
+  "Abby Silk",
+  "Gabriella Boccara",
+  "Ryan Hermann",
+  "Megan Bober",
+];
+
+function projectCatalog() {
+  return typeof PROJECTS === "undefined" ? [] : [...PROJECTS].sort((a, b) => a.title.localeCompare(b.title));
+}
+
+function syncWorkedDetail() {
+  const yes = document.querySelector('#add-form input[name="worked"]:checked')?.value === "yes";
+  const box = document.getElementById("add-worked-detail");
+  if (box) box.hidden = !yes;
+  const memberToggle = document.getElementById("add-member-toggle");
+  if (memberToggle) memberToggle.disabled = !yes;
+}
+
+function paintProjectMenu() {
+  const panel = document.getElementById("add-project-panel");
+  const selected = document.getElementById("add-project")?.value || "";
+  if (!panel) return;
+  const projects = projectCatalog();
+  panel.innerHTML = projects.map((project) => {
+    const on = project.id === selected;
+    return `<button class="add-city_option${on ? " is-on" : ""}" type="button" role="option" data-project="${escapeHtml(project.id)}">${escapeHtml(project.title)}</button>`;
+  }).join("") || `<p class="location-empty">No projects yet.</p>`;
+  panel.querySelectorAll("[data-project]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const project = projectCatalog().find((item) => item.id === button.dataset.project);
+      const input = document.getElementById("add-project");
+      const label = document.getElementById("add-project-label");
+      const toggle = document.getElementById("add-project-toggle");
+      if (input) input.value = project?.id || "";
+      if (label) label.textContent = project?.title || "Select a project";
+      toggle?.classList.toggle("is-set", Boolean(project));
+      closeAddMenus();
+    });
+  });
+}
+
+function paintMemberMenu() {
+  const panel = document.getElementById("add-member-panel");
+  const selected = document.getElementById("add-member")?.value || "";
+  if (!panel) return;
+  panel.innerHTML = TEAM_MEMBERS.map((name) => {
+    const on = name === selected;
+    return `<button class="add-city_option${on ? " is-on" : ""}" type="button" role="option" data-member="${escapeHtml(name)}">${escapeHtml(name)}</button>`;
+  }).join("");
+  panel.querySelectorAll("[data-member]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const input = document.getElementById("add-member");
+      const label = document.getElementById("add-member-label");
+      const toggle = document.getElementById("add-member-toggle");
+      if (input) input.value = button.dataset.member || "";
+      if (label) label.textContent = button.textContent || "Select a team member";
+      toggle?.classList.add("is-set");
+      closeAddMenus();
+    });
+  });
+}
+
+function resetAddExtras() {
+  const project = document.getElementById("add-project");
+  const member = document.getElementById("add-member");
+  const projectLabel = document.getElementById("add-project-label");
+  const memberLabel = document.getElementById("add-member-label");
+  const memberToggle = document.getElementById("add-member-toggle");
+  if (project) project.value = "";
+  if (member) member.value = "";
+  if (projectLabel) projectLabel.textContent = "Select a project";
+  if (memberLabel) memberLabel.textContent = "Select a team member";
+  document.getElementById("add-project-toggle")?.classList.remove("is-set");
+  memberToggle?.classList.remove("is-set");
+  if (memberToggle) memberToggle.disabled = true;
+  const dollar = document.querySelector('#add-form input[name="rate-tier"][value="$"]');
+  if (dollar) dollar.checked = true;
+  syncRateControl();
+  syncWorkedDetail();
+  closeAddMenus();
+}
+
+function bindAddExtras() {
+  if (bindAddExtras.ready) return;
+  bindAddExtras.ready = true;
+  document.querySelectorAll('#add-form input[name="rate-tier"]').forEach((input) => {
+    input.addEventListener("change", () => syncRateControl());
+  });
+  document.getElementById("add-rate-toggle")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const panel = document.getElementById("add-rate-panel");
+    const open = panel?.hidden !== false;
+    closeCityMenus();
+    closeAddMenus();
+    if (!panel) return;
+    if (!open) {
+      panel.hidden = true;
+      event.currentTarget.setAttribute("aria-expanded", "false");
+      document.getElementById("add-rate-wrap")?.classList.remove("is-open");
+      return;
+    }
+    paintRateMenu();
+    panel.hidden = false;
+    event.currentTarget.setAttribute("aria-expanded", "true");
+    document.getElementById("add-rate-wrap")?.classList.add("is-open");
+    placeDialogMenu(panel);
+  });
+  document.querySelectorAll('#add-form input[name="worked"]').forEach((input) => {
+    input.addEventListener("change", syncWorkedDetail);
+  });
+  document.getElementById("add-project-toggle")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const panel = document.getElementById("add-project-panel");
+    const open = panel?.hidden !== false;
+    closeCityMenus();
+    closeAddMenus();
+    if (!panel) return;
+    if (!open) {
+      panel.hidden = true;
+      event.currentTarget.setAttribute("aria-expanded", "false");
+      document.getElementById("add-project-wrap")?.classList.remove("is-open");
+      return;
+    }
+    paintProjectMenu();
+    panel.hidden = false;
+    event.currentTarget.setAttribute("aria-expanded", "true");
+    document.getElementById("add-project-wrap")?.classList.add("is-open");
+    placeDialogMenu(panel);
+  });
+  document.getElementById("add-member-toggle")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    if (event.currentTarget.disabled) return;
+    const panel = document.getElementById("add-member-panel");
+    const open = panel?.hidden !== false;
+    closeCityMenus();
+    closeAddMenus();
+    if (!panel) return;
+    if (!open) {
+      panel.hidden = true;
+      event.currentTarget.setAttribute("aria-expanded", "false");
+      document.getElementById("add-member-wrap")?.classList.remove("is-open");
+      return;
+    }
+    paintMemberMenu();
+    panel.hidden = false;
+    event.currentTarget.setAttribute("aria-expanded", "true");
+    document.getElementById("add-member-wrap")?.classList.add("is-open");
+    placeDialogMenu(panel);
+  });
+}
+
 function fillAddForm() {
   const city = document.getElementById("add-city");
   const wrap = document.getElementById("add-city-wrap");
@@ -3885,6 +4132,7 @@ function setAddOpen(open) {
   const lookup = document.getElementById("add-lookup");
   if (lookup) lookup.textContent = "";
   syncInstagramLinkCheck();
+  resetAddExtras();
   document.getElementById("add-instagram-link")?.focus();
 }
 
@@ -3988,6 +4236,28 @@ async function addPersonFromForm() {
     document.querySelector('#add-form input[name="worked"]')?.focus();
     return;
   }
+  const projectId = document.getElementById("add-project")?.value || "";
+  const memberName = document.getElementById("add-member")?.value || "";
+  const project = projectCatalog().find((item) => item.id === projectId);
+  if (worked === "yes" && !project) {
+    error.textContent = "Choose the project they worked on.";
+    document.getElementById("add-project-toggle")?.focus();
+    return;
+  }
+  if (worked === "yes" && !TEAM_MEMBERS.includes(memberName)) {
+    error.textContent = "Choose the team member they worked with.";
+    document.getElementById("add-member-toggle")?.focus();
+    return;
+  }
+  const rate = currentRateLabel();
+  const past = worked === "yes"
+    ? [{
+        id: project.id,
+        project: project.title,
+        role: "",
+        with: memberName,
+      }]
+    : [];
   const sameLookup = addLookup && addLookup.instagram && instagram && addLookup.instagram.toLowerCase() === instagram.toLowerCase();
   const record = person(rosterId(name), name, chosenCity, [], roles, genres, worked === "yes", {
     instagram,
@@ -3996,11 +4266,11 @@ async function addPersonFromForm() {
     preferred: ["instagram", "email", "phone"].find((key) => contact[key]) || "",
     secondary: extraRoles,
     referredBy: "",
-    compensation: "",
+    compensation: rate,
     portfolio,
     bio,
-    rate: "",
-    past: [],
+    rate,
+    past,
     avatar: sameLookup ? addLookup.avatar || "" : "",
     images: sameLookup && Array.isArray(addLookup.images) ? addLookup.images : [],
     workedWith: worked === "yes",
@@ -4223,12 +4493,14 @@ function bindAddRoster() {
     addSecondaryField();
   });
   bindCityPicker(document.getElementById("add-city-wrap"));
+  bindAddExtras();
   document.getElementById("add-form").addEventListener("click", (event) => {
     [mainPicker, ...secondaryPickers].forEach((picker) => {
       const wrap = picker.wrap();
       if (wrap && picker.isOpen() && !wrap.contains(event.target)) picker.close();
     });
     if (!event.target.closest(".add-city")) closeCityMenus();
+    if (!event.target.closest("#add-project-wrap, #add-member-wrap, #add-rate-wrap")) closeAddMenus();
   });
   document.getElementById("add-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -7038,6 +7310,9 @@ function floatDockMarkup() {
     <a class="float-dock_item" id="float-dock-boards" href="boards.html" aria-label="Boards">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
     </a>
+    <a class="float-dock_item" id="float-dock-projects" href="projects.html" aria-label="Projects">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10 9.1v5.8l5.2-2.9L10 9.1z" fill="currentColor"/></svg>
+    </a>
   `;
 }
 
@@ -7077,8 +7352,10 @@ function initFloatDock() {
   const page = document.body.dataset.page || "";
   nav.querySelector("#float-dock-creatives").classList.toggle("is-current", page === "results");
   nav.querySelector("#float-dock-boards").classList.toggle("is-current", page === "boards");
+  nav.querySelector("#float-dock-projects")?.classList.toggle("is-current", page === "explore");
   if (page === "results") nav.querySelector("#float-dock-creatives").setAttribute("aria-current", "page");
   if (page === "boards") nav.querySelector("#float-dock-boards").setAttribute("aria-current", "page");
+  if (page === "explore") nav.querySelector("#float-dock-projects")?.setAttribute("aria-current", "page");
 
   if (!initFloatDock.watching) {
     initFloatDock.watching = true;

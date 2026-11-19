@@ -6,7 +6,7 @@
     <title>Projects · 10K Creatives</title>
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="description" content="Explore previous 10K projects and the creatives who worked them." />
+    <meta name="description" content="Explore 10K projects and the creatives who worked them." />
     <link rel="preconnect" href="https://cdn.prod.website-files.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,9 +30,9 @@
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=485" />
+    <link rel="stylesheet" href="styles.css?v=513" />
   </head>
-  <body data-page="explore">
+  <body data-page="explore" class="has-float-dock">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     <header class="navbar results-top">
       <a class="nav_brand" href="/" aria-label="Draft, home">
@@ -96,71 +96,43 @@
         <svg class="nav-toggle_close" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
       </button>
       <nav class="nav-links" id="nav-links" aria-label="Sections">
-        <a class="nav_link is-current" href="projects.html">Projects</a>
         <a class="nav_link" href="results.html?browse=1">Creatives</a>
         <a class="nav_link" href="boards.html">Boards</a>
+        <a class="nav_link is-current" href="projects.html">Projects</a>
       </nav>
     </header>
 
     <main class="explore">
-      <h1>Projects</h1>
-      <div class="project-tools" id="project-filters" aria-label="Filter projects">
-        <div class="filter-wrap" id="project-creative-wrap">
-          <button class="tool-pill" id="project-creative-toggle" type="button" aria-expanded="false" aria-controls="project-creative-panel">
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8" />
-              <path d="M5.6 19.2c.7-3.1 3-4.7 6.4-4.7s5.7 1.6 6.4 4.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      <div class="results-heading">
+        <h1>Projects</h1>
+      </div>
+      <p class="boards-sub projects-lede">Explore 10K projects and the creatives who worked them.</p>
+      <div class="project-tools" id="project-sort">
+        <div class="filter-wrap">
+          <button class="tool-pill" id="project-sort-toggle" type="button" aria-expanded="false" aria-controls="project-sort-panel" aria-haspopup="menu" aria-label="Sort by, Newest to oldest">
+            <svg class="project-sort_mark" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5v14M5 8l3-3 3 3M16 19V5M13 16l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
-            Creatives
-            <span class="tool-pill_count" id="project-creative-count" hidden>
-              <span class="tool-pill_num"></span>
-              <svg class="tool-pill_x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
-            </span>
+            Sort by
           </button>
-          <div class="filters-panel" id="project-creative-panel" hidden>
-            <label class="location-search">
-              <input id="project-creative-filter" type="search" placeholder="Search creatives" autocomplete="off" aria-label="Search creatives" />
-            </label>
-            <div class="filters-menu" id="project-creative-menu" role="menu" aria-label="Creatives"></div>
-          </div>
-        </div>
-        <div class="filter-wrap" id="project-place-wrap">
-          <button class="tool-pill" id="project-place-toggle" type="button" aria-expanded="false" aria-controls="project-place-panel">
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.8" />
-              <circle cx="12" cy="10" r="2.2" fill="currentColor" />
-            </svg>
-            Location
-            <span class="tool-pill_count" id="project-place-count" hidden>
-              <span class="tool-pill_num"></span>
-              <svg class="tool-pill_x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
-            </span>
-          </button>
-          <div class="filters-panel" id="project-place-panel" hidden>
-            <label class="location-search">
-              <input id="project-place-filter" type="search" placeholder="Search locations" autocomplete="off" aria-label="Search locations" />
-            </label>
-            <div class="filters-menu" id="project-place-menu" role="menu" aria-label="Locations"></div>
-          </div>
-        </div>
-        <div class="filter-wrap" id="project-type-wrap">
-          <button class="tool-pill" id="project-type-toggle" type="button" aria-expanded="false" aria-controls="project-type-panel">
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <path d="M4.5 12.4 12 4.9h6.6v6.6l-7.5 7.5-6.6-6.6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
-              <circle cx="15.3" cy="8.2" r="1" fill="currentColor" />
-            </svg>
-            Project type
-            <span class="tool-pill_count" id="project-type-count" hidden>
-              <span class="tool-pill_num"></span>
-              <svg class="tool-pill_x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
-            </span>
-          </button>
-          <div class="filters-panel" id="project-type-panel" hidden>
-            <div class="filters-menu" id="project-type-menu" role="menu" aria-label="Project types"></div>
+          <div class="filters-panel" id="project-sort-panel" hidden>
+            <div class="filters-menu" role="menu" aria-label="Sort projects">
+              <button class="filter-row" type="button" role="menuitemradio" data-sort="newest" aria-checked="true">
+                <svg class="project-sort_mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M7 14l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                Newest to oldest
+              </button>
+              <button class="filter-row" type="button" role="menuitemradio" data-sort="oldest" aria-checked="false">
+                <svg class="project-sort_mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M7 10l5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                Oldest to newest
+              </button>
+              <button class="filter-row" type="button" role="menuitemradio" data-sort="az" aria-checked="false">
+                <svg class="project-sort_mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l3.1-10h1.7L12 17M5.3 13.2h5.3M14 7h5.4M14 17h5.4M19.4 7 14 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                A to Z
+              </button>
+            </div>
           </div>
         </div>
       </div>
-      <p class="project-empty" id="project-empty" hidden>No projects match that yet.</p>
       <div class="masonry" id="project-grid" aria-busy="true" aria-label="Loading projects">
         <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
         <div class="project-card skeleton" aria-hidden="true"><span class="skeleton_block skeleton_media"></span><span class="skeleton_block skeleton_line"></span><span class="skeleton_block skeleton_line skeleton_line-short"></span></div>
@@ -175,8 +147,8 @@
       </div>
     </main>
 
-    <script src="people.js?v=26"></script>
-    <script src="projects.js?v=46"></script>
-    <script src="app.js?v=359"></script>
+    <script src="people.js?v=27"></script>
+    <script src="projects.js?v=48"></script>
+    <script src="app.js?v=372"></script>
   </body>
 </html>
