@@ -4447,6 +4447,9 @@ let moodboardMode = "";
 let moodboardBoardId = "";
 let moodboardPicks = {};
 let moodboardSeed = 1;
+let moodboardGenerateTimer = 0;
+let moodboardGenerateStepTimer = 0;
+let moodboardRevealSkeleton = false;
 let boardRoleTab = "";
 let boardRoleTabOwner = "";
 
@@ -4593,8 +4596,18 @@ function boardRoleGroupsMap(members) {
 function setMoodboardBarOpen(open) {
   const bar = document.getElementById("board-moodboard-bar");
   const popup = document.getElementById("board-moodboard-popup");
-  if (bar) bar.hidden = !open;
+  const wasClosed = popup ? popup.hidden : true;
   if (popup) popup.hidden = !open;
+  if (bar) {
+    bar.hidden = !open;
+    if (open && wasClosed) {
+      bar.classList.remove("is-entering");
+      void bar.offsetWidth;
+      bar.classList.add("is-entering");
+    } else if (!open) {
+      bar.classList.remove("is-entering");
+    }
+  }
   document.body.classList.toggle("moodboard-select-open", open && mobileLayout());
 }
 
@@ -4666,7 +4679,31 @@ function placeMoodboardPickMenu(menu, anchor) {
   if (overflow > 0) menu.style.left = `${Math.max(12, Math.round(box.left - overflow))}px`;
 }
 
+function clearMoodboardGeneratingState() {
+  if (moodboardGenerateTimer) {
+    window.clearTimeout(moodboardGenerateTimer);
+    moodboardGenerateTimer = 0;
+  }
+  if (moodboardGenerateStepTimer) {
+    window.clearTimeout(moodboardGenerateStepTimer);
+    moodboardGenerateStepTimer = 0;
+  }
+  const bar = document.getElementById("board-moodboard-bar");
+  const stage = document.getElementById("board-moodboard-stage");
+  const titleEl = document.getElementById("board-moodboard-title");
+  const loader = document.getElementById("board-moodboard-loader");
+  const genBtn = document.getElementById("board-moodboard-generate");
+  const genLabel = genBtn?.querySelector("span");
+  bar?.classList.remove("is-generating");
+  stage?.classList.remove("is-generating");
+  if (titleEl) titleEl.textContent = "Generated moodboard";
+  if (loader) loader.hidden = true;
+  if (genBtn) genBtn.classList.remove("is-generating");
+  if (genLabel) genLabel.textContent = "Generate";
+}
+
 function resetMoodboardState() {
+  clearMoodboardGeneratingState();
   moodboardMode = "";
   moodboardBoardId = "";
   moodboardPicks = {};
@@ -4740,14 +4777,16 @@ function syncMoodboardUI(activeBoard, members, roleGroups) {
             const groupRecords = roleGroups.get(roleName) || [];
             const pickedIds = moodboardPickList(roleName);
             const label = moodboardSelectionLabel(groupRecords, pickedIds);
+            const chipContentHtml = pickedIds.length
+              ? `<strong>${escapeHtml(roleName)}:</strong><span>${escapeHtml(label)}</span>`
+              : `<strong>+ Add ${escapeHtml(roleName.toLowerCase())}</strong>`;
             const clearHtml = pickedIds.length
               ? `<button type="button" class="moodboard-pick-clear" data-clear-role="${escapeHtml(roleName)}">Clear selection</button>`
               : "";
             return `
               <div class="moodboard-pick-drop" data-role="${escapeHtml(roleName)}">
                 <button type="button" class="moodboard-pick-chip${pickedIds.length ? " is-picked" : ""}" aria-haspopup="menu" aria-expanded="false">
-                  <strong>${escapeHtml(roleName)}:</strong>
-                  <span>${escapeHtml(label)}</span>
+                  ${chipContentHtml}
                   <svg class="moodboard-pick-chevron" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
                     <path d="M4 6.5 8 10.5 12 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
@@ -4894,12 +4933,22 @@ function paintMoodboardStage(roleGroups) {
   const buckets = selectedCrew.map(({ role, record }) => {
     const rawImages = (record.images || [])
       .map((item) => (typeof item === "string" ? { src: item, href: "" } : item))
-      .filter((item) => item && item.src)
-      .slice(0, 5);
+      .filter((item) => item && item.src);
     if (!rawImages.length && record.avatar) {
       rawImages.push({ src: record.avatar, href: record.instagram ? `https://instagram.com/${record.instagram}` : "" });
     }
-    return rawImages.map((img) => ({
+    const pool = rawImages.slice();
+    if (moodboardSeed > 1 && pool.length > 1) {
+      let hash = moodboardSeed * 2654435761;
+      for (let i = pool.length - 1; i > 0; i -= 1) {
+        hash = (hash ^ (hash >>> 13)) * 1597334677;
+        const j = Math.abs(hash + i * 31) % (i + 1);
+        const tmp = pool[i];
+        pool[i] = pool[j];
+        pool[j] = tmp;
+      }
+    }
+    return pool.slice(0, 5).map((img) => ({
       src: img.src,
       href: img.href || (record.instagram ? `https://instagram.com/${record.instagram}` : ""),
       record,
@@ -4925,14 +4974,36 @@ function paintMoodboardStage(roleGroups) {
   }
 
   const ordered = interleaved.slice();
-  if (moodboardSeed > 1) {
+  if (moodboardSeed > 1 && ordered.length > 1) {
+    let seed = moodboardSeed * 1103515245 + 12345;
     for (let i = ordered.length - 1; i > 0; i -= 1) {
-      const j = (i * moodboardSeed * 7 + moodboardSeed * 3) % (i + 1);
+      seed = (seed * 1664525 + 1013904223) | 0;
+      const j = Math.abs(seed) % (i + 1);
       const temp = ordered[i];
       ordered[i] = ordered[j];
       ordered[j] = temp;
     }
+    if (ordered[0] === interleaved[0] && ordered.length > 1) {
+      const first = ordered.shift();
+      ordered.push(first);
+    }
   }
+
+  const useRevealSkeleton = moodboardRevealSkeleton;
+  moodboardRevealSkeleton = false;
+  const stageEl = document.getElementById("board-moodboard-stage");
+  const titleEl = document.getElementById("board-moodboard-title");
+
+  if (useRevealSkeleton) {
+    stageEl?.classList.add("is-generating");
+    if (titleEl) titleEl.textContent = "Generating moodboard...";
+    if (subEl) subEl.textContent = "Curating visual chemistry and arranging polaroids...";
+  } else {
+    stageEl?.classList.remove("is-generating");
+    if (titleEl) titleEl.textContent = "Generated moodboard";
+  }
+
+  canvasEl.classList.toggle("is-revealing", useRevealSkeleton);
 
   canvasEl.innerHTML = ordered
     .map((item, idx) => {
@@ -4941,14 +5012,23 @@ function paintMoodboardStage(roleGroups) {
       const ratio = aspects[(idx + moodboardSeed) % aspects.length];
       return `
         <figure
-          class="moodboard-item${item.record.external ? " is-external" : ""}"
+          class="moodboard-item${item.record.external ? " is-external" : ""}${useRevealSkeleton ? " is-skeleton-card" : ""}"
           style="--mb-rot:${rot}deg;--mb-lift:${lift}px;--mb-ratio:${ratio}"
           data-person="${escapeHtml(item.record.id)}"
+          data-shot-key="${escapeHtml(`${item.record.id}::${item.src}`)}"
         >
-          <div class="moodboard-item_photo">
+          <div class="moodboard-item_photo is-loading">
+            <span class="moodboard-item_skeleton skeleton_block" aria-hidden="true"></span>
             <img src="${escapeHtml(item.src)}" alt="" />
           </div>
           <figcaption class="moodboard-item_cap">
+            <span class="moodboard-item_cap_skeleton" aria-hidden="true">
+              <span class="moodboard-item_cap_dot skeleton_block"></span>
+              <span class="moodboard-item_cap_lines">
+                <span class="moodboard-item_cap_line skeleton_block"></span>
+                <span class="moodboard-item_cap_line moodboard-item_cap_line-short skeleton_block"></span>
+              </span>
+            </span>
             ${avatarHtml(item.record, "moodboard-item_avatar")}
             <span class="moodboard-item_credit">
               <span class="moodboard-item_name">
@@ -4963,7 +5043,39 @@ function paintMoodboardStage(roleGroups) {
     })
     .join("");
 
-  canvasEl.querySelectorAll(".moodboard-item").forEach((card) => {
+  const totalCards = ordered.length;
+  let revealedCount = 0;
+  const summaryText = selectedCrew.map((item) => `${item.record.name} (${item.role})`).join(" + ");
+
+  canvasEl.querySelectorAll(".moodboard-item").forEach((card, idx) => {
+    const photoWrap = card.querySelector(".moodboard-item_photo");
+    const img = photoWrap?.querySelector("img");
+    if (img && photoWrap) {
+      const reveal = () => {
+        const delay = useRevealSkeleton ? 1200 + Math.min(idx * 160, 1100) : 140 + Math.min(idx * 40, 240);
+        window.setTimeout(() => {
+          photoWrap.classList.remove("is-loading");
+          photoWrap.classList.add("is-loaded");
+          card.classList.remove("is-skeleton-card");
+          revealedCount += 1;
+          if (useRevealSkeleton && revealedCount >= Math.min(2, totalCards)) {
+            stageEl?.classList.remove("is-generating");
+            if (titleEl) titleEl.textContent = "Generated moodboard";
+            if (subEl) {
+              subEl.textContent = summaryText
+                ? `Featuring work from ${summaryText}.`
+                : "Visualizing how your selected crew's work looks together.";
+            }
+          }
+        }, delay);
+      };
+      if (img.complete) {
+        reveal();
+      } else {
+        img.addEventListener("load", reveal, { once: true });
+        img.addEventListener("error", reveal, { once: true });
+      }
+    }
     if (card.classList.contains("is-external")) return;
     card.addEventListener("click", () => {
       if (card.dataset.person) {
@@ -6243,7 +6355,7 @@ function bindBoards() {
   });
 
   moodboardGenerateBtn?.addEventListener("click", () => {
-    if (!state.board) return;
+    if (!state.board || moodboardGenerateTimer) return;
     const board = readBoards().find((item) => item.id === state.board);
     if (!board) return;
     const members = board.people
@@ -6256,14 +6368,115 @@ function bindBoards() {
         if (records[0]) moodboardPicks[roleName] = [records[0].id];
       });
     }
-    moodboardSeed = 1;
-    moodboardMode = "preview";
-    renderBoards();
+
+    closeMoodboardPickMenus();
+    const bar = document.getElementById("board-moodboard-bar");
+    const loader = document.getElementById("board-moodboard-loader");
+    const barTitle = bar?.querySelector(".moodboard-bar_title strong");
+    const hintEl = document.getElementById("board-moodboard-hint");
+    const genLabel = moodboardGenerateBtn.querySelector("span");
+
+    bar?.classList.remove("is-entering");
+    bar?.classList.add("is-generating");
+    if (loader) loader.hidden = false;
+    moodboardGenerateBtn.classList.add("is-generating");
+    if (genLabel) genLabel.textContent = "Generating...";
+    if (barTitle) barTitle.textContent = "Generating moodboard...";
+    if (hintEl) hintEl.textContent = "Pulling portfolio shots from selected creatives...";
+
+    moodboardGenerateTimer = window.setTimeout(() => {
+      moodboardGenerateTimer = 0;
+      clearMoodboardGeneratingState();
+      moodboardSeed = 1;
+      moodboardRevealSkeleton = true;
+      moodboardMode = "preview";
+      renderBoards();
+    }, 950);
   });
 
   moodboardShuffleBtn?.addEventListener("click", () => {
+    const canvasEl = document.getElementById("board-moodboard-canvas");
+    const oldCards = [...(canvasEl?.querySelectorAll(".moodboard-item") || [])];
+    const firstRects = new Map();
+    const slotRects = [];
+    oldCards.forEach((card, idx) => {
+      const rect = card.getBoundingClientRect();
+      slotRects[idx] = rect;
+      if (card.dataset.shotKey) {
+        firstRects.set(card.dataset.shotKey, rect);
+      }
+    });
+
+    moodboardShuffleBtn.classList.remove("is-shuffling");
+    void moodboardShuffleBtn.offsetWidth;
+    moodboardShuffleBtn.classList.add("is-shuffling");
+
     moodboardSeed += 1;
     renderBoards();
+
+    const newCanvasEl = document.getElementById("board-moodboard-canvas");
+    if (!newCanvasEl || !slotRects.length) return;
+    const newCards = [...newCanvasEl.querySelectorAll(".moodboard-item")];
+
+    newCards.forEach((card, idx) => {
+      const key = card.dataset.shotKey;
+      const fallbackIndex = (idx + Math.max(1, Math.floor(newCards.length / 2))) % slotRects.length;
+      const first = (key && firstRects.get(key)) || slotRects[fallbackIndex] || slotRects[0];
+      const last = card.getBoundingClientRect();
+      const targetRot = parseFloat(card.style.getPropertyValue("--mb-rot")) || 0;
+      const targetLift = parseFloat(card.style.getPropertyValue("--mb-lift")) || 0;
+
+      let dx = first ? first.left - last.left : 0;
+      let dy = first ? first.top - last.top : 0;
+      if (Math.hypot(dx, dy) < 28 && slotRects.length > 1) {
+        const alt = slotRects[(idx + 2) % slotRects.length];
+        dx = alt.left - last.left;
+        dy = alt.top - last.top;
+      }
+
+      const arcSign = idx % 2 === 0 ? 1 : -1;
+      const midX = dx * 0.46 + arcSign * 28;
+      const midY = dy * 0.46 - 24;
+      const midRot = arcSign * (12 + (idx % 4) * 3);
+
+      card.animate(
+        [
+          {
+            transform: `translate3d(${dx}px, ${dy + targetLift}px, 0) rotate(${-targetRot}deg) scale(0.96)`,
+            zIndex: 12 + (idx % 6),
+          },
+          {
+            transform: `translate3d(${midX}px, ${midY}px, 0) rotate(${midRot}deg) scale(1.06)`,
+            boxShadow: "0 28px 56px rgba(17, 17, 17, 0.24)",
+            zIndex: 25 + (idx % 6),
+            offset: 0.48,
+          },
+          {
+            transform: `translate3d(0px, ${targetLift}px, 0) rotate(${targetRot}deg) scale(1)`,
+            zIndex: 1,
+          },
+        ],
+        {
+          duration: 620,
+          delay: Math.min(idx * 18, 140),
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          fill: "both",
+        }
+      );
+
+      const img = card.querySelector(".moodboard-item_photo img");
+      img?.animate(
+        [
+          { transform: "scale(1.14)", filter: " saturate(1.12)" },
+          { transform: "scale(1)", filter: "saturate(1)" },
+        ],
+        {
+          duration: 540,
+          delay: Math.min(idx * 18, 140),
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        }
+      );
+    });
   });
 
   moodboardEditBtn?.addEventListener("click", () => {
