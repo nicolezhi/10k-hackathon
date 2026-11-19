@@ -23,13 +23,14 @@
           return;
         }
         try {
-          if (sessionStorage.getItem("10k-layout") === "mobile" && matchMedia("(min-width: 801px)").matches) {
+          var layout = sessionStorage.getItem("10k-layout");
+          if ((layout === "mobile" || layout === "intro") && matchMedia("(min-width: 801px)").matches) {
             document.documentElement.classList.add("is-device-preview");
           }
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=475" />
+    <link rel="stylesheet" href="styles.css?v=485" />
   </head>
   <body data-page="results" data-view="home" class="has-float-dock">
     <nav class="float-dock" id="float-dock" aria-label="Sections">
@@ -216,7 +217,7 @@
           <span class="add-copy_narrow">Instagram handle</span>
           <span class="add-input">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/></svg>
-            <input id="add-instagram-link" name="instagramLink" type="text" autocomplete="off" placeholder="@username" aria-describedby="add-instagram-status add-lookup" />
+            <input id="add-instagram-link" name="instagramLink" type="text" autocomplete="off" placeholder="username" aria-describedby="add-instagram-status add-lookup" />
             <svg class="add-link-check" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 12.5 9.2 16.5 19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="sr" id="add-instagram-status"></span>
           </span>
@@ -260,6 +261,11 @@
             </button>
             <div class="add-city_panel" id="add-city-panel" hidden role="listbox" aria-label="City"></div>
             <input id="add-city" name="city" type="hidden" value="" />
+            <label class="add-city_other" id="add-city-other" hidden>
+              <span class="sr">Other city</span>
+              <input id="add-city-custom" type="text" placeholder="Type a city" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="add-city-suggest" aria-autocomplete="list" />
+              <div class="add-city_suggest" id="add-city-suggest" hidden role="listbox"></div>
+            </label>
           </div>
         </div>
         <h3 class="add-section" id="add-bio-label">Bio</h3>
@@ -268,6 +274,13 @@
           <textarea id="add-bio" name="bio" rows="4" aria-labelledby="add-bio-label" placeholder="Suggested from their Instagram"></textarea>
         </label>
         <p class="add-bio_note" id="add-bio-note" hidden>AI-generated based on their Instagram profile.</p>
+        <fieldset class="add-field">
+          <legend>Has this creative previously worked with 10k Projects?</legend>
+          <div class="add-checks add-yesno">
+            <label class="add-check"><input type="radio" name="worked" value="yes" /><span>Yes</span></label>
+            <label class="add-check"><input type="radio" name="worked" value="no" /><span>No</span></label>
+          </div>
+        </fieldset>
         <h3 class="add-section">Contact</h3>
         <div class="add-contact">
           <label class="add-field">
@@ -311,6 +324,6 @@
     <script src="projects.js?v=46"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="app.js?v=352"></script>
+    <script src="app.js?v=359"></script>
   </body>
 </html>

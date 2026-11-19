@@ -31,13 +31,14 @@
           return;
         }
         try {
-          if (sessionStorage.getItem("10k-layout") === "mobile" && matchMedia("(min-width: 801px)").matches) {
+          var layout = sessionStorage.getItem("10k-layout");
+          if ((layout === "mobile" || layout === "intro") && matchMedia("(min-width: 801px)").matches) {
             document.documentElement.classList.add("is-device-preview");
           }
         } catch (e) {}
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=475" />
+    <link rel="stylesheet" href="styles.css?v=485" />
   </head>
   <body data-view="home">
     <div class="aura" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
@@ -159,6 +160,6 @@
 
     <script src="people.js?v=26"></script>
     <script src="projects.js?v=46"></script>
-    <script src="app.js?v=352"></script>
+    <script src="app.js?v=359"></script>
   </body>
 </html>

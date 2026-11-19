@@ -3687,6 +3687,21 @@ body.add-open {
   background: #f2f2f2;
 }
 
+#add-dialog .add-dialog_close {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.42) 48%, rgba(228, 220, 255, 0.48));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 4px 14px rgba(17, 17, 17, 0.1);
+  backdrop-filter: blur(16px) saturate(1.45);
+  -webkit-backdrop-filter: blur(16px) saturate(1.45);
+  color: #111;
+}
+
+#add-dialog .add-dialog_close:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.55) 48%, rgba(228, 220, 255, 0.56));
+}
+
 .add-dialog_panel h2 {
   margin: 0;
   padding-right: 32px;
@@ -3882,6 +3897,69 @@ body.add-open {
 
 .add-role_toggle.is-set {
   color: #111;
+}
+
+.add-city_other {
+  position: relative;
+  display: block;
+  margin-top: 8px;
+}
+
+.add-city_other[hidden] {
+  display: none;
+}
+
+.add-city_other input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+}
+
+.add-city_other input:focus {
+  outline: none;
+  border-color: #111;
+}
+
+.add-city_suggest {
+  position: fixed;
+  z-index: 30;
+  max-height: 180px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.12);
+}
+
+.add-city_suggest[hidden] {
+  display: none;
+}
+
+.add-city_suggest button {
+  display: block;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.add-city_suggest button.is-active,
+.add-city_suggest button:hover {
+  background: #f4f4f4;
 }
 
 .add-secondary {
@@ -4307,6 +4385,23 @@ body.add-open {
 
 .add-yesno {
   margin-top: 4px;
+}
+
+#add-form .add-field:has(#add-bio) {
+  margin-bottom: 28px;
+}
+
+#add-form #add-bio-note:not([hidden]) {
+  margin-top: -16px;
+  margin-bottom: 28px;
+}
+
+#add-form fieldset.add-field {
+  margin-bottom: 28px;
+}
+
+#add-form fieldset.add-field + .add-section {
+  margin-top: 8px;
 }
 
 .add-dialog_panel {
@@ -4853,7 +4948,7 @@ body[data-page="results"]:has([data-results-view="map"]) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 0 0 4px;
+  margin: 0 0 20px;
 }
 
 .results-page .results-heading h2,
@@ -11753,6 +11848,23 @@ html.is-frame body:not([data-page]) .hero_stage {
 
   body.has-board-dock .results-top .nav_brand {
     margin-top: 8px;
+  }
+
+  body.has-board-dock .results-top .board-icon-tray {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    order: 4;
+    margin-top: 6px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  body[data-view="profile"].has-board-dock .results-top .board-icon-tray {
+    display: none;
   }
 
   body.has-board-dock .results-top > #board-moodboard-btn,
