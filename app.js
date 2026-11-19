@@ -60,6 +60,20 @@ const CITIES = [
   { name: "Remote", icon: "public", line: "Anywhere. Editors, designers, and animators", tint: "#eef2f6", place: "Remote", at: null },
 ];
 
+const EXTRA_CITY_PLACES = [
+  "Brisbane, AU", "Melbourne, AU", "Perth, AU", "Adelaide, AU", "Auckland, NZ", "Wellington, NZ",
+  "Tokyo, JP", "Osaka, JP", "Seoul, KR", "Beijing, CN", "Shanghai, CN", "Hong Kong, HK", "Taipei, TW",
+  "Singapore, SG", "Bangkok, TH", "Jakarta, ID", "Manila, PH", "Kuala Lumpur, MY", "Mumbai, IN", "Delhi, IN",
+  "Dubai, AE", "Tel Aviv, IL", "Cairo, EG", "Cape Town, ZA", "Johannesburg, ZA", "Lagos, NG", "Nairobi, KE",
+  "Toronto, CA", "Vancouver, CA", "Montreal, CA", "Miami, US", "Seattle, US", "San Francisco, US", "Dallas, US",
+  "Houston, US", "Denver, US", "Philadelphia, US", "Washington, US", "Nashville, US", "Portland, US", "Detroit, US",
+  "Phoenix, US", "San Diego, US", "Las Vegas, US", "Lisbon, PT", "Rome, IT", "Milan, IT", "Florence, IT",
+  "Amsterdam, NL", "Rotterdam, NL", "Berlin, DE", "Munich, DE", "Hamburg, DE", "Frankfurt, DE", "Vienna, AT",
+  "Zurich, CH", "Geneva, CH", "Stockholm, SE", "Gothenburg, SE", "Dublin, IE", "Edinburgh, UK", "Manchester, UK",
+  "Liverpool, UK", "Leeds, UK", "Prague, CZ", "Budapest, HU", "Athens, GR", "Istanbul, TR", "Kyiv, UA",
+  "Krakow, PL", "Rio de Janeiro, BR", "São Paulo, BR", "Buenos Aires, AR", "Santiago, CL", "Lima, PE", "Bogotá, CO",
+];
+
 const NEARBY = {
   Memphis: ["Atlanta"],
   Atlanta: ["Memphis"],
@@ -3476,33 +3490,196 @@ function setCityOpen(wrap, open) {
   else clearDialogMenu(panel);
 }
 
-function paintCityMenu(wrap) {
+function addCityIsHome(wrap) {
+  return wrap?.id === "add-city-wrap";
+}
+
+function citySuggestions(query) {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+  const knownPlaces = new Set(CITIES.map((city) => String(city.place || city.name).toLowerCase()));
+  const known = CITIES.filter((city) => city.name !== "Remote").map((city) => ({
+    label: city.place || city.name,
+    name: city.name,
+    known: true,
+  }));
+  const extra = EXTRA_CITY_PLACES
+    .filter((place) => !knownPlaces.has(place.toLowerCase()))
+    .map((place) => ({ label: place, name: place, known: false }));
+  return [...known, ...extra]
+    .filter((item) => `${item.label} ${item.name}`.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const rank = (item) => {
+        const label = item.label.toLowerCase();
+        const name = item.name.toLowerCase();
+        if (label.startsWith(q) || name.startsWith(q)) return 0;
+        return 1;
+      };
+      const diff = rank(a) - rank(b);
+      return diff || a.label.localeCompare(b.label);
+    })
+    .slice(0, 6);
+}
+
+function hideAddCitySuggest() {
+  const list = document.getElementById("add-city-suggest");
+  const input = document.getElementById("add-city-custom");
+  if (list) list.hidden = true;
+  if (input) input.setAttribute("aria-expanded", "false");
+  hideAddCitySuggest.index = -1;
+}
+
+function placeAddCitySuggest(list, input) {
+  const scroller = list.closest(".add-dialog_panel");
+  const transformed = scroller && getComputedStyle(scroller).transform !== "none";
+  if (transformed || window.matchMedia("(max-width: 800px)").matches) {
+    list.style.position = "absolute";
+    list.style.top = "calc(100% + 4px)";
+    list.style.left = "0";
+    list.style.right = "0";
+    list.style.width = "auto";
+    const rect = input.getBoundingClientRect();
+    const menuHeight = Math.min(list.scrollHeight || 180, 180);
+    const overflow = rect.bottom + 8 + menuHeight - (window.innerHeight - 12);
+    if (overflow > 0 && scroller) scroller.scrollTop += overflow;
+    return;
+  }
+  const rect = input.getBoundingClientRect();
+  list.style.position = "fixed";
+  list.style.left = `${rect.left}px`;
+  list.style.top = `${rect.bottom + 4}px`;
+  list.style.right = "auto";
+  list.style.width = `${rect.width}px`;
+}
+
+function chooseAddCitySuggestion(wrap, item) {
+  const hidden = document.getElementById("add-city");
+  const custom = document.getElementById("add-city-custom");
+  const label = wrap.querySelector(".add-city_label");
+  const toggle = wrap.querySelector(".add-city_toggle");
+  hideAddCitySuggest();
+  if (item.known) {
+    wrap.dataset.other = "";
+    if (hidden) hidden.value = item.name;
+    if (custom) custom.value = "";
+    addFilled.delete("add-city");
+    paintCityMenu(wrap);
+    return;
+  }
+  wrap.dataset.other = "1";
+  if (hidden) hidden.value = item.label;
+  if (custom) custom.value = item.label;
+  if (label) label.textContent = item.label;
+  toggle?.classList.add("is-set");
+  const field = document.getElementById("add-city-other");
+  if (field) field.hidden = true;
+}
+
+function paintAddCitySuggest(wrap) {
+  const input = document.getElementById("add-city-custom");
+  const list = document.getElementById("add-city-suggest");
+  if (!input || !list) return;
+  const matches = citySuggestions(input.value);
+  if (!matches.length) {
+    hideAddCitySuggest();
+    return;
+  }
+  if (hideAddCitySuggest.index >= matches.length) hideAddCitySuggest.index = matches.length - 1;
+  if (hideAddCitySuggest.index < 0) hideAddCitySuggest.index = 0;
+  list.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+  list.innerHTML = matches.map((item, index) => {
+    const active = index === hideAddCitySuggest.index;
+    return `<button type="button" class="add-city_suggest_option${active ? " is-active" : ""}" role="option" aria-selected="${active}" data-name="${escapeHtml(item.name)}" data-label="${escapeHtml(item.label)}" data-known="${item.known ? "1" : "0"}">${escapeHtml(item.label)}</button>`;
+  }).join("");
+  placeAddCitySuggest(list, input);
+  list.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("mousedown", (event) => event.preventDefault());
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      chooseAddCitySuggestion(wrap, {
+        name: button.dataset.name,
+        label: button.dataset.label,
+        known: button.dataset.known === "1",
+      });
+    });
+  });
+}
+
+function syncAddCityOther(wrap, editing = false) {
+  const field = document.getElementById("add-city-other");
+  const custom = document.getElementById("add-city-custom");
+  if (!field || !addCityIsHome(wrap)) return;
+  const on = wrap.dataset.other === "1";
+  const value = document.getElementById("add-city")?.value || "";
+  field.hidden = !(on && (editing || !value));
+  if (!custom) return;
+  if (on) custom.value = value;
+  else custom.value = "";
+}
+
+function commitAddCityOther(wrap) {
+  const custom = document.getElementById("add-city-custom");
+  const hidden = document.getElementById("add-city");
+  const field = document.getElementById("add-city-other");
+  const label = wrap.querySelector(".add-city_label");
+  if (!custom || !hidden || wrap.dataset.other !== "1") return;
+  const value = custom.value.trim();
+  hidden.value = value;
+  custom.value = value;
+  if (!value) {
+    if (label) label.textContent = "Other";
+    if (field) field.hidden = false;
+    wrap.querySelector(".add-city_toggle")?.classList.add("is-set");
+    return;
+  }
+  if (label) label.textContent = value;
+  wrap.querySelector(".add-city_toggle")?.classList.add("is-set");
+  if (field) field.hidden = true;
+  hideAddCitySuggest();
+}
+
+function paintCityMenu(wrap, editing = false) {
   const input = wrap.querySelector("input");
   const label = wrap.querySelector(".add-city_label");
   const panel = wrap.querySelector(".add-city_panel");
   const toggle = wrap.querySelector(".add-city_toggle");
   if (!input || !label || !panel || !toggle) return;
   const selected = input.value;
+  const other = addCityIsHome(wrap) && wrap.dataset.other === "1";
+  const fieldOpen = other && (editing || !selected);
   const blocked = (wrap.dataset.blocked || "").split("|").filter(Boolean);
-  const current = CITIES.find((item) => item.name === selected);
-  label.textContent = current ? current.place || current.name : "Select a city";
-  toggle.classList.toggle("is-set", Boolean(current));
-  panel.innerHTML = CITIES.filter((item) => item.name === selected || !blocked.includes(item.name))
+  const current = other ? null : CITIES.find((item) => item.name === selected);
+  label.textContent = other ? (fieldOpen ? "Other" : selected || "Other") : current ? current.place || current.name : "Select a city";
+  toggle.classList.toggle("is-set", Boolean(current || (other && selected) || fieldOpen));
+  const options = CITIES.filter((item) => item.name === selected || !blocked.includes(item.name))
     .map((item) => {
-      const on = item.name === selected;
+      const on = item.name === selected && !other;
       return `<button class="add-city_option${on ? " is-on" : ""}" type="button" role="option" aria-selected="${on}" data-city="${escapeHtml(item.name)}">${escapeHtml(item.place || item.name)}</button>`;
-    })
-    .join("");
+    });
+  if (addCityIsHome(wrap)) {
+    options.push(`<button class="add-city_option${other ? " is-on" : ""}" type="button" role="option" aria-selected="${other}" data-city="__other__">Other</button>`);
+  }
+  panel.innerHTML = options.join("");
   panel.querySelectorAll(".add-city_option").forEach((button) => {
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      input.value = button.dataset.city;
-      addFilled.delete("add-city");
+      if (button.dataset.city === "__other__") {
+        wrap.dataset.other = "1";
+        input.value = document.getElementById("add-city-custom")?.value.trim() || "";
+      } else {
+        wrap.dataset.other = "";
+        input.value = button.dataset.city;
+        addFilled.delete("add-city");
+      }
       input.dispatchEvent(new Event("change", { bubbles: true }));
-      paintCityMenu(wrap);
+      paintCityMenu(wrap, button.dataset.city === "__other__");
       setCityOpen(wrap, false);
+      if (button.dataset.city === "__other__") document.getElementById("add-city-custom")?.focus();
     });
   });
+  syncAddCityOther(wrap, editing);
 }
 
 function bindCityPicker(wrap) {
@@ -3536,6 +3713,49 @@ function bindCityPicker(wrap) {
       options[index].click();
     }
   });
+  if (addCityIsHome(wrap)) {
+    const custom = document.getElementById("add-city-custom");
+    const list = document.getElementById("add-city-suggest");
+    hideAddCitySuggest.index = -1;
+    custom?.addEventListener("input", () => {
+      hideAddCitySuggest.index = 0;
+      paintAddCitySuggest(wrap);
+    });
+    custom?.addEventListener("keydown", (event) => {
+      const open = list && !list.hidden;
+      const buttons = open ? [...list.querySelectorAll("button")] : [];
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (!buttons.length) return;
+        event.preventDefault();
+        const next = event.key === "ArrowDown" ? hideAddCitySuggest.index + 1 : hideAddCitySuggest.index - 1;
+        hideAddCitySuggest.index = Math.max(0, Math.min(buttons.length - 1, next));
+        paintAddCitySuggest(wrap);
+        return;
+      }
+      if (event.key === "Escape" && open) {
+        event.preventDefault();
+        hideAddCitySuggest();
+        return;
+      }
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      const picked = buttons[hideAddCitySuggest.index];
+      if (picked) {
+        picked.click();
+        return;
+      }
+      hideAddCitySuggest();
+      commitAddCityOther(wrap);
+      custom.blur();
+    });
+    custom?.addEventListener("blur", () => {
+      hideAddCitySuggest();
+      commitAddCityOther(wrap);
+    });
+    document.querySelector("#add-dialog .add-dialog_panel")?.addEventListener("scroll", () => {
+      if (list && !list.hidden && custom) placeAddCitySuggest(list, custom);
+    }, { passive: true });
+  }
 }
 
 function travelCityWraps() {
@@ -3626,6 +3846,10 @@ function fillAddForm() {
   const wrap = document.getElementById("add-city-wrap");
   city.value = "";
   wrap.dataset.blocked = "";
+  wrap.dataset.other = "";
+  const custom = document.getElementById("add-city-custom");
+  if (custom) custom.value = "";
+  syncAddCityOther(wrap);
   paintCityMenu(wrap);
   mainPicker.reset();
   clearSecondaryFields();
@@ -3727,9 +3951,15 @@ async function addPersonFromForm() {
     document.getElementById("add-name").focus();
     return;
   }
-  if (!city) {
-    error.textContent = "Choose a city.";
-    document.getElementById("add-city-toggle").focus();
+  const cityWrap = document.getElementById("add-city-wrap");
+  const customCity = document.getElementById("add-city-custom");
+  const chosenCity = cityWrap?.dataset.other === "1" ? customCity?.value.trim() || "" : city;
+  if (cityWrap?.dataset.other === "1" && document.getElementById("add-city")) {
+    document.getElementById("add-city").value = chosenCity;
+  }
+  if (!chosenCity) {
+    error.textContent = cityWrap?.dataset.other === "1" ? "Enter a city." : "Choose a city.";
+    (cityWrap?.dataset.other === "1" ? customCity : document.getElementById("add-city-toggle"))?.focus();
     return;
   }
   if (!roles.length) {
@@ -3752,8 +3982,14 @@ async function addPersonFromForm() {
     document.getElementById("add-instagram").focus();
     return;
   }
+  const worked = document.querySelector('#add-form input[name="worked"]:checked')?.value || "";
+  if (worked !== "yes" && worked !== "no") {
+    error.textContent = "Choose yes or no.";
+    document.querySelector('#add-form input[name="worked"]')?.focus();
+    return;
+  }
   const sameLookup = addLookup && addLookup.instagram && instagram && addLookup.instagram.toLowerCase() === instagram.toLowerCase();
-  const record = person(rosterId(name), name, city, [], roles, genres, false, {
+  const record = person(rosterId(name), name, chosenCity, [], roles, genres, worked === "yes", {
     instagram,
     email,
     phone,
@@ -3767,6 +4003,7 @@ async function addPersonFromForm() {
     past: [],
     avatar: sameLookup ? addLookup.avatar || "" : "",
     images: sameLookup && Array.isArray(addLookup.images) ? addLookup.images : [],
+    workedWith: worked === "yes",
   });
   commitAddedPerson(record);
 }
@@ -3791,9 +4028,19 @@ function setAddCityValue(name) {
   const wrap = document.getElementById("add-city-wrap");
   if (!input || !wrap || !addFieldWritable("add-city")) return;
   const known = CITIES.some((city) => city.name === name);
-  input.value = known ? name : "";
+  if (known) {
+    wrap.dataset.other = "";
+    input.value = name;
+  } else if (name) {
+    wrap.dataset.other = "1";
+    input.value = name;
+  } else {
+    wrap.dataset.other = "";
+    input.value = "";
+  }
   if (input.value) addFilled.add("add-city");
   else addFilled.delete("add-city");
+  syncAddCityOther(wrap);
   paintCityMenu(wrap);
 }
 
@@ -3886,7 +4133,7 @@ async function addPersonFromShortForm() {
     input.focus();
     return;
   }
-  const record = person(rosterId(handle), handle, "", [], [], [], false, {
+  const record = person(rosterId(handle), handle, "", [], [], [], worked === "yes", {
     instagram: handle,
     email: "",
     phone: "",
@@ -3941,7 +4188,7 @@ function placeAddRoster() {
   const brand = header?.querySelector(".nav_brand");
   const instagram = document.getElementById("add-instagram-link");
   const mobile = window.matchMedia("(max-width: 800px)").matches;
-  if (instagram) instagram.placeholder = mobile ? "@username" : "@username or instagram.com/username";
+  if (instagram) instagram.placeholder = mobile ? "username" : "username or instagram.com/username";
   if (!button || !header || !heading || !brand) return;
   if (mobile) {
     if (button.previousElementSibling !== brand) brand.after(button);
@@ -7115,6 +7362,12 @@ function syncFloatDock() {
   const moreWrap = document.getElementById("board-more-wrap");
   const moreMenu = document.getElementById("board-more-menu");
   const shareBtn = document.getElementById("board-share-btn");
+  let tray = document.getElementById("board-icon-tray");
+  if (!tray && header) {
+    tray = document.createElement("div");
+    tray.id = "board-icon-tray";
+    tray.className = "board-icon-tray";
+  }
   const onBoard = mobileLayout() && isBoardsPage() && Boolean(state.board) && Boolean(document.getElementById("board-detail")) && !document.getElementById("board-detail").hidden;
   const onResultsProfile = mobileLayout() && isResultsPage() && document.body.dataset.view === "profile";
   document.body.classList.toggle("has-float-dock", mobileLayout() && !onBoard && !onResultsProfile);
@@ -7122,9 +7375,10 @@ function syncFloatDock() {
   if (nav) nav.hidden = !mobileLayout() || onBoard || onResultsProfile;
   if (boardDock) boardDock.hidden = true;
 
-  if (!actions || !header || !generate || !addWrap || !share || !remove || !moreWrap || !moreMenu || !shareBtn) return;
+  if (!actions || !header || !generate || !addWrap || !share || !remove || !moreWrap || !moreMenu || !shareBtn || !tray) return;
   if (onBoard) {
-    header.append(generate, addWrap, moreWrap, share);
+    tray.append(generate, addWrap, moreWrap);
+    header.append(tray, share);
     moreMenu.append(shareBtn, remove);
     moreWrap.hidden = false;
     return;
@@ -7132,6 +7386,7 @@ function syncFloatDock() {
   share.prepend(shareBtn);
   closeBoardMoreMenu();
   moreWrap.hidden = true;
+  if (tray.parentNode) tray.remove();
   actions.append(generate, addWrap, share, remove, moreWrap);
 }
 
@@ -7532,6 +7787,16 @@ function layoutUrl(href, frame) {
   return url.toString();
 }
 
+function isOnboardingPage() {
+  return !document.body.dataset.page;
+}
+
+function mobileFrameHref(mode) {
+  if (mode === "intro") return layoutUrl("index.html", true);
+  if (isOnboardingPage()) return layoutUrl("results.html?browse=1", true);
+  return layoutUrl(location.href, true);
+}
+
 function initLayoutToggle() {
   const root = document.documentElement;
   if (root.classList.contains("is-frame")) return;
@@ -7548,6 +7813,9 @@ function initLayoutToggle() {
     </button>
     <button type="button" data-layout="mobile" aria-pressed="false" aria-label="Mobile">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 18.5h2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <button type="button" data-layout="intro" aria-pressed="false" aria-label="Onboarding">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.4 9.1l4.2 2.7-4.2 2.7z" fill="currentColor"/></svg>
     </button>
   `;
   const stage = document.createElement("div");
@@ -7618,14 +7886,21 @@ function initLayoutToggle() {
   }
 
   function paint(mode) {
-    const mobile = mode === "mobile";
-    toggle.querySelector('[data-layout="desktop"]').setAttribute("aria-pressed", String(!mobile));
-    toggle.querySelector('[data-layout="mobile"]').setAttribute("aria-pressed", String(mobile));
-    root.classList.toggle("is-device-preview", mobile);
-    if (mobile && iframe.dataset.loaded !== "1") {
-      iframe.src = layoutUrl(location.href, true);
-      iframe.dataset.loaded = "1";
+    const preview = mode === "mobile" || mode === "intro";
+    toggle.querySelectorAll("[data-layout]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.layout === mode));
+    });
+    root.classList.toggle("is-device-preview", preview);
+    if (!preview) return;
+    const href = mobileFrameHref(mode);
+    const same = iframe.dataset.preview === href;
+    iframe.dataset.loaded = "1";
+    iframe.dataset.preview = href;
+    if (mode === "intro" && same) {
+      iframe.src = `${href}&replay=${Date.now()}`;
+      return;
     }
+    if (!same) iframe.src = href;
   }
 
   toggle.addEventListener("click", (event) => {
@@ -7635,6 +7910,11 @@ function initLayoutToggle() {
     const mode = button.dataset.layout;
     try { sessionStorage.setItem(LAYOUT_KEY, mode); } catch {}
     if (mode === "desktop") {
+      const showingIntro = toggle.querySelector('[data-layout="intro"]')?.getAttribute("aria-pressed") === "true";
+      if (isOnboardingPage() || showingIntro) {
+        paint("desktop");
+        return;
+      }
       let next = location.href;
       try {
         const framed = iframe.contentWindow.location.href;
@@ -7648,7 +7928,7 @@ function initLayoutToggle() {
       location.href = dest;
       return;
     }
-    paint("mobile");
+    paint(mode);
   });
 
   desktopMq.addEventListener("change", () => {
@@ -7658,12 +7938,13 @@ function initLayoutToggle() {
     }
     let saved = "";
     try { saved = sessionStorage.getItem(LAYOUT_KEY) || ""; } catch {}
-    if (saved === "mobile") paint("mobile");
+    if (saved === "mobile" || saved === "intro") paint(saved);
   });
 
   let saved = "";
   try { saved = sessionStorage.getItem(LAYOUT_KEY) || ""; } catch {}
-  if (saved === "mobile" || root.classList.contains("is-device-preview")) paint("mobile");
+  if (saved === "intro") paint("intro");
+  else if (saved === "mobile" || root.classList.contains("is-device-preview")) paint("mobile");
 }
 
 initLayoutToggle();
