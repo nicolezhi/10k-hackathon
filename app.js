@@ -775,12 +775,12 @@ function syncStarButtons() {
 
 function tenkStampHtml(record) {
   if (!record.tenk) return "";
-  return `<span class="tenk-stamp" title="Worked with 10K">10K</span>`;
+  return `<span class="tenk-stamp" data-tooltip="Worked with 10K Projects" aria-label="Worked with 10K Projects">10K</span>`;
 }
 
 function externalStampHtml(record) {
   if (!record.external) return "";
-  return `<span class="tenk-stamp" title="External creative">E</span>`;
+  return `<span class="tenk-stamp" data-tooltip="External creative added via Instagram" aria-label="External creative added via Instagram">E</span>`;
 }
 
 function rosterCardHtml(record) {
@@ -4691,13 +4691,11 @@ function clearMoodboardGeneratingState() {
   const bar = document.getElementById("board-moodboard-bar");
   const stage = document.getElementById("board-moodboard-stage");
   const titleEl = document.getElementById("board-moodboard-title");
-  const loader = document.getElementById("board-moodboard-loader");
   const genBtn = document.getElementById("board-moodboard-generate");
   const genLabel = genBtn?.querySelector("span");
   bar?.classList.remove("is-generating");
   stage?.classList.remove("is-generating");
   if (titleEl) titleEl.textContent = "Generated moodboard";
-  if (loader) loader.hidden = true;
   if (genBtn) genBtn.classList.remove("is-generating");
   if (genLabel) genLabel.textContent = "Generate";
 }
@@ -6355,7 +6353,7 @@ function bindBoards() {
   });
 
   moodboardGenerateBtn?.addEventListener("click", () => {
-    if (!state.board || moodboardGenerateTimer) return;
+    if (!state.board) return;
     const board = readBoards().find((item) => item.id === state.board);
     if (!board) return;
     const members = board.people
@@ -6370,28 +6368,11 @@ function bindBoards() {
     }
 
     closeMoodboardPickMenus();
-    const bar = document.getElementById("board-moodboard-bar");
-    const loader = document.getElementById("board-moodboard-loader");
-    const barTitle = bar?.querySelector(".moodboard-bar_title strong");
-    const hintEl = document.getElementById("board-moodboard-hint");
-    const genLabel = moodboardGenerateBtn.querySelector("span");
-
-    bar?.classList.remove("is-entering");
-    bar?.classList.add("is-generating");
-    if (loader) loader.hidden = false;
-    moodboardGenerateBtn.classList.add("is-generating");
-    if (genLabel) genLabel.textContent = "Generating...";
-    if (barTitle) barTitle.textContent = "Generating moodboard...";
-    if (hintEl) hintEl.textContent = "Pulling portfolio shots from selected creatives...";
-
-    moodboardGenerateTimer = window.setTimeout(() => {
-      moodboardGenerateTimer = 0;
-      clearMoodboardGeneratingState();
-      moodboardSeed = 1;
-      moodboardRevealSkeleton = true;
-      moodboardMode = "preview";
-      renderBoards();
-    }, 950);
+    clearMoodboardGeneratingState();
+    moodboardSeed = 1;
+    moodboardRevealSkeleton = true;
+    moodboardMode = "preview";
+    renderBoards();
   });
 
   moodboardShuffleBtn?.addEventListener("click", () => {
