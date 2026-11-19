@@ -5709,6 +5709,11 @@ button.roster-icon {
     padding: 14px 14px 12px;
   }
 
+  .result-card:not(.skeleton):hover {
+    z-index: 1;
+    transform: none;
+  }
+
   .results-page .result-card_avatar {
     width: 46px;
     height: 46px;
@@ -7610,7 +7615,7 @@ a.profile_ig:hover,
 
 .board-picker {
   position: fixed;
-  z-index: 120;
+  z-index: 160;
   width: 280px;
   padding: 12px;
   border: 1px solid rgba(255, 255, 255, 0.78);
@@ -8416,6 +8421,231 @@ a.profile_ig:hover,
 
 .board-add_avatar.avatar-fallback {
   font-size: 12px;
+}
+
+.board-browse-dialog {
+  z-index: 140;
+  align-items: stretch;
+  padding: 14px 10px;
+}
+
+html.is-frame .board-browse-dialog {
+  padding-top: 68px;
+  padding-bottom: 18px;
+}
+
+.board-browse-dialog[hidden] {
+  display: none;
+}
+
+body.board-browse-open {
+  overflow: hidden;
+}
+
+.board-browse_panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100dvh - 28px);
+  max-height: none;
+  margin: 0;
+  padding: 18px 16px 12px;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #fffaf7;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  color: #111;
+}
+
+html.is-frame .board-browse_panel {
+  height: calc(100dvh - 86px);
+}
+
+.board-browse_panel h2 {
+  margin: 0 36px 14px 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+.board-browse_filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.board-browse_filter {
+  position: relative;
+  min-width: 0;
+}
+
+.board-browse_filter .tool-pill {
+  max-width: 168px;
+}
+
+.board-browse_filter .tool-pill.is-on {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.board-browse_menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  width: min(260px, 72vw);
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(17, 17, 17, 0.16);
+}
+
+.board-browse_menu[hidden] {
+  display: none;
+}
+
+.board-browse_menu .location-search {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.board-browse_menu .location-search input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+
+.board-browse_option {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #111;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-browse_option.is-on,
+.board-browse_option:hover {
+  background: rgba(17, 17, 17, 0.06);
+}
+
+.board-browse_count {
+  margin: 0 0 8px;
+  color: #6b6560;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.board-browse_panel .board-browse_list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  align-items: start;
+  grid-template-columns: 1fr;
+  grid-auto-rows: max-content;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.board-browse_list .result-card {
+  height: auto;
+  align-self: start;
+}
+
+.board-browse_panel .filters-panel {
+  max-height: min(420px, calc(100dvh - 160px));
+  overflow: auto;
+}
+
+.board-browse_row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.8);
+  color: #111;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-browse_avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #dedee2;
+}
+
+.board-browse_meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.board-browse_meta strong,
+.board-browse_meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-browse_meta strong {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.board-browse_meta span {
+  color: #6b6560;
+  font-size: 12px;
+}
+
+.board-browse_pill {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.board-browse_row.is-added .board-browse_pill {
+  background: #ece7e2;
+  color: #111;
+}
+
+.board-browse_empty {
+  margin: 12px 0;
+  color: #6b6560;
+  font-size: 14px;
 }
 
 .boards-create_submit,
@@ -10896,21 +11126,22 @@ html.is-frame body:not([data-page]) .hero_stage {
 
   .float-dock:not([hidden]) {
     position: fixed;
-    left: 50vw;
+    left: 20px;
+    right: 20px;
     bottom: 16px;
     z-index: 70;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: max-content;
-    max-width: calc(100% - 28px);
+    width: auto;
+    max-width: none;
     margin: 0;
     padding: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    transform: translateX(-50%);
+    transform: none;
   }
 
   .float-dock-board:not([hidden]) {
@@ -10979,11 +11210,12 @@ html.is-frame body:not([data-page]) .hero_stage {
 
   #float-dock #float-dock-search {
     display: flex;
+    flex: 1 1 auto;
     align-items: center;
     justify-content: flex-start;
     gap: 8px;
     width: auto;
-    min-width: 196px;
+    min-width: 0;
     padding: 0 16px 0 12px;
     border-radius: 999px;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -11022,7 +11254,7 @@ html.is-frame body:not([data-page]) .hero_stage {
     text-align: left;
     opacity: 0;
     transform: translateY(70%);
-    animation: search-role-cycle 12s linear infinite;
+    animation: search-role-cycle 9s linear infinite;
   }
 
   #float-dock #float-dock-search:not(.is-cycling) .search-cycle_roles {
@@ -11049,27 +11281,27 @@ html.is-frame body:not([data-page]) .hero_stage {
 
   body:not([data-page]).is-intro-search-open .intro-search .search-cycle_roles > span {
     transform: translateY(70%);
-    animation: search-role-cycle 12s linear infinite;
+    animation: search-role-cycle 9s linear infinite;
   }
 
   #float-dock #float-dock-search.is-cycling .search-cycle_roles > span:nth-child(2),
   body:not([data-page]) .intro-search .search-cycle_roles > span:nth-child(2) {
-    animation-delay: 2.4s;
+    animation-delay: 1.8s;
   }
 
   #float-dock #float-dock-search.is-cycling .search-cycle_roles > span:nth-child(3),
   body:not([data-page]) .intro-search .search-cycle_roles > span:nth-child(3) {
-    animation-delay: 4.8s;
+    animation-delay: 3.6s;
   }
 
   #float-dock #float-dock-search.is-cycling .search-cycle_roles > span:nth-child(4),
   body:not([data-page]) .intro-search .search-cycle_roles > span:nth-child(4) {
-    animation-delay: 7.2s;
+    animation-delay: 5.4s;
   }
 
   #float-dock #float-dock-search.is-cycling .search-cycle_roles > span:nth-child(5),
   body:not([data-page]) .intro-search .search-cycle_roles > span:nth-child(5) {
-    animation-delay: 9.6s;
+    animation-delay: 7.2s;
   }
 
   @keyframes search-role-cycle {

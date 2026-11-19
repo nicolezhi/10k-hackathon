@@ -1465,10 +1465,7 @@ function searchPromptLabel() {
 }
 
 function searchLabelCycles() {
-  const page = document.body.dataset.page || "";
-  if (!page) return true;
-  if (page !== "results" || state.profile) return false;
-  return !(state.query || state.country || state.roles.length || activeCities().length);
+  return true;
 }
 
 function syncSearchCycle() {
@@ -2608,8 +2605,10 @@ function render(options = {}) {
     }
   }
   renderProfile();
+  syncFloatDock();
   syncSearchCycle();
-  if (!skipUrl) {
+  if (boardBrowseOpen()) paintBoardBrowse();
+  if (!skipUrl && !boardBrowseOpen()) {
     if (isResultsPage() || isBoardsPage()) writeUrl(options.url || "replace");
     else if (state.profile || new URLSearchParams(location.search).has("person")) writeUrl(options.url || "replace");
   }
@@ -2928,6 +2927,7 @@ function loadAddedPeople() {
     const handle = String(record?.instagram || "").trim().toLowerCase().replace(/^@/, "");
     if (!name) return false;
     if (/^(nicole|ncole|hamna|betty)(\s|$)/i.test(name)) return false;
+    if (/^melina k$/i.test(name) || handle === "epi.to.me" || record?.id === "melina-k" || record?.id === "melina-k-2") return false;
     if (handle === "nicolezhi" || record?.id === "ncole") return false;
     const duplicate = PEOPLE.some((item) => {
       if (String(item.name || "").trim().toLowerCase() === name.toLowerCase()) return true;
@@ -5263,6 +5263,87 @@ function closeBoardAddPanel() {
   if (btn) btn.setAttribute("aria-expanded", "false");
 }
 
+function boardBrowseOpen() {
+  const dialog = document.getElementById("board-browse-dialog");
+  return Boolean(dialog && !dialog.hidden);
+}
+
+function resetBoardBrowseFilters() {
+  state.city = "";
+  state.country = "";
+  state.extraCities = [];
+  state.roles = [];
+  state.roleGenres = {};
+  state.genres = [];
+  state.genresScoped = false;
+  openFilterRole = "";
+  const field = document.getElementById("location-filter");
+  if (field) field.value = "";
+  setFiltersOpen(false);
+  setLocationOpen(false);
+}
+
+function openBoardBrowse() {
+  const dialog = document.getElementById("board-browse-dialog");
+  if (!dialog || !state.board) return;
+  bindBoardBrowse();
+  resetBoardBrowseFilters();
+  dialog.hidden = false;
+  document.body.classList.add("board-browse-open");
+  document.getElementById("board-add-creative-btn")?.setAttribute("aria-expanded", "true");
+  syncControls();
+  paintBoardBrowse();
+}
+
+function closeBoardBrowse() {
+  const dialog = document.getElementById("board-browse-dialog");
+  if (dialog) dialog.hidden = true;
+  document.body.classList.remove("board-browse-open");
+  document.getElementById("board-add-creative-btn")?.setAttribute("aria-expanded", "false");
+  resetBoardBrowseFilters();
+}
+
+function paintBoardBrowse() {
+  const dialog = document.getElementById("board-browse-dialog");
+  const listEl = document.getElementById("board-browse-list");
+  if (!dialog || dialog.hidden || !listEl || !state.board) return;
+  const scroll = listEl.scrollTop;
+  const people = filteredPeople();
+  listEl.innerHTML = "";
+  if (!people.length) {
+    listEl.innerHTML = `<p class="board-browse_empty">No creatives match.</p>`;
+    return;
+  }
+  people.forEach((record) => {
+    const card = document.createElement("article");
+    card.className = "result-card";
+    card.dataset.id = record.id;
+    card.innerHTML = rosterCardHtml(record);
+    listEl.append(card);
+  });
+  listEl.scrollTop = scroll;
+}
+
+function bindBoardBrowse() {
+  const dialog = document.getElementById("board-browse-dialog");
+  if (!dialog || dialog.dataset.bound) return;
+  dialog.dataset.bound = "1";
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) closeBoardBrowse();
+  });
+  document.getElementById("board-browse-close")?.addEventListener("click", closeBoardBrowse);
+  document.getElementById("board-browse-list")?.addEventListener("click", (event) => {
+    if (event.target.closest("a, .copy-icon, .star-btn, .ig-mark")) return;
+    const card = event.target.closest(".result-card");
+    if (!card || !state.board) return;
+    togglePersonInBoard(card.dataset.id, state.board);
+    paintBoardBrowse();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !dialog.hidden) closeBoardBrowse();
+  });
+}
+
 function setExternalSubmitBusy(busy) {
   const submit = document.querySelector("#board-external-form .add-submit");
   if (!submit) return;
@@ -5884,6 +5965,7 @@ function syncBoardShareLinks() {
 }
 
 function bindBoards() {
+  bindBoardBrowse();
   document.addEventListener("mouseover", (event) => {
     if (mobileLayout()) return;
     const starBtn = event.target.closest(".star-btn[data-star-person]");
@@ -6463,6 +6545,11 @@ document.addEventListener("click", (event) => {
       return;
     }
   }
+  if (anchor.id === "board-add-creative-btn" && mobileLayout()) {
+    event.preventDefault();
+    openBoardBrowse();
+    return;
+  }
   if (document.documentElement.classList.contains("is-frame")) {
     url.searchParams.set("frame", "1");
     const next = `${url.pathname}${url.search}${url.hash}`;
@@ -6503,7 +6590,7 @@ function floatDockMarkup() {
     <a class="float-dock_item" id="float-dock-creatives" href="results.html?browse=1" aria-label="Creatives">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="8" r="3.1" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5.2 19.4c.9-3.1 3.1-4.6 6.8-4.6s5.9 1.5 6.8 4.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
     </a>
-    <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search for creatives">
+    <button type="button" class="float-dock_item is-cycling" id="float-dock-search" aria-label="Search for creatives">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.6 15.6 20.2 20.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       <span class="search-cycle"><span class="search-cycle_keep">Search for</span><span class="search-cycle_roles"><span>photographers</span><span>videographers</span><span>stylists</span><span>models</span><span>graphic designers</span></span></span>
     </button>
@@ -6816,9 +6903,10 @@ function syncFloatDock() {
   const moreMenu = document.getElementById("board-more-menu");
   const shareBtn = document.getElementById("board-share-btn");
   const onBoard = mobileLayout() && isBoardsPage() && Boolean(state.board) && Boolean(document.getElementById("board-detail")) && !document.getElementById("board-detail").hidden;
-  document.body.classList.toggle("has-float-dock", mobileLayout() && !onBoard);
+  const onResultsProfile = mobileLayout() && isResultsPage() && document.body.dataset.view === "profile";
+  document.body.classList.toggle("has-float-dock", mobileLayout() && !onBoard && !onResultsProfile);
   document.body.classList.toggle("has-board-dock", onBoard);
-  if (nav) nav.hidden = !mobileLayout() || onBoard;
+  if (nav) nav.hidden = !mobileLayout() || onBoard || onResultsProfile;
   if (boardDock) boardDock.hidden = true;
 
   if (!actions || !header || !generate || !addWrap || !share || !remove || !moreWrap || !moreMenu || !shareBtn) return;
