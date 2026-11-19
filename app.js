@@ -1386,9 +1386,6 @@ function renderProfile() {
   if (preferredRows.length) {
     contact.insertAdjacentHTML("beforeend", `
       <div class="contact_preferred">
-        <div class="contact_preferred_head">
-          <strong>Preferred</strong>
-        </div>
         ${preferredRows.map((row) => contactLine(row)).join("")}
       </div>`);
   }
@@ -1465,6 +1462,17 @@ function composerOpen() {
 
 function searchPromptLabel() {
   return "Search for creatives";
+}
+
+function searchLabelCycles() {
+  const page = document.body.dataset.page || "";
+  if (!page) return true;
+  if (page !== "results" || state.profile) return false;
+  return !(state.query || state.country || state.roles.length || activeCities().length);
+}
+
+function syncSearchCycle() {
+  document.querySelector("#float-dock #float-dock-search")?.classList.toggle("is-cycling", searchLabelCycles());
 }
 
 function clearSearchFilters() {
@@ -2600,6 +2608,7 @@ function render(options = {}) {
     }
   }
   renderProfile();
+  syncSearchCycle();
   if (!skipUrl) {
     if (isResultsPage() || isBoardsPage()) writeUrl(options.url || "replace");
     else if (state.profile || new URLSearchParams(location.search).has("person")) writeUrl(options.url || "replace");
@@ -3109,7 +3118,19 @@ function placeDialogMenu(panel) {
   const scroller = panel.closest(".add-dialog_panel");
   const anchor = panel.parentElement?.querySelector(".add-role_toggle, .add-city_toggle");
   if (!scroller || !anchor || panel.hidden) return;
+  const transformed = getComputedStyle(scroller).transform !== "none";
   const rect = anchor.getBoundingClientRect();
+  if (transformed) {
+    panel.style.position = "absolute";
+    panel.style.top = "";
+    panel.style.left = "0";
+    panel.style.right = "0";
+    panel.style.width = "auto";
+    const menuHeight = Math.min(panel.scrollHeight || 240, 240);
+    const overflow = rect.bottom + 8 + menuHeight - (window.innerHeight - 12);
+    if (overflow > 0) scroller.scrollTop += overflow;
+    return;
+  }
   panel.style.position = "fixed";
   panel.style.left = `${rect.left}px`;
   panel.style.width = `${rect.width}px`;
@@ -3358,14 +3379,19 @@ const mainPicker = createRolePicker({
 
 function syncSecondaryAdd() {
   const button = document.getElementById("add-secondary-add");
-  if (button) button.hidden = secondaryPickers.length >= 1;
+  if (button) button.hidden = secondaryPickers.length >= 3;
+  const removes = document.querySelectorAll("#add-secondary-list .add-field_remove");
+  removes.forEach((remove) => {
+    remove.hidden = removes.length < 2;
+  });
 }
 
 function clearSecondaryFields() {
   secondaryPickers.splice(0, secondaryPickers.length);
   const list = document.getElementById("add-secondary-list");
   if (list) list.replaceChildren();
-  syncSecondaryAdd();
+  if (list) addSecondaryField({ open: false });
+  else syncSecondaryAdd();
 }
 
 function secondaryTaken(except) {
@@ -3379,14 +3405,13 @@ function secondaryTaken(except) {
 
 function addSecondaryField({ open = true } = {}) {
   const list = document.getElementById("add-secondary-list");
-  if (!list || secondaryPickers.length >= 1) return null;
+  if (!list || secondaryPickers.length >= 3) return null;
   const id = `add-secondary-${secondaryCount}`;
   secondaryCount += 1;
   const wrap = document.createElement("div");
   wrap.className = "add-role add-secondary_field";
   wrap.id = id;
   wrap.innerHTML = `
-    <span class="add-secondary_label">Secondary role</span>
     <div class="add-role_group">
       <button class="add-role_toggle" id="${id}-toggle" type="button" aria-expanded="false" aria-controls="${id}-panel">
         <span id="${id}-label">Add a secondary role</span>
@@ -3644,17 +3669,20 @@ function syncInstagramLinkCheck() {
   const box = input?.closest(".add-input");
   const status = document.getElementById("add-instagram-status");
   if (!input || !box) return;
-  const valid = Boolean(instagramLinkHandle(input.value));
-  box.classList.toggle("is-valid", valid);
-  if (status) status.textContent = valid ? "Valid Instagram link" : "";
+  const handle = instagramLinkHandle(input.value);
+  box.classList.toggle("is-valid", Boolean(handle));
+  if (status) status.textContent = handle ? "Valid Instagram profile" : "";
+  if (handle) writeAddField("add-instagram", handle);
+  const submit = document.querySelector("#add-form .add-submit");
+  if (submit) submit.disabled = !handle;
 }
 
 function instagramLinkHandle(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
-  const url = raw.match(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\/([A-Za-z0-9._]{1,30})\/?(?:[?#].*)?$/i);
-  if (url) return url[1];
-  const handle = raw.match(/^@?([A-Za-z0-9._]{1,30})$/);
+  const fromUrl = raw.match(/(?:https?:\/\/)?(?:www\.|m\.)?instagram\.com\/([A-Za-z0-9._]{1,30})/i);
+  if (fromUrl && !/^(p|reel|reels|stories|explore|tv|accounts|about|direct)$/i.test(fromUrl[1])) return fromUrl[1];
+  const handle = raw.match(/^@?([A-Za-z0-9._]{1,30})\/?$/);
   return handle ? handle[1] : "";
 }
 
@@ -3685,8 +3713,15 @@ async function addPersonFromForm() {
   const phone = document.getElementById("add-phone").value.trim();
   const portfolio = cleanUrl(document.getElementById("add-portfolio").value);
   const bio = document.getElementById("add-bio")?.value.trim() || "";
-  const preferred = document.querySelector('#add-form input[name="preferred"]:checked')?.value || "";
+  const contact = { instagram, email, phone };
   const error = document.getElementById("add-error");
+  if (!instagramLinkHandle(document.getElementById("add-instagram-link")?.value)) {
+    error.textContent = window.matchMedia("(max-width: 800px)").matches
+      ? "Enter an Instagram handle."
+      : "Enter an Instagram handle or link.";
+    document.getElementById("add-instagram-link")?.focus();
+    return;
+  }
   if (!name) {
     error.textContent = "Add a name.";
     document.getElementById("add-name").focus();
@@ -3717,17 +3752,12 @@ async function addPersonFromForm() {
     document.getElementById("add-instagram").focus();
     return;
   }
-  const contact = { instagram, email, phone };
-  if (preferred && !contact[preferred]) {
-    error.textContent = "Preferred contact needs a value.";
-    return;
-  }
   const sameLookup = addLookup && addLookup.instagram && instagram && addLookup.instagram.toLowerCase() === instagram.toLowerCase();
   const record = person(rosterId(name), name, city, [], roles, genres, false, {
     instagram,
     email,
     phone,
-    preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
+    preferred: ["instagram", "email", "phone"].find((key) => contact[key]) || "",
     secondary: extraRoles,
     referredBy: "",
     compensation: "",
@@ -3769,12 +3799,8 @@ function setAddCityValue(name) {
 
 function removeAutofillSecondary() {
   if (!addFilled.has("secondary")) return;
-  const picker = secondaryPickers[0];
-  picker?.close();
-  secondaryPickers.splice(0, secondaryPickers.length);
-  document.getElementById("add-secondary-list")?.replaceChildren();
+  clearSecondaryFields();
   addFilled.delete("secondary");
-  syncSecondaryAdd();
 }
 
 function applyInstagramLookup(profile) {
@@ -3801,12 +3827,6 @@ function applyInstagramLookup(profile) {
   } else {
     removeAutofillSecondary();
   }
-  const preferred = document.querySelector('#add-form input[name="preferred"]:checked');
-  const instagramChoice = document.querySelector('#add-form input[name="preferred"][value="instagram"]');
-  if (instagramChoice && profile.instagram && (!preferred || addFilled.has("preferred"))) {
-    instagramChoice.checked = true;
-    addFilled.add("preferred");
-  }
 }
 
 async function lookupInstagramProfile(handle) {
@@ -3822,7 +3842,7 @@ async function lookupInstagramProfile(handle) {
       return;
     }
     applyInstagramLookup(payload);
-    if (lookup) lookup.textContent = "Pulled in information from their Instagram. Edit anything as needed.";
+    if (lookup) lookup.textContent = "Pulled in information from their Instagram. Edit as needed.";
   } catch (lookupError) {
     if (token !== addLookupToken) return;
     if (lookup) lookup.textContent = "Couldn't read that profile. Fill in the rest yourself.";
@@ -3848,12 +3868,12 @@ async function addPersonFromShortForm() {
   const handle = instagramLinkHandle(input?.value);
   const worked = document.querySelector('#add-form input[name="worked"]:checked')?.value || "";
   if (!input?.value.trim()) {
-    error.textContent = "Add an Instagram link.";
+    error.textContent = "Add an Instagram handle or link.";
     input?.focus();
     return;
   }
   if (!handle) {
-    error.textContent = "Enter an Instagram profile link.";
+    error.textContent = "Enter an Instagram handle or profile link.";
     input.focus();
     return;
   }
@@ -3893,7 +3913,7 @@ async function commitAddedPerson(record) {
     await savePersonRecord(record);
   } catch (saveError) {
     error.textContent = "Couldn't add them to the roster. Try again.";
-    if (submit) submit.disabled = false;
+    syncInstagramLinkCheck();
     return;
   }
   if (!PEOPLE.some((item) => item.id === record.id)) PEOPLE.unshift(record);
@@ -3910,15 +3930,35 @@ async function commitAddedPerson(record) {
   }
   buildFilters();
   setAddOpen(false);
-  if (submit) submit.disabled = false;
   render({ url: "push" });
   document.querySelector(`.result-card[data-id="${CSS.escape(record.id)}"]`)?.scrollIntoView({ block: "center" });
+}
+
+function placeAddRoster() {
+  const button = document.getElementById("add-roster");
+  const header = document.querySelector(".results-top");
+  const heading = document.querySelector(".results-heading");
+  const brand = header?.querySelector(".nav_brand");
+  const instagram = document.getElementById("add-instagram-link");
+  const mobile = window.matchMedia("(max-width: 800px)").matches;
+  if (instagram) instagram.placeholder = mobile ? "@username" : "@username or instagram.com/username";
+  if (!button || !header || !heading || !brand) return;
+  if (mobile) {
+    if (button.previousElementSibling !== brand) brand.after(button);
+  } else if (button.parentElement !== heading) {
+    heading.append(button);
+  }
 }
 
 function bindAddRoster() {
   const button = document.getElementById("add-roster");
   const dialog = document.getElementById("add-dialog");
   if (!button || !dialog) return;
+  placeAddRoster();
+  if (!bindAddRoster.placed) {
+    bindAddRoster.placed = true;
+    window.matchMedia("(max-width: 800px)").addEventListener("change", placeAddRoster);
+  }
   button.addEventListener("click", () => setAddOpen(true));
   document.getElementById("add-cancel").addEventListener("click", () => setAddOpen(false));
   document.getElementById("add-close").addEventListener("click", () => setAddOpen(false));
@@ -3960,7 +4000,6 @@ function bindAddRoster() {
       }
     });
   });
-  document.getElementById("add-preferred")?.addEventListener("change", () => addFilled.delete("preferred"));
 }
 
 function markSkeletonNav() {
@@ -4372,6 +4411,12 @@ function closeDeleteBoardDialog() {
   }
 }
 
+function syncBoardCreateSubmit() {
+  const input = document.getElementById("boards-create-input");
+  const submit = document.getElementById("boards-create-submit");
+  if (submit) submit.disabled = !input?.value.trim();
+}
+
 function setBoardCreateOpen(open) {
   const dialog = document.getElementById("boards-create-dialog");
   const createInput = document.getElementById("boards-create-input");
@@ -4395,6 +4440,7 @@ function setBoardCreateOpen(open) {
     if (createDesc) createDesc.value = "";
     if (createError) createError.textContent = "";
   }
+  syncBoardCreateSubmit();
 }
 
 let moodboardMode = "";
@@ -6025,6 +6071,8 @@ function bindBoards() {
     if (event.target === createDialog) setBoardCreateOpen(false);
   });
 
+  createInput?.addEventListener("input", syncBoardCreateSubmit);
+
   createForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const name = createInput?.value.trim();
@@ -6457,7 +6505,7 @@ function floatDockMarkup() {
     </a>
     <button type="button" class="float-dock_item" id="float-dock-search" aria-label="Search for creatives">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.6 15.6 20.2 20.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span>Search for creatives</span>
+      <span class="search-cycle"><span class="search-cycle_keep">Search for</span><span class="search-cycle_roles"><span>photographers</span><span>videographers</span><span>stylists</span><span>models</span><span>graphic designers</span></span></span>
     </button>
     <a class="float-dock_item" id="float-dock-boards" href="boards.html" aria-label="Boards">
       <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="7" width="12" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="9" y="4" width="12" height="13" rx="2.2" fill="#fff" stroke="currentColor" stroke-width="1.7"/></svg>
@@ -6509,6 +6557,7 @@ function initFloatDock() {
     window.matchMedia("(max-width: 800px)").addEventListener("change", syncFloatDock);
   }
   syncFloatDock();
+  syncSearchCycle();
   initHomeIntro();
 }
 
@@ -6582,7 +6631,7 @@ function initHomeIntro() {
       [...text].forEach((char) => {
         const span = document.createElement("span");
         span.className = char === " " ? "type-letter is-space is-flat" : "type-letter is-flat";
-        span.textContent = char === " " ? "\u00a0" : char;
+        span.textContent = char === " " ? " " : char;
         span.style.setProperty("--d", `${lineIndex * 45}ms`);
         line.append(span);
       });

@@ -209,7 +209,6 @@ function JoinForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [portfolio, setPortfolio] = useState("");
-  const [preferred, setPreferred] = useState("");
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [menu, setMenu] = useState("");
@@ -266,15 +265,11 @@ function JoinForm() {
       setError("Add Instagram, email, phone, or a portfolio.");
       return;
     }
-    if (preferred && !contact[preferred]) {
-      setError("Preferred contact needs a value.");
-      return;
-    }
     const record = person(rosterId(name.trim()), name.trim(), home, travelCities, [main.role], [...new Set([...main.genres, ...extraGenres])], false, {
       instagram: handle,
       email: mail,
       phone: number,
-      preferred: preferred || ["instagram", "email", "phone"].find((key) => contact[key]) || "",
+      preferred: ["instagram", "email", "phone"].find((key) => contact[key]) || "",
       secondary: extraRoles,
       referredBy: "",
       rate: "",
@@ -380,20 +375,6 @@ function JoinForm() {
           </span>
         </label>
       </div>
-      <fieldset class="add-field">
-        <legend>Preferred contact</legend>
-        <div class="add-checks">
-          ${[
-            ["instagram", "Instagram", html`<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="16.6" cy="7.4" r="0.9" fill="currentColor"/></svg>`],
-            ["email", "Email", html`<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M5 7.5 12 12.5 19 7.5" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>`],
-            ["phone", "Phone", html`<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M8 5.5h2.2l1 2.4-1.4 1.1a9 9 0 0 0 4.2 4.2l1.1-1.4 2.4 1V15a1.4 1.4 0 0 1-1.5 1.4A11.4 11.4 0 0 1 6.6 7 1.4 1.4 0 0 1 8 5.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`],
-          ].map(([value, label, icon]) => html`<label class="add-check" key=${value}>
-            <input type="radio" name="preferred" value=${value} checked=${preferred === value} onChange=${() => setPreferred(value)} />
-            ${icon}
-            <span>${label}</span>
-          </label>`)}
-        </div>
-      </fieldset>
       <p class="add-dialog_error" role="alert">${error}</p>
       <div class="add-dialog_actions">
         <button class="add-cancel" type="button" onClick=${() => { location.hash = ""; }}>Cancel</button>

@@ -450,7 +450,7 @@ class Handler(SimpleHTTPRequestHandler):
         query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
         handle = (query.get("handle") or [""])[0].strip().lstrip("@")
         if not HANDLE_RE.fullmatch(handle):
-            self.json_response(400, {"ok": False, "error": "Enter an Instagram profile link."})
+            self.json_response(400, {"ok": False, "error": "Enter an Instagram handle or profile link."})
             return
         try:
             self.json_response(200, lookup_profile(handle))
